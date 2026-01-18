@@ -1,0 +1,4 @@
+project_id = "lnaqgtimdxlcpvfmqvyn"
+
+[functions.rzuma-chat]
+verify_jwt = false
