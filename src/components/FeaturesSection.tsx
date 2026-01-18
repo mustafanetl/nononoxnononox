@@ -29,7 +29,7 @@ const features = [
 
 const FeaturesSection = () => {
   return (
-    <section id="features" className="py-20 px-4 bg-card">
+    <section id="features" className="py-20 px-4 bg-card/50">
       <div className="container mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
@@ -45,7 +45,7 @@ const FeaturesSection = () => {
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className="group glass-card rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+              className="group glass-card rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] hover:border-primary/30"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
