@@ -1,4 +1,4 @@
-import { Plane, Clock, ArrowRight } from "lucide-react";
+import { Plane, Clock } from "lucide-react";
 
 export interface FlightData {
   id: string;
@@ -19,7 +19,6 @@ interface FlightCardProps {
   flight: FlightData;
 }
 
-// City image URLs (using Unsplash for reliable images)
 const cityImages: Record<string, string> = {
   dubai: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=200&fit=crop",
   paris: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=200&fit=crop",
@@ -48,20 +47,20 @@ const getImageUrl = (city?: string): string => {
 
 const FlightCard = ({ flight }: FlightCardProps) => {
   return (
-    <div className="min-w-[280px] w-[280px] bg-card border border-border rounded-xl overflow-hidden hover:border-primary/50 transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 flex-shrink-0">
+    <div className="min-w-[260px] w-[260px] bg-card border border-border rounded-xl overflow-hidden hover:border-foreground/20 transition-all duration-200 flex-shrink-0">
       {/* City Image */}
-      <div className="relative h-24 w-full">
+      <div className="relative h-20 w-full">
         <img
           src={getImageUrl(flight.cityImage)}
           alt={flight.to}
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-card/90 to-transparent" />
-        <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
-          <span className="text-xs font-medium text-foreground bg-card/80 backdrop-blur-sm px-2 py-1 rounded-md">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+          <span className="text-xs font-medium text-white">
             {flight.airline}
           </span>
-          <span className="text-xs text-foreground/80 bg-card/80 backdrop-blur-sm px-2 py-1 rounded-md">
+          <span className="text-xs text-white/80">
             {flight.date}
           </span>
         </div>
@@ -71,7 +70,7 @@ const FlightCard = ({ flight }: FlightCardProps) => {
         {/* Flight Times */}
         <div className="flex items-center justify-between mb-2">
           <div className="text-center">
-            <p className="text-base font-bold text-foreground">{flight.departureTime}</p>
+            <p className="text-sm font-semibold">{flight.departureTime}</p>
             <p className="text-[10px] text-muted-foreground uppercase">{flight.from}</p>
           </div>
 
@@ -81,9 +80,9 @@ const FlightCard = ({ flight }: FlightCardProps) => {
               <span>{flight.duration}</span>
             </div>
             <div className="w-full flex items-center gap-1 my-1">
-              <div className="h-[1px] flex-1 bg-border" />
-              <Plane className="h-3 w-3 text-primary rotate-90" />
-              <div className="h-[1px] flex-1 bg-border" />
+              <div className="h-px flex-1 bg-border" />
+              <Plane className="h-3 w-3 text-muted-foreground" />
+              <div className="h-px flex-1 bg-border" />
             </div>
             <span className="text-[10px] text-muted-foreground">
               {flight.stops === 0 ? "Direct" : `${flight.stops} stop`}
@@ -91,7 +90,7 @@ const FlightCard = ({ flight }: FlightCardProps) => {
           </div>
 
           <div className="text-center">
-            <p className="text-base font-bold text-foreground">{flight.arrivalTime}</p>
+            <p className="text-sm font-semibold">{flight.arrivalTime}</p>
             <p className="text-[10px] text-muted-foreground uppercase">{flight.to}</p>
           </div>
         </div>
@@ -99,7 +98,7 @@ const FlightCard = ({ flight }: FlightCardProps) => {
         {/* Price */}
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <span className="text-[10px] text-muted-foreground">Round trip</span>
-          <span className="text-lg font-bold text-primary">
+          <span className="text-base font-bold">
             {flight.currency}{flight.price}
           </span>
         </div>
