@@ -1,8 +1,31 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Sparkles, RotateCcw, ArrowUp } from "lucide-react";
+import { Sparkles, RotateCcw, ArrowUp } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import heroImage from "@/assets/hero-adventure.jpeg";
+import FlightCard, { FlightData } from "@/components/FlightCard";
+
+// Parse message content to extract flight data and text
+const parseMessageContent = (content: string): { text: string; flights: FlightData[] } => {
+  const flightRegex = /```flights\s*([\s\S]*?)```/g;
+  let flights: FlightData[] = [];
+  let text = content;
+
+  const matches = content.matchAll(flightRegex);
+  for (const match of matches) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (Array.isArray(parsed)) {
+        flights = [...flights, ...parsed];
+      }
+    } catch (e) {
+      // Invalid JSON, skip
+    }
+    text = text.replace(match[0], "");
+  }
+
+  return { text: text.trim(), flights };
+};
 
 const ChatInterface = () => {
   const [input, setInput] = useState("");
@@ -61,24 +84,42 @@ const ChatInterface = () => {
         {/* Chat Messages */}
         {hasMessages && (
           <div className="flex-1 overflow-y-auto py-4 space-y-4 mb-4">
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
+            {messages.map((msg, i) => {
+              const { text, flights } = msg.role === "assistant" 
+                ? parseMessageContent(msg.content)
+                : { text: msg.content, flights: [] };
+
+              return (
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card border border-border"
-                  }`}
+                  key={i}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  <p className="text-sm md:text-base whitespace-pre-wrap leading-relaxed">
-                    {msg.content}
-                  </p>
+                  <div className={`max-w-[85%] ${msg.role === "user" ? "" : "space-y-3"}`}>
+                    {text && (
+                      <div
+                        className={`rounded-2xl px-4 py-3 ${
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-card border border-border"
+                        }`}
+                      >
+                        <p className="text-sm md:text-base whitespace-pre-wrap leading-relaxed">
+                          {text}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {flights.length > 0 && (
+                      <div className="grid gap-3 mt-3">
+                        {flights.map((flight, idx) => (
+                          <FlightCard key={flight.id || idx} flight={flight} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             
             {isLoading && messages[messages.length - 1]?.role === "user" && (
               <div className="flex justify-start">
