@@ -110,10 +110,14 @@ const ChatInterface = () => {
                     )}
                     
                     {flights.length > 0 && (
-                      <div className="grid gap-3 mt-3">
-                        {flights.map((flight, idx) => (
-                          <FlightCard key={flight.id || idx} flight={flight} />
-                        ))}
+                      <div className="mt-3 -mx-4 px-4">
+                        <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
+                          {flights.map((flight, idx) => (
+                            <div key={flight.id || idx} className="snap-start">
+                              <FlightCard flight={flight} />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
