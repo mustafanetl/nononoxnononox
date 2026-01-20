@@ -9,38 +9,38 @@ interface FlightDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const cityInfo: Record<string, { description: string; video: string }> = {
+const cityInfo: Record<string, { description: string; image: string }> = {
   dubai: {
     description: "Dubai is a city of superlatives—home to the world's tallest building, largest shopping malls, and most luxurious hotels. Experience stunning architecture, desert adventures, and world-class dining.",
-    video: "https://player.vimeo.com/video/370467553?background=1&autoplay=1&loop=1&muted=1",
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=80",
   },
   paris: {
     description: "The City of Light captivates with its iconic Eiffel Tower, world-renowned museums like the Louvre, charming cafés, and romantic Seine river cruises. A timeless destination for art, culture, and cuisine.",
-    video: "https://player.vimeo.com/video/301394137?background=1&autoplay=1&loop=1&muted=1",
+    image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80",
   },
   tokyo: {
     description: "Tokyo blends ultra-modern technology with ancient traditions. From neon-lit Shibuya to serene temples, experience cutting-edge innovation alongside centuries-old culture.",
-    video: "https://player.vimeo.com/video/289502264?background=1&autoplay=1&loop=1&muted=1",
+    image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80",
   },
   bali: {
     description: "Bali offers tropical paradise with stunning beaches, lush rice terraces, ancient temples, and vibrant arts scene. Perfect for relaxation, adventure, and spiritual renewal.",
-    video: "https://player.vimeo.com/video/247442432?background=1&autoplay=1&loop=1&muted=1",
+    image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80",
   },
   rome: {
     description: "The Eternal City is an open-air museum of ancient history—from the Colosseum to the Vatican. Savor authentic Italian cuisine and la dolce vita lifestyle.",
-    video: "https://player.vimeo.com/video/219638680?background=1&autoplay=1&loop=1&muted=1",
+    image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&q=80",
   },
   london: {
     description: "London combines royal heritage with modern cool. Explore historic landmarks, world-class theaters, diverse neighborhoods, and iconic pubs.",
-    video: "https://player.vimeo.com/video/216658772?background=1&autoplay=1&loop=1&muted=1",
+    image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&q=80",
   },
   newyork: {
     description: "The city that never sleeps offers iconic skylines, Broadway shows, Central Park, and endless cultural experiences. Energy and diversity in every corner.",
-    video: "https://player.vimeo.com/video/239581792?background=1&autoplay=1&loop=1&muted=1",
+    image: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80",
   },
   default: {
     description: "Discover amazing destinations around the world. Each journey brings new experiences, cultures, and memories waiting to be made.",
-    video: "https://player.vimeo.com/video/370467553?background=1&autoplay=1&loop=1&muted=1",
+    image: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&q=80",
   },
 };
 
@@ -64,13 +64,12 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 overflow-hidden">
-        {/* City Video Header */}
+        {/* City Image Header */}
         <div className="relative h-48 w-full overflow-hidden">
-          <iframe
-            src={info.video}
-            className="absolute inset-0 w-full h-full object-cover scale-150"
-            allow="autoplay; fullscreen"
-            style={{ border: "none", pointerEvents: "none" }}
+          <img
+            src={info.image}
+            alt={cityName}
+            className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4">
