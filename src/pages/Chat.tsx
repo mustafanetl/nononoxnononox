@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import FlightCard, { FlightData } from "@/components/FlightCard";
+import FlightDetailModal from "@/components/FlightDetailModal";
 import { Link } from "react-router-dom";
 
 // Parse message content to extract flight data and text
@@ -27,7 +28,13 @@ const parseMessageContent = (content: string): { text: string; flights: FlightDa
   return { text: text.trim(), flights };
 };
 
-const FlightCarousel = ({ flights }: { flights: FlightData[] }) => {
+const FlightCarousel = ({ 
+  flights, 
+  onFlightClick 
+}: { 
+  flights: FlightData[]; 
+  onFlightClick: (flight: FlightData) => void;
+}) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -81,14 +88,18 @@ const FlightCarousel = ({ flights }: { flights: FlightData[] }) => {
         className="flex gap-3 overflow-x-auto scrollbar-hide px-1 py-1"
       >
         {flights.map((flight, idx) => (
-          <FlightCard key={flight.id || idx} flight={flight} />
+          <FlightCard 
+            key={flight.id || idx} 
+            flight={flight} 
+            onClick={() => onFlightClick(flight)}
+          />
         ))}
       </div>
 
       {/* Scroll hint */}
       {flights.length > 1 && (
         <p className="text-xs text-muted-foreground text-center mt-2">
-          Swipe to see more options →
+          Tap a card for details • Swipe for more →
         </p>
       )}
     </div>
@@ -98,9 +109,16 @@ const FlightCarousel = ({ flights }: { flights: FlightData[] }) => {
 const Chat = () => {
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedFlight, setSelectedFlight] = useState<FlightData | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const { messages, isLoading, error, sendMessage, clearChat } = useRzumaChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleFlightClick = (flight: FlightData) => {
+    setSelectedFlight(flight);
+    setModalOpen(true);
+  };
 
   const suggestions = [
     "Find flights to Tokyo",
@@ -256,7 +274,10 @@ const Chat = () => {
                               </p>
                             )}
                             {flights.length > 0 && (
-                              <FlightCarousel flights={flights} />
+                              <FlightCarousel 
+                                flights={flights} 
+                                onFlightClick={handleFlightClick}
+                              />
                             )}
                           </div>
                         </div>
@@ -326,6 +347,13 @@ const Chat = () => {
           </div>
         </div>
       </main>
+
+      {/* Flight Detail Modal */}
+      <FlightDetailModal
+        flight={selectedFlight}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
     </div>
   );
 };

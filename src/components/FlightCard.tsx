@@ -15,9 +15,7 @@ export interface FlightData {
   cityImage?: string;
 }
 
-interface FlightCardProps {
-  flight: FlightData;
-}
+// FlightCardProps moved below after formatCityName
 
 const cityImages: Record<string, string> = {
   dubai: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=200&fit=crop",
@@ -45,24 +43,42 @@ const getImageUrl = (city?: string): string => {
   return cityImages[key] || cityImages.default;
 };
 
-const FlightCard = ({ flight }: FlightCardProps) => {
+interface FlightCardProps {
+  flight: FlightData;
+  onClick?: () => void;
+}
+
+const formatCityName = (city?: string): string => {
+  if (!city) return "";
+  return city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
+};
+
+const FlightCard = ({ flight, onClick }: FlightCardProps) => {
   return (
-    <div className="min-w-[260px] w-[260px] bg-card border border-border rounded-xl overflow-hidden hover:border-foreground/20 transition-all duration-200 flex-shrink-0">
+    <div 
+      onClick={onClick}
+      className="min-w-[260px] w-[260px] bg-card border border-border rounded-xl overflow-hidden hover:border-foreground/20 hover:shadow-lg transition-all duration-200 flex-shrink-0 cursor-pointer"
+    >
       {/* City Image */}
-      <div className="relative h-20 w-full">
+      <div className="relative h-24 w-full">
         <img
           src={getImageUrl(flight.cityImage)}
           alt={flight.to}
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-          <span className="text-xs font-medium text-white">
-            {flight.airline}
-          </span>
-          <span className="text-xs text-white/80">
-            {flight.date}
-          </span>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute bottom-2 left-2 right-2">
+          <p className="text-base font-bold text-white">
+            {formatCityName(flight.cityImage)}
+          </p>
+          <div className="flex items-center justify-between mt-0.5">
+            <span className="text-xs text-white/90">
+              {flight.airline}
+            </span>
+            <span className="text-xs text-white/80">
+              {flight.date}
+            </span>
+          </div>
         </div>
       </div>
 
