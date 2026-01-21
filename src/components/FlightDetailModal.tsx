@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plane, Clock, MapPin, Calendar, ArrowRight } from "lucide-react";
+import { Plane, Clock, MapPin, Calendar, ArrowRight, ExternalLink } from "lucide-react";
 import { FlightData } from "./FlightCard";
 import { Button } from "@/components/ui/button";
 
@@ -71,26 +71,94 @@ const formatCityName = (city?: string): string => {
   return city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
 };
 
-// Airport code to city name mapping
-const airportToCity: Record<string, string> = {
-  JFK: "New York",
-  LAX: "Los Angeles",
-  DXB: "Dubai",
-  CDG: "Paris",
-  LHR: "London",
-  NRT: "Tokyo",
-  HND: "Tokyo",
-  FCO: "Rome",
-  SYD: "Sydney",
-  SIN: "Singapore",
-  DPS: "Bali",
-  BCN: "Barcelona",
-  MLE: "Maldives",
-  AMS: "Amsterdam",
+// Airport code to city name and Skyscanner place ID mapping
+const airportData: Record<string, { city: string; skyscannerCode: string }> = {
+  JFK: { city: "New York", skyscannerCode: "JFK" },
+  LAX: { city: "Los Angeles", skyscannerCode: "LAX" },
+  DXB: { city: "Dubai", skyscannerCode: "DXB" },
+  CDG: { city: "Paris", skyscannerCode: "CDG" },
+  LHR: { city: "London", skyscannerCode: "LHR" },
+  NRT: { city: "Tokyo", skyscannerCode: "NRT" },
+  HND: { city: "Tokyo", skyscannerCode: "HND" },
+  FCO: { city: "Rome", skyscannerCode: "FCO" },
+  SYD: { city: "Sydney", skyscannerCode: "SYD" },
+  SIN: { city: "Singapore", skyscannerCode: "SIN" },
+  DPS: { city: "Bali", skyscannerCode: "DPS" },
+  BCN: { city: "Barcelona", skyscannerCode: "BCN" },
+  MLE: { city: "Maldives", skyscannerCode: "MLE" },
+  AMS: { city: "Amsterdam", skyscannerCode: "AMS" },
+  ORD: { city: "Chicago", skyscannerCode: "ORD" },
+  SFO: { city: "San Francisco", skyscannerCode: "SFO" },
+  MIA: { city: "Miami", skyscannerCode: "MIA" },
+  BKK: { city: "Bangkok", skyscannerCode: "BKK" },
+  IST: { city: "Istanbul", skyscannerCode: "IST" },
+  DOH: { city: "Doha", skyscannerCode: "DOH" },
+  AUH: { city: "Abu Dhabi", skyscannerCode: "AUH" },
+  FRA: { city: "Frankfurt", skyscannerCode: "FRA" },
+  MAD: { city: "Madrid", skyscannerCode: "MAD" },
+  DEL: { city: "Delhi", skyscannerCode: "DEL" },
+  BOM: { city: "Mumbai", skyscannerCode: "BOM" },
+  HKG: { city: "Hong Kong", skyscannerCode: "HKG" },
+  ICN: { city: "Seoul", skyscannerCode: "ICN" },
+  YYZ: { city: "Toronto", skyscannerCode: "YYZ" },
+  MEL: { city: "Melbourne", skyscannerCode: "MEL" },
+  ZRH: { city: "Zurich", skyscannerCode: "ZRH" },
 };
 
 const getFullCityName = (code: string): string => {
-  return airportToCity[code] || code;
+  return airportData[code]?.city || code;
+};
+
+// Generate Skyscanner search URL
+const generateSkyscannerUrl = (flight: FlightData): string => {
+  // Parse date - expecting format like "Mar 15" or "March 15"
+  const parseDate = (dateStr: string): string => {
+    const months: Record<string, string> = {
+      jan: "01", january: "01",
+      feb: "02", february: "02",
+      mar: "03", march: "03",
+      apr: "04", april: "04",
+      may: "05",
+      jun: "06", june: "06",
+      jul: "07", july: "07",
+      aug: "08", august: "08",
+      sep: "09", september: "09",
+      oct: "10", october: "10",
+      nov: "11", november: "11",
+      dec: "12", december: "12",
+    };
+    
+    const parts = dateStr.toLowerCase().trim().split(/\s+/);
+    const monthStr = parts[0];
+    const day = parts[1]?.padStart(2, "0") || "15";
+    const month = months[monthStr] || months[monthStr.slice(0, 3)] || "01";
+    
+    // Use current year or next year if month has passed
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+    const flightMonth = parseInt(month);
+    
+    const year = flightMonth < currentMonth ? currentYear + 1 : currentYear;
+    
+    return `${year}${month}${day}`;
+  };
+
+  const fromCode = airportData[flight.from]?.skyscannerCode || flight.from;
+  const toCode = airportData[flight.to]?.skyscannerCode || flight.to;
+  const outboundDate = parseDate(flight.date);
+  
+  // Calculate return date (7 days later by default for round trips)
+  const outDate = new Date(
+    parseInt(outboundDate.slice(0, 4)),
+    parseInt(outboundDate.slice(4, 6)) - 1,
+    parseInt(outboundDate.slice(6, 8))
+  );
+  outDate.setDate(outDate.getDate() + 7);
+  const returnDate = `${outDate.getFullYear()}${String(outDate.getMonth() + 1).padStart(2, "0")}${String(outDate.getDate()).padStart(2, "0")}`;
+
+  // Skyscanner URL format: /transport/flights/{from}/{to}/{outbound}/{return}/
+  return `https://www.skyscanner.com/transport/flights/${fromCode}/${toCode}/${outboundDate}/${returnDate}/?adultsv2=1&cabinclass=economy&childrenv2=&ref=home&rtn=1&preferdirects=false&outboundaltsen498senabled=false&inboundaltsenabled=false`;
 };
 
 const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProps) => {
@@ -100,6 +168,11 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
   const cityName = formatCityName(flight.cityImage);
   const fromCity = getFullCityName(flight.from);
   const toCity = getFullCityName(flight.to);
+  const skyscannerUrl = generateSkyscannerUrl(flight);
+
+  const handleBookClick = () => {
+    window.open(skyscannerUrl, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -218,8 +291,9 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
               <p className="text-xs text-muted-foreground">Round trip total</p>
               <p className="text-2xl font-bold">{flight.currency}{flight.price}</p>
             </div>
-            <Button size="lg" className="px-8">
-              Book Now
+            <Button size="lg" className="px-8 gap-2" onClick={handleBookClick}>
+              Book on Skyscanner
+              <ExternalLink className="h-4 w-4" />
             </Button>
           </div>
         </div>
