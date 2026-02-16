@@ -1,103 +1,113 @@
 
 
-# Full Trip Planner with Occasion-Based Activities
+# Enhance Rzuma - Major Feature Upgrades
 
 ## Overview
 
-Transform Rzuma from a flight-finder into a complete trip planner. The AI will suggest activities, itineraries, and experiences tailored to the user's occasion (honeymoon, birthday, family vacation, solo adventure, etc.), displayed as rich interactive cards alongside flights.
+This plan adds several high-impact features to make Rzuma a genuinely useful trip planning app: budget tracking, hotel recommendations, markdown rendering for AI responses, a trip summary/export feature, dark mode toggle, and an improved landing page.
 
-## What Changes
+---
 
-### 1. New Activity Cards
-A new `ActivityCard` component will display suggested activities with:
-- Activity image (from Unsplash, mapped by activity type)
-- Activity name, category icon, duration, and estimated price
-- Occasion tag (e.g. "Perfect for honeymoons")
+## 1. Budget Tracker
 
-These will render in a horizontal carousel just like flight cards.
+Add a running budget sidebar/panel that automatically totals up flights and activities the user has viewed or "added" to their trip.
 
-### 2. Itinerary Cards
-A new `ItineraryCard` component for day-by-day plans:
-- Day number and date
-- Morning / afternoon / evening activity breakdown
-- Clickable to expand details
+**What it does:**
+- A collapsible budget panel on the chat page showing selected flights, activities, and total estimated cost
+- "Add to trip" buttons on flight and activity detail modals
+- Running total updates in real-time as items are added/removed
 
-### 3. Activity Detail Modal
-When clicking an activity card, a modal shows:
-- Full description of the activity
-- Best time to visit, tips, and booking links
-- Related activities nearby
+**Technical:**
+- Create `src/components/BudgetPanel.tsx` with state managed via React context
+- Create `src/contexts/TripContext.tsx` to hold selected flights, activities, and budget
+- Add "Add to trip" / "Remove" toggle buttons in `FlightDetailModal` and `ActivityDetailModal`
+- Show a small floating budget indicator in the chat header
 
-### 4. Updated AI Prompt
-The system prompt in the edge function will be expanded so Rzuma:
-- Asks about the occasion if not mentioned (honeymoon, birthday, family, solo, etc.)
-- Suggests 3-4 activities tailored to the occasion and destination
-- Can generate a day-by-day itinerary when asked
-- Uses a new structured format for activities and itineraries
+---
 
-### 5. Updated Chat Parser
-The message parser in `Chat.tsx` will handle three block types:
-- `flights` (existing)
-- `activities` (new)
-- `itinerary` (new)
+## 2. Hotel Recommendations
 
-### 6. Updated Suggestions
-The welcome screen suggestions will reflect the full trip planning capability:
-- "Plan a honeymoon in Bali"
-- "Birthday trip to Tokyo"
-- "Family vacation to Dubai"
-- "Solo adventure in Europe"
+Extend the AI to suggest hotels alongside flights and activities.
 
-## Technical Details
+**What it does:**
+- New hotel cards with name, star rating, price per night, image, and a "Book" link to Booking.com
+- Rendered in the same horizontal carousel style
 
-### New files to create:
-- `src/components/ActivityCard.tsx` -- card with image, name, category, duration, price, occasion tag
-- `src/components/ActivityDetailModal.tsx` -- expanded view with description, tips, booking info
-- `src/components/ItineraryCard.tsx` -- day-by-day plan card
+**Technical:**
+- Create `src/components/HotelCard.tsx` with fields: name, stars, pricePerNight, currency, image, location, bookingUrl
+- Create `src/components/HotelDetailModal.tsx` with full details and booking link
+- Update the system prompt in `supabase/functions/rzuma-chat/index.ts` to include a `hotels` block format
+- Update `parseMessageContent` in `Chat.tsx` to extract and render hotel cards
 
-### Files to modify:
-- `supabase/functions/rzuma-chat/index.ts` -- expand system prompt with activity/itinerary formats and occasion-awareness
-- `src/pages/Chat.tsx` -- add parsing for `activities` and `itinerary` blocks, add carousels for each, update suggestions, add state for activity detail modal
-- `src/components/FlightDetailModal.tsx` -- minor: no major changes needed
+---
 
-### Activity data format (AI output):
-```text
-```activities
-[
-  {
-    "id": "1",
-    "name": "Sunset Dinner Cruise",
-    "category": "dining",
-    "duration": "3 hours",
-    "price": 120,
-    "currency": "$",
-    "image": "cruise",
-    "occasion": "honeymoon",
-    "description": "Romantic dinner on the water..."
-  }
-]
-```
-```
+## 3. Markdown Rendering for AI Responses
 
-### Itinerary data format (AI output):
-```text
-```itinerary
-[
-  {
-    "day": 1,
-    "title": "Arrival & Relaxation",
-    "morning": "Check in and explore the hotel",
-    "afternoon": "Beach time and lunch at local restaurant",
-    "evening": "Sunset dinner cruise"
-  }
-]
-```
-```
+Currently AI text responses render as plain text. Adding markdown support makes responses with bold text, links, and formatting look polished.
 
-### Updated system prompt highlights:
-- Detect occasion from context or ask about it
-- When suggesting a destination, include both flights AND activities
-- When user asks to "plan a trip", provide flights + activities + optional itinerary
-- Activities sorted by relevance to the occasion
-- Keep text concise (2-3 sentences max), let the cards do the talking
+**Technical:**
+- Install `react-markdown` package
+- Replace the plain `<p>` tag for assistant text in `Chat.tsx` with `<ReactMarkdown>` wrapped in prose styling
+
+---
+
+## 4. Dark Mode Toggle
+
+The CSS already has dark mode variables defined but no way to switch.
+
+**What it does:**
+- A sun/moon toggle button in the chat header and landing page
+- Persists preference in localStorage
+
+**Technical:**
+- The project already has `next-themes` installed
+- Wrap `App.tsx` with `ThemeProvider`
+- Add a toggle button component in the chat header and landing page nav
+
+---
+
+## 5. Share / Export Trip Summary
+
+Let users share or copy their planned trip as a clean summary.
+
+**What it does:**
+- A "Share trip" button that generates a text summary of the conversation (flights, activities, itinerary) and copies to clipboard or opens a share dialog
+
+**Technical:**
+- Create `src/utils/tripSummary.ts` with a function that parses all messages and extracts trip data into a formatted text
+- Add a share button in the chat header
+- Use the Web Share API with clipboard fallback
+
+---
+
+## 6. Improved Landing Page
+
+The current landing page is basic. Enhance it with destination cards users can click to jump directly into planning.
+
+**What it does:**
+- Popular destination cards (Dubai, Bali, Tokyo, Paris) with images that link to `/chat` with a pre-filled message
+- Testimonial section for social proof
+
+**Technical:**
+- Update `src/pages/Index.tsx` with a destination grid section and testimonials
+- Each destination card navigates to `/chat?q=Plan a trip to Dubai` and auto-sends the message
+
+---
+
+## Files to Create
+- `src/components/HotelCard.tsx`
+- `src/components/HotelDetailModal.tsx`
+- `src/components/BudgetPanel.tsx`
+- `src/components/ThemeToggle.tsx`
+- `src/contexts/TripContext.tsx`
+- `src/utils/tripSummary.ts`
+
+## Files to Modify
+- `src/App.tsx` -- wrap with ThemeProvider and TripContext
+- `src/pages/Chat.tsx` -- add hotel parsing, budget panel, markdown rendering, share button, dark mode toggle
+- `src/pages/Index.tsx` -- add destination cards and testimonials
+- `src/components/FlightDetailModal.tsx` -- add "Add to trip" button
+- `src/components/ActivityDetailModal.tsx` -- add "Add to trip" button
+- `supabase/functions/rzuma-chat/index.ts` -- add hotel block format to system prompt
+- `package.json` -- add `react-markdown` dependency
 
