@@ -1,13 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plane, Clock, MapPin, Calendar, ArrowRight, ExternalLink } from "lucide-react";
+import { Plane, Clock, MapPin, Calendar, ArrowRight, ExternalLink, PlusCircle, CheckCircle } from "lucide-react";
 import { FlightData } from "./FlightCard";
 import { Button } from "@/components/ui/button";
-
-interface FlightDetailModalProps {
-  flight: FlightData | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+import { useTripContext } from "@/contexts/TripContext";
 
 const cityInfo: Record<string, { description: string; image: string }> = {
   dubai: {
@@ -71,7 +66,6 @@ const formatCityName = (city?: string): string => {
   return city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
 };
 
-// Airport code to city name and Skyscanner place ID mapping
 const airportData: Record<string, { city: string; skyscannerCode: string }> = {
   JFK: { city: "New York", skyscannerCode: "JFK" },
   LAX: { city: "Los Angeles", skyscannerCode: "LAX" },
@@ -109,59 +103,44 @@ const getFullCityName = (code: string): string => {
   return airportData[code]?.city || code;
 };
 
-// Generate Skyscanner search URL
 const generateSkyscannerUrl = (flight: FlightData): string => {
-  // Parse date - expecting format like "Mar 15" or "March 15"
   const parseDate = (dateStr: string): string => {
     const months: Record<string, string> = {
-      jan: "01", january: "01",
-      feb: "02", february: "02",
-      mar: "03", march: "03",
-      apr: "04", april: "04",
-      may: "05",
-      jun: "06", june: "06",
-      jul: "07", july: "07",
-      aug: "08", august: "08",
-      sep: "09", september: "09",
-      oct: "10", october: "10",
-      nov: "11", november: "11",
-      dec: "12", december: "12",
+      jan: "01", january: "01", feb: "02", february: "02", mar: "03", march: "03",
+      apr: "04", april: "04", may: "05", jun: "06", june: "06", jul: "07", july: "07",
+      aug: "08", august: "08", sep: "09", september: "09", oct: "10", october: "10",
+      nov: "11", november: "11", dec: "12", december: "12",
     };
-    
     const parts = dateStr.toLowerCase().trim().split(/\s+/);
     const monthStr = parts[0];
     const day = parts[1]?.padStart(2, "0") || "15";
     const month = months[monthStr] || months[monthStr.slice(0, 3)] || "01";
-    
-    // Use current year or next year if month has passed
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth() + 1;
     const currentYear = currentDate.getFullYear();
     const flightMonth = parseInt(month);
-    
     const year = flightMonth < currentMonth ? currentYear + 1 : currentYear;
-    
     return `${year}${month}${day}`;
   };
 
   const fromCode = airportData[flight.from]?.skyscannerCode || flight.from;
   const toCode = airportData[flight.to]?.skyscannerCode || flight.to;
   const outboundDate = parseDate(flight.date);
-  
-  // Calculate return date (7 days later by default for round trips)
-  const outDate = new Date(
-    parseInt(outboundDate.slice(0, 4)),
-    parseInt(outboundDate.slice(4, 6)) - 1,
-    parseInt(outboundDate.slice(6, 8))
-  );
+  const outDate = new Date(parseInt(outboundDate.slice(0, 4)), parseInt(outboundDate.slice(4, 6)) - 1, parseInt(outboundDate.slice(6, 8)));
   outDate.setDate(outDate.getDate() + 7);
   const returnDate = `${outDate.getFullYear()}${String(outDate.getMonth() + 1).padStart(2, "0")}${String(outDate.getDate()).padStart(2, "0")}`;
-
-  // Skyscanner URL format: /transport/flights/{from}/{to}/{outbound}/{return}/
-  return `https://www.skyscanner.com/transport/flights/${fromCode}/${toCode}/${outboundDate}/${returnDate}/?adultsv2=1&cabinclass=economy&childrenv2=&ref=home&rtn=1&preferdirects=false&outboundaltsen498senabled=false&inboundaltsenabled=false`;
+  return `https://www.skyscanner.com/transport/flights/${fromCode}/${toCode}/${outboundDate}/${returnDate}/?adultsv2=1&cabinclass=economy&childrenv2=&ref=home&rtn=1&preferdirects=false`;
 };
 
+interface FlightDetailModalProps {
+  flight: FlightData | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
 const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProps) => {
+  const { addItem, removeItem, isInTrip } = useTripContext();
+
   if (!flight) return null;
 
   const info = getCityInfo(flight.cityImage);
@@ -169,6 +148,12 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
   const fromCity = getFullCityName(flight.from);
   const toCity = getFullCityName(flight.to);
   const skyscannerUrl = generateSkyscannerUrl(flight);
+  const inTrip = isInTrip("flight", flight.id);
+
+  const toggleTrip = () => {
+    if (inTrip) removeItem("flight", flight.id);
+    else addItem({ type: "flight", data: flight });
+  };
 
   const handleBookClick = () => {
     window.open(skyscannerUrl, "_blank", "noopener,noreferrer");
@@ -177,13 +162,8 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 overflow-hidden">
-        {/* City Image Header */}
         <div className="relative h-44 w-full overflow-hidden">
-          <img
-            src={info.image}
-            alt={cityName}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <img src={info.image} alt={cityName} className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4">
             <DialogHeader>
@@ -197,7 +177,6 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
         </div>
 
         <div className="p-5 space-y-4">
-          {/* Airline & Date */}
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
@@ -211,20 +190,17 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
             </div>
           </div>
 
-          {/* Outbound Flight */}
           <div className="bg-muted/50 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-2 h-2 rounded-full bg-foreground" />
               <span className="text-xs font-medium uppercase tracking-wide">Outbound</span>
             </div>
-            
             <div className="flex items-center justify-between">
               <div className="text-center">
                 <p className="text-xl font-bold">{flight.departureTime}</p>
                 <p className="text-xs text-muted-foreground font-medium">{flight.from}</p>
                 <p className="text-xs text-muted-foreground">{fromCity}</p>
               </div>
-
               <div className="flex-1 flex flex-col items-center px-3">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                   <Clock className="h-3 w-3" />
@@ -239,7 +215,6 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
                   {flight.stops === 0 ? "Direct" : `${flight.stops} stop`}
                 </span>
               </div>
-
               <div className="text-center">
                 <p className="text-xl font-bold">{flight.arrivalTime}</p>
                 <p className="text-xs text-muted-foreground font-medium">{flight.to}</p>
@@ -248,20 +223,17 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
             </div>
           </div>
 
-          {/* Return Flight */}
           <div className="bg-muted/50 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-2 h-2 rounded-full bg-muted-foreground" />
               <span className="text-xs font-medium uppercase tracking-wide">Return</span>
             </div>
-            
             <div className="flex items-center justify-between">
               <div className="text-center">
                 <p className="text-xl font-bold">{flight.arrivalTime}</p>
                 <p className="text-xs text-muted-foreground font-medium">{flight.to}</p>
                 <p className="text-xs text-muted-foreground">{toCity}</p>
               </div>
-
               <div className="flex-1 flex flex-col items-center px-3">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                   <Clock className="h-3 w-3" />
@@ -276,7 +248,6 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
                   {flight.stops === 0 ? "Direct" : `${flight.stops} stop`}
                 </span>
               </div>
-
               <div className="text-center">
                 <p className="text-xl font-bold">{flight.departureTime}</p>
                 <p className="text-xs text-muted-foreground font-medium">{flight.from}</p>
@@ -285,16 +256,21 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
             </div>
           </div>
 
-          {/* Price & Book */}
           <div className="flex items-center justify-between pt-2">
             <div>
               <p className="text-xs text-muted-foreground">Round trip total</p>
               <p className="text-2xl font-bold">{flight.currency}{flight.price}</p>
             </div>
-            <Button size="lg" className="px-8 gap-2" onClick={handleBookClick}>
-              Book on Skyscanner
-              <ExternalLink className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-2">
+              <Button variant={inTrip ? "secondary" : "outline"} size="lg" className="gap-2" onClick={toggleTrip}>
+                {inTrip ? <CheckCircle className="h-4 w-4" /> : <PlusCircle className="h-4 w-4" />}
+                {inTrip ? "Added" : "Add"}
+              </Button>
+              <Button size="lg" className="px-6 gap-2" onClick={handleBookClick}>
+                Book
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

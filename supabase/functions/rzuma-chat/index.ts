@@ -30,6 +30,18 @@ When user asks about flights/trips, include flight cards using this EXACT format
 
 cityImage must be ONE word describing the destination. Always include 2-3 flight options with varied prices.
 
+When suggesting hotels, include hotel cards using this EXACT format:
+
+\`\`\`hotels
+[
+  {"id":"1","name":"The Ritz-Carlton","stars":5,"pricePerNight":350,"currency":"$","image":"luxury","location":"Downtown Dubai","description":"Iconic luxury hotel with stunning views of the Dubai Fountain and Burj Khalifa."},
+  {"id":"2","name":"Aloft Dubai","stars":4,"pricePerNight":120,"currency":"$","image":"city","location":"Al Mina","description":"Modern, vibrant hotel near the creek with rooftop pool and lively atmosphere."}
+]
+\`\`\`
+
+Hotel image must be one of: luxury, resort, boutique, beach, city, villa, hostel.
+Include 2-3 hotel options with varied price ranges (budget to luxury).
+
 When suggesting a destination or planning a trip, ALSO include activity cards using this EXACT format:
 
 \`\`\`activities
@@ -53,6 +65,7 @@ When user asks for a detailed plan or itinerary, ALSO include:
 ]
 \`\`\`
 
+IMPORTANT: When planning a full trip, include ALL card types: flights, hotels, activities, and itinerary.
 Keep text concise (1-2 sentences), let the cards do the talking.`;
 
 serve(async (req) => {
