@@ -1,7 +1,8 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Clock, DollarSign, ExternalLink, Lightbulb, MapPin } from "lucide-react";
+import { Clock, DollarSign, ExternalLink, Lightbulb, MapPin, PlusCircle, CheckCircle } from "lucide-react";
 import { ActivityData } from "./ActivityCard";
+import { useTripContext } from "@/contexts/TripContext";
 
 const imageMap: Record<string, string> = {
   cruise: "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800&h=400&fit=crop",
@@ -30,10 +31,18 @@ const ActivityDetailModal = ({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) => {
+  const { addItem, removeItem, isInTrip } = useTripContext();
+
   if (!activity) return null;
 
   const imgUrl = imageMap[activity.image] || imageMap.beach;
   const searchQuery = encodeURIComponent(activity.name);
+  const inTrip = isInTrip("activity", activity.id);
+
+  const toggleTrip = () => {
+    if (inTrip) removeItem("activity", activity.id);
+    else addItem({ type: "activity", data: activity });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -71,6 +80,14 @@ const ActivityDetailModal = ({
           </div>
 
           <div className="flex gap-2">
+            <Button
+              variant={inTrip ? "secondary" : "outline"}
+              className="gap-2"
+              onClick={toggleTrip}
+            >
+              {inTrip ? <CheckCircle className="h-4 w-4" /> : <PlusCircle className="h-4 w-4" />}
+              {inTrip ? "Added" : "Add to Trip"}
+            </Button>
             <Button
               className="flex-1 gap-2"
               onClick={() => window.open(`https://www.google.com/search?q=${searchQuery}+booking`, "_blank")}

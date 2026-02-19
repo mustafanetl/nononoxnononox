@@ -1,31 +1,40 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2 } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import FlightCard, { FlightData } from "@/components/FlightCard";
 import FlightDetailModal from "@/components/FlightDetailModal";
 import ActivityCard, { ActivityData } from "@/components/ActivityCard";
 import ActivityDetailModal from "@/components/ActivityDetailModal";
 import ItineraryCard, { ItineraryData } from "@/components/ItineraryCard";
-import { Link } from "react-router-dom";
+import HotelCard from "@/components/HotelCard";
+import HotelDetailModal from "@/components/HotelDetailModal";
+import BudgetPanel from "@/components/BudgetPanel";
+import ThemeToggle from "@/components/ThemeToggle";
+import { HotelData } from "@/contexts/TripContext";
+import { shareTripSummary } from "@/utils/tripSummary";
+import { Link, useSearchParams } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 
-// Parse message content to extract flight, activity, and itinerary data
+// Parse message content to extract flight, activity, hotel, and itinerary data
 const parseMessageContent = (content: string): { 
   text: string; 
   flights: FlightData[]; 
   activities: ActivityData[];
+  hotels: HotelData[];
   itinerary: ItineraryData[];
 } => {
   let flights: FlightData[] = [];
   let activities: ActivityData[] = [];
+  let hotels: HotelData[] = [];
   let itinerary: ItineraryData[] = [];
   let text = content;
 
   const extractBlock = (blockType: string) => {
     const regex = new RegExp("```" + blockType + "\\s*([\\s\\S]*?)```", "g");
-    const matches = text.matchAll(regex);
     const items: any[] = [];
-    for (const match of matches) {
+    for (const match of text.matchAll(regex)) {
       try {
         const parsed = JSON.parse(match[1]);
         if (Array.isArray(parsed)) items.push(...parsed);
@@ -37,9 +46,10 @@ const parseMessageContent = (content: string): {
 
   flights = extractBlock("flights");
   activities = extractBlock("activities");
+  hotels = extractBlock("hotels");
   itinerary = extractBlock("itinerary");
 
-  return { text: text.trim(), flights, activities, itinerary };
+  return { text: text.trim(), flights, activities, hotels, itinerary };
 };
 
 const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
@@ -90,9 +100,22 @@ const Chat = () => {
   const [flightModalOpen, setFlightModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityData | null>(null);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
+  const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const { messages, isLoading, error, sendMessage, clearChat } = useRzumaChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [searchParams] = useSearchParams();
+  const initialQuerySent = useRef(false);
+
+  // Auto-send query from URL params
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && !initialQuerySent.current && messages.length === 0) {
+      initialQuerySent.current = true;
+      sendMessage(q);
+    }
+  }, [searchParams, messages.length, sendMessage]);
 
   const handleFlightClick = (flight: FlightData) => {
     setSelectedFlight(flight);
@@ -102,6 +125,20 @@ const Chat = () => {
   const handleActivityClick = (activity: ActivityData) => {
     setSelectedActivity(activity);
     setActivityModalOpen(true);
+  };
+
+  const handleHotelClick = (hotel: HotelData) => {
+    setSelectedHotel(hotel);
+    setHotelModalOpen(true);
+  };
+
+  const handleShare = async () => {
+    try {
+      await shareTripSummary(messages);
+      toast.success("Trip summary copied to clipboard!");
+    } catch {
+      toast.error("Couldn't share trip summary");
+    }
   };
 
   const suggestions = [
@@ -164,13 +201,23 @@ const Chat = () => {
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />}
 
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="flex items-center gap-3 p-3 border-b border-border md:hidden">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <Compass className="h-5 w-5" />
-            <span className="font-semibold">Rzuma</span>
+        <header className="flex items-center justify-between gap-3 p-3 border-b border-border">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden">
+              <Menu className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-2">
+              <Compass className="h-5 w-5" />
+              <span className="font-semibold">Rzuma</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            {hasMessages && (
+              <Button variant="ghost" size="icon" onClick={handleShare} className="h-9 w-9">
+                <Share2 className="h-4 w-4" />
+              </Button>
+            )}
+            <ThemeToggle />
           </div>
         </header>
 
@@ -185,7 +232,7 @@ const Chat = () => {
                 </div>
                 <h1 className="text-2xl font-semibold mb-2">Where would you like to go?</h1>
                 <p className="text-muted-foreground text-center mb-8">
-                  I can help you plan trips, find flights, and discover activities for any occasion.
+                  I can help you plan trips, find flights, hotels, and discover activities for any occasion.
                 </p>
                 <div className="grid grid-cols-2 gap-2 w-full max-w-md">
                   {suggestions.map((s) => (
@@ -198,10 +245,10 @@ const Chat = () => {
             ) : (
               <div className="space-y-6">
                 {messages.map((msg, i) => {
-                  const { text, flights, activities, itinerary } =
+                  const { text, flights, activities, hotels, itinerary } =
                     msg.role === "assistant"
                       ? parseMessageContent(msg.content)
-                      : { text: msg.content, flights: [], activities: [], itinerary: [] };
+                      : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [] };
 
                   return (
                     <div key={i} className="animate-fade-in">
@@ -217,11 +264,22 @@ const Chat = () => {
                             <Compass className="h-4 w-4 text-background" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            {text && <p className="text-sm leading-relaxed whitespace-pre-wrap">{text}</p>}
+                            {text && (
+                              <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">
+                                <ReactMarkdown>{text}</ReactMarkdown>
+                              </div>
+                            )}
                             {flights.length > 0 && (
                               <HorizontalCarousel>
                                 {flights.map((f, idx) => (
                                   <FlightCard key={f.id || idx} flight={f} onClick={() => handleFlightClick(f)} />
+                                ))}
+                              </HorizontalCarousel>
+                            )}
+                            {hotels.length > 0 && (
+                              <HorizontalCarousel>
+                                {hotels.map((h, idx) => (
+                                  <HotelCard key={h.id || idx} hotel={h} onClick={() => handleHotelClick(h)} />
                                 ))}
                               </HorizontalCarousel>
                             )}
@@ -300,8 +358,10 @@ const Chat = () => {
         </div>
       </main>
 
+      <BudgetPanel />
       <FlightDetailModal flight={selectedFlight} open={flightModalOpen} onOpenChange={setFlightModalOpen} />
       <ActivityDetailModal activity={selectedActivity} open={activityModalOpen} onOpenChange={setActivityModalOpen} />
+      <HotelDetailModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={setHotelModalOpen} />
     </div>
   );
 };
