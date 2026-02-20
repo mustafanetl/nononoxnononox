@@ -1,20 +1,109 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 type Message = {
   role: "user" | "assistant";
   content: string;
 };
 
+type Conversation = {
+  id: string;
+  title: string;
+  messages: Message[];
+  updatedAt: number;
+};
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rzuma-chat`;
+const STORAGE_KEY = "rzuma-conversations";
+
+const generateId = () => crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+
+const loadConversations = (): Conversation[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+};
+
+const saveConversations = (convos: Conversation[]) => {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(convos)); } catch { /* quota */ }
+};
+
+const titleFromMessage = (msg: string) => msg.slice(0, 40) + (msg.length > 40 ? "…" : "");
 
 export const useRzumaChat = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>(loadConversations);
+  const [activeId, setActiveId] = useState<string | null>(() => {
+    const convos = loadConversations();
+    return convos.length > 0 ? convos[0].id : null;
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const convosRef = useRef(conversations);
+  convosRef.current = conversations;
+
+  // Persist on change
+  useEffect(() => { saveConversations(conversations); }, [conversations]);
+
+  const activeConvo = conversations.find(c => c.id === activeId);
+  const messages = activeConvo?.messages || [];
+
+  const setMessagesForActive = useCallback((updater: (prev: Message[]) => Message[]) => {
+    setConversations(prev => prev.map(c =>
+      c.id === (convosRef.current.find(x => x.id === activeId)?.id ?? activeId)
+        ? { ...c, messages: updater(c.messages), updatedAt: Date.now() }
+        : c
+    ));
+  }, [activeId]);
+
+  const newChat = useCallback(() => {
+    const id = generateId();
+    const convo: Conversation = { id, title: "New chat", messages: [], updatedAt: Date.now() };
+    setConversations(prev => [convo, ...prev]);
+    setActiveId(id);
+    setError(null);
+  }, []);
+
+  const switchChat = useCallback((id: string) => {
+    setActiveId(id);
+    setError(null);
+  }, []);
+
+  const deleteChat = useCallback((id: string) => {
+    setConversations(prev => {
+      const next = prev.filter(c => c.id !== id);
+      if (id === activeId) {
+        setActiveId(next.length > 0 ? next[0].id : null);
+      }
+      return next;
+    });
+  }, [activeId]);
 
   const sendMessage = useCallback(async (input: string) => {
+    let currentId = activeId;
+
+    // Auto-create conversation if none active
+    if (!currentId) {
+      const id = generateId();
+      const convo: Conversation = { id, title: titleFromMessage(input), messages: [], updatedAt: Date.now() };
+      setConversations(prev => [convo, ...prev]);
+      setActiveId(id);
+      currentId = id;
+    }
+
     const userMsg: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMsg]);
+
+    // Update title if first message
+    setConversations(prev => prev.map(c => {
+      if (c.id !== currentId) return c;
+      const isFirst = c.messages.length === 0;
+      return {
+        ...c,
+        title: isFirst ? titleFromMessage(input) : c.title,
+        messages: [...c.messages, userMsg],
+        updatedAt: Date.now(),
+      };
+    }));
+
     setIsLoading(true);
     setError(null);
 
@@ -22,25 +111,30 @@ export const useRzumaChat = () => {
 
     const updateAssistant = (chunk: string) => {
       assistantContent += chunk;
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
+      const content = assistantContent;
+      setConversations(prev => prev.map(c => {
+        if (c.id !== currentId) return c;
+        const msgs = c.messages;
+        const last = msgs[msgs.length - 1];
         if (last?.role === "assistant") {
-          return prev.map((m, i) =>
-            i === prev.length - 1 ? { ...m, content: assistantContent } : m
-          );
+          return { ...c, messages: msgs.map((m, i) => i === msgs.length - 1 ? { ...m, content } : m), updatedAt: Date.now() };
         }
-        return [...prev, { role: "assistant", content: assistantContent }];
-      });
+        return { ...c, messages: [...msgs, { role: "assistant", content }], updatedAt: Date.now() };
+      }));
     };
 
     try {
+      // Get current messages for this convo
+      const currentMessages = [...(convosRef.current.find(c => c.id === currentId)?.messages || []), userMsg]
+        .filter(m => m.role === "user" || m.role === "assistant");
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: [...messages, userMsg] }),
+        body: JSON.stringify({ messages: currentMessages }),
       });
 
       if (!resp.ok) {
@@ -70,10 +164,7 @@ export const useRzumaChat = () => {
           if (!line.startsWith("data: ")) continue;
 
           const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") {
-            streamDone = true;
-            break;
-          }
+          if (jsonStr === "[DONE]") { streamDone = true; break; }
 
           try {
             const parsed = JSON.parse(jsonStr);
@@ -99,25 +190,36 @@ export const useRzumaChat = () => {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) updateAssistant(content);
-          } catch {
-            /* ignore */
-          }
+          } catch { /* ignore */ }
         }
       }
     } catch (e) {
       console.error("Chat error:", e);
       setError(e instanceof Error ? e.message : "Something went wrong");
-      // Remove the user message if there was an error
-      setMessages((prev) => prev.slice(0, -1));
+      // Remove the user message on error
+      setConversations(prev => prev.map(c => {
+        if (c.id !== currentId) return c;
+        return { ...c, messages: c.messages.slice(0, -1) };
+      }));
     } finally {
       setIsLoading(false);
     }
-  }, [messages]);
+  }, [activeId]);
 
   const clearChat = useCallback(() => {
-    setMessages([]);
-    setError(null);
-  }, []);
+    newChat();
+  }, [newChat]);
 
-  return { messages, isLoading, error, sendMessage, clearChat };
+  return {
+    messages,
+    isLoading,
+    error,
+    sendMessage,
+    clearChat,
+    conversations,
+    activeId,
+    newChat,
+    switchChat,
+    deleteChat,
+  };
 };
