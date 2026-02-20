@@ -1,113 +1,117 @@
 
 
-# Enhance Rzuma - Major Feature Upgrades
+# Next-Level Features for Rzuma
 
 ## Overview
 
-This plan adds several high-impact features to make Rzuma a genuinely useful trip planning app: budget tracking, hotel recommendations, markdown rendering for AI responses, a trip summary/export feature, dark mode toggle, and an improved landing page.
+These features fill real gaps that would make users come back and actually rely on Rzuma for trip planning.
 
 ---
 
-## 1. Budget Tracker
+## 1. Multi-City / Multi-Leg Trip Support
 
-Add a running budget sidebar/panel that automatically totals up flights and activities the user has viewed or "added" to their trip.
+Currently Rzuma only handles single-destination trips. Many travelers want multi-city routes (e.g., "Paris to Rome to Barcelona").
 
 **What it does:**
-- A collapsible budget panel on the chat page showing selected flights, activities, and total estimated cost
-- "Add to trip" buttons on flight and activity detail modals
-- Running total updates in real-time as items are added/removed
+- Users can say "Plan a 2-week Europe trip: Paris, Rome, Barcelona"
+- Rzuma generates flights between each city, hotels for each stop, and a combined itinerary
+- A visual trip timeline shows each leg of the journey
 
 **Technical:**
-- Create `src/components/BudgetPanel.tsx` with state managed via React context
-- Create `src/contexts/TripContext.tsx` to hold selected flights, activities, and budget
-- Add "Add to trip" / "Remove" toggle buttons in `FlightDetailModal` and `ActivityDetailModal`
-- Show a small floating budget indicator in the chat header
+- Update the system prompt to handle multi-city requests and output a `legs` structure
+- Create `src/components/TripTimeline.tsx` showing a visual step-by-step of the multi-city route
+- Parse a new `timeline` block in Chat.tsx
 
 ---
 
-## 2. Hotel Recommendations
+## 2. Chat History Persistence
 
-Extend the AI to suggest hotels alongside flights and activities.
+Right now, refreshing the page loses everything. Users need their conversations saved.
 
 **What it does:**
-- New hotel cards with name, star rating, price per night, image, and a "Book" link to Booking.com
-- Rendered in the same horizontal carousel style
+- Conversations persist in localStorage so they survive page refreshes
+- Sidebar shows recent chats that users can switch between
+- "New chat" actually creates a separate conversation
 
 **Technical:**
-- Create `src/components/HotelCard.tsx` with fields: name, stars, pricePerNight, currency, image, location, bookingUrl
-- Create `src/components/HotelDetailModal.tsx` with full details and booking link
-- Update the system prompt in `supabase/functions/rzuma-chat/index.ts` to include a `hotels` block format
-- Update `parseMessageContent` in `Chat.tsx` to extract and render hotel cards
+- Update `src/hooks/useRzumaChat.ts` to save/load messages from localStorage keyed by conversation ID
+- Create a conversation list manager in the sidebar
+- Each conversation gets a generated title from the first user message
 
 ---
 
-## 3. Markdown Rendering for AI Responses
+## 3. Visa & Travel Requirements Info
 
-Currently AI text responses render as plain text. Adding markdown support makes responses with bold text, links, and formatting look polished.
-
-**Technical:**
-- Install `react-markdown` package
-- Replace the plain `<p>` tag for assistant text in `Chat.tsx` with `<ReactMarkdown>` wrapped in prose styling
-
----
-
-## 4. Dark Mode Toggle
-
-The CSS already has dark mode variables defined but no way to switch.
+A huge pain point for travelers -- knowing visa requirements, COVID rules, etc.
 
 **What it does:**
-- A sun/moon toggle button in the chat header and landing page
-- Persists preference in localStorage
+- When planning a trip, Rzuma automatically mentions visa requirements based on the user's origin
+- A dedicated "Travel Info" card showing entry requirements, best travel season, currency, time zone, and language
 
 **Technical:**
-- The project already has `next-themes` installed
-- Wrap `App.tsx` with `ThemeProvider`
-- Add a toggle button component in the chat header and landing page nav
+- Create `src/components/TravelInfoCard.tsx` with destination metadata
+- Update the system prompt to include a `travelinfo` block format with fields: visa, currency, language, timezone, bestSeason, safety
+- Parse and render the new block in Chat.tsx
 
 ---
 
-## 5. Share / Export Trip Summary
+## 4. Price Comparison View
 
-Let users share or copy their planned trip as a clean summary.
+Users want to compare options side-by-side rather than scrolling through carousels.
 
 **What it does:**
-- A "Share trip" button that generates a text summary of the conversation (flights, activities, itinerary) and copies to clipboard or opens a share dialog
+- A "Compare" button on flight and hotel cards that adds them to a comparison tray
+- A comparison modal that shows selected options in a table format (price, rating, duration, stops)
+- Helps users make quick decisions
 
 **Technical:**
-- Create `src/utils/tripSummary.ts` with a function that parses all messages and extracts trip data into a formatted text
-- Add a share button in the chat header
-- Use the Web Share API with clipboard fallback
+- Add compare state to TripContext
+- Create `src/components/ComparisonModal.tsx` with a table layout
+- Add a "Compare" toggle on FlightCard and HotelCard
 
 ---
 
-## 6. Improved Landing Page
+## 5. Weather Forecast for Destination
 
-The current landing page is basic. Enhance it with destination cards users can click to jump directly into planning.
+Show weather expectations so users know what to pack.
 
 **What it does:**
-- Popular destination cards (Dubai, Bali, Tokyo, Paris) with images that link to `/chat` with a pre-filled message
-- Testimonial section for social proof
+- A weather card showing average temperature, rainfall, and conditions for the travel dates
+- Packing suggestions based on weather
 
 **Technical:**
-- Update `src/pages/Index.tsx` with a destination grid section and testimonials
-- Each destination card navigates to `/chat?q=Plan a trip to Dubai` and auto-sends the message
+- Create `src/components/WeatherCard.tsx` with temperature, conditions, and packing tips
+- Update the system prompt to include a `weather` block format
+- Parse and render in Chat.tsx
+
+---
+
+## 6. Quick Reply Buttons
+
+After the AI responds, show contextual follow-up buttons so users don't have to type.
+
+**What it does:**
+- After showing flights: "Show hotels too", "Find cheaper options", "Different dates"
+- After showing a full plan: "Export this plan", "Adjust budget", "Add more days"
+- Makes the app feel more interactive and guided
+
+**Technical:**
+- Update the system prompt to include a `quickreplies` block with 2-4 suggested follow-ups
+- Create `src/components/QuickReplies.tsx` as clickable chips below assistant messages
+- On click, send the reply text as a new user message
 
 ---
 
 ## Files to Create
-- `src/components/HotelCard.tsx`
-- `src/components/HotelDetailModal.tsx`
-- `src/components/BudgetPanel.tsx`
-- `src/components/ThemeToggle.tsx`
-- `src/contexts/TripContext.tsx`
-- `src/utils/tripSummary.ts`
+- `src/components/TripTimeline.tsx` -- visual multi-city route display
+- `src/components/TravelInfoCard.tsx` -- visa, currency, timezone card
+- `src/components/ComparisonModal.tsx` -- side-by-side comparison table
+- `src/components/WeatherCard.tsx` -- destination weather and packing tips
+- `src/components/QuickReplies.tsx` -- contextual follow-up buttons
 
 ## Files to Modify
-- `src/App.tsx` -- wrap with ThemeProvider and TripContext
-- `src/pages/Chat.tsx` -- add hotel parsing, budget panel, markdown rendering, share button, dark mode toggle
-- `src/pages/Index.tsx` -- add destination cards and testimonials
-- `src/components/FlightDetailModal.tsx` -- add "Add to trip" button
-- `src/components/ActivityDetailModal.tsx` -- add "Add to trip" button
-- `supabase/functions/rzuma-chat/index.ts` -- add hotel block format to system prompt
-- `package.json` -- add `react-markdown` dependency
+- `src/hooks/useRzumaChat.ts` -- add localStorage persistence and conversation management
+- `src/pages/Chat.tsx` -- parse new block types, render new components, wire up sidebar with saved chats
+- `src/contexts/TripContext.tsx` -- add comparison state
+- `supabase/functions/rzuma-chat/index.ts` -- expand system prompt with new block formats (travelinfo, weather, quickreplies, timeline)
 
