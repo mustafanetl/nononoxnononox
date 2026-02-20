@@ -18,6 +18,10 @@ type TripItem =
   | { type: "activity"; data: ActivityData }
   | { type: "hotel"; data: HotelData };
 
+type CompareItem = 
+  | { type: "flight"; data: FlightData }
+  | { type: "hotel"; data: HotelData };
+
 type TripContextType = {
   items: TripItem[];
   addItem: (item: TripItem) => void;
@@ -26,6 +30,12 @@ type TripContextType = {
   clearTrip: () => void;
   totalBudget: number;
   currency: string;
+  // Compare
+  compareItems: CompareItem[];
+  addToCompare: (item: CompareItem) => void;
+  removeFromCompare: (type: string, id: string) => void;
+  isInCompare: (type: string, id: string) => boolean;
+  clearCompare: () => void;
 };
 
 const TripContext = createContext<TripContextType | null>(null);
@@ -36,14 +46,11 @@ export const useTripContext = () => {
   return ctx;
 };
 
-const getItemId = (item: TripItem) => {
-  if (item.type === "flight") return item.data.id;
-  if (item.type === "activity") return item.data.id;
-  return item.data.id;
-};
+const getItemId = (item: TripItem | CompareItem) => item.data.id;
 
 export const TripProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<TripItem[]>([]);
+  const [compareItems, setCompareItems] = useState<CompareItem[]>([]);
 
   const addItem = useCallback((item: TripItem) => {
     setItems((prev) => [...prev, item]);
@@ -59,10 +66,27 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
 
   const clearTrip = useCallback(() => setItems([]), []);
 
+  const addToCompare = useCallback((item: CompareItem) => {
+    setCompareItems((prev) => {
+      if (prev.some(i => i.type === item.type && getItemId(i) === getItemId(item))) return prev;
+      return [...prev, item];
+    });
+  }, []);
+
+  const removeFromCompare = useCallback((type: string, id: string) => {
+    setCompareItems((prev) => prev.filter((i) => !(i.type === type && getItemId(i) === id)));
+  }, []);
+
+  const isInCompare = useCallback((type: string, id: string) => {
+    return compareItems.some((i) => i.type === type && getItemId(i) === id);
+  }, [compareItems]);
+
+  const clearCompare = useCallback(() => setCompareItems([]), []);
+
   const totalBudget = items.reduce((sum, item) => {
     if (item.type === "flight") return sum + item.data.price;
     if (item.type === "activity") return sum + item.data.price;
-    if (item.type === "hotel") return sum + item.data.pricePerNight * 3; // estimate 3 nights
+    if (item.type === "hotel") return sum + item.data.pricePerNight * 3;
     return sum;
   }, 0);
 
@@ -71,7 +95,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     : "$";
 
   return (
-    <TripContext.Provider value={{ items, addItem, removeItem, isInTrip, clearTrip, totalBudget, currency }}>
+    <TripContext.Provider value={{ items, addItem, removeItem, isInTrip, clearTrip, totalBudget, currency, compareItems, addToCompare, removeFromCompare, isInCompare, clearCompare }}>
       {children}
     </TripContext.Provider>
   );

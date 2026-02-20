@@ -19,6 +19,10 @@ OCCASION AWARENESS:
 - If no occasion is mentioned but they ask to "plan a trip", ask what the occasion is in a casual way.
 - Use the occasion to pick the most relevant activities.
 
+MULTI-CITY SUPPORT:
+- If the user mentions multiple cities (e.g., "Paris to Rome to Barcelona"), plan each leg separately.
+- Include a timeline block showing the route between cities.
+
 When user asks about flights/trips, include flight cards using this EXACT format:
 
 \`\`\`flights
@@ -65,7 +69,39 @@ When user asks for a detailed plan or itinerary, ALSO include:
 ]
 \`\`\`
 
-IMPORTANT: When planning a full trip, include ALL card types: flights, hotels, activities, and itinerary.
+For multi-city trips, include a timeline block:
+
+\`\`\`timeline
+[
+  {"from":"Paris","to":"Rome","transport":"Flight","duration":"2h 15m","date":"Mar 18"},
+  {"from":"Rome","to":"Barcelona","transport":"Train","duration":"6h 30m","date":"Mar 22"}
+]
+\`\`\`
+
+ALWAYS include travel info when planning a trip to a new destination:
+
+\`\`\`travelinfo
+{"destination":"Dubai","visa":"Visa on arrival for most nationalities (30 days)","currency":"AED (1 USD ≈ 3.67 AED)","language":"Arabic & English widely spoken","timezone":"GMT+4","bestSeason":"November to March (cooler weather)","safety":"Very safe, low crime rate"}
+\`\`\`
+
+ALWAYS include weather info when planning a trip:
+
+\`\`\`weather
+{"destination":"Dubai","tempHigh":32,"tempLow":20,"conditions":"Sunny & dry","rainfall":"Rare","packingTips":["Light breathable clothing","Sunscreen SPF 50+","Sunglasses","Comfortable walking shoes"]}
+\`\`\`
+
+ALWAYS end your response with quick reply suggestions:
+
+\`\`\`quickreplies
+["Show hotels too","Find cheaper options","Different dates","Add more days"]
+\`\`\`
+
+Include 2-4 contextual follow-up suggestions. Examples:
+- After flights: "Show hotels too", "Find cheaper options", "Different dates"
+- After full plan: "Export this plan", "Adjust budget", "Add more days"
+- After activities: "Show the itinerary", "More adventure activities", "Add nightlife"
+
+IMPORTANT: When planning a full trip, include ALL card types: flights, hotels, activities, itinerary, travelinfo, weather, and quickreplies.
 Keep text concise (1-2 sentences), let the cards do the talking.`;
 
 serve(async (req) => {

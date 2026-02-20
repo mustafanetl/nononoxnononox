@@ -1,5 +1,5 @@
-import { Star, MapPin } from "lucide-react";
-import { HotelData } from "@/contexts/TripContext";
+import { Star, MapPin, GitCompare } from "lucide-react";
+import { HotelData, useTripContext } from "@/contexts/TripContext";
 
 const hotelImages: Record<string, string> = {
   luxury: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=250&fit=crop",
@@ -16,6 +16,14 @@ export const getHotelImage = (image: string) => hotelImages[image] || hotelImage
 
 const HotelCard = ({ hotel, onClick }: { hotel: HotelData; onClick: () => void }) => {
   const imgUrl = getHotelImage(hotel.image);
+  const { addToCompare, removeFromCompare, isInCompare } = useTripContext();
+  const comparing = isInCompare("hotel", hotel.id);
+
+  const toggleCompare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (comparing) removeFromCompare("hotel", hotel.id);
+    else addToCompare({ type: "hotel", data: hotel });
+  };
 
   return (
     <div
@@ -29,7 +37,12 @@ const HotelCard = ({ hotel, onClick }: { hotel: HotelData; onClick: () => void }
         </div>
       </div>
       <div className="p-3 space-y-1.5">
-        <h3 className="font-semibold text-sm leading-tight">{hotel.name}</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm leading-tight flex-1">{hotel.name}</h3>
+          <button onClick={toggleCompare} className={`p-1 rounded-md transition-colors ${comparing ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}>
+            <GitCompare className="h-3 w-3" />
+          </button>
+        </div>
         <div className="flex items-center gap-1">
           {Array.from({ length: hotel.stars }).map((_, i) => (
             <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />

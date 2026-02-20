@@ -1,4 +1,5 @@
-import { Plane, Clock } from "lucide-react";
+import { Plane, Clock, GitCompare } from "lucide-react";
+import { useTripContext } from "@/contexts/TripContext";
 
 export interface FlightData {
   id: string;
@@ -54,10 +55,19 @@ const formatCityName = (city?: string): string => {
 };
 
 const FlightCard = ({ flight, onClick }: FlightCardProps) => {
+  const { addToCompare, removeFromCompare, isInCompare } = useTripContext();
+  const comparing = isInCompare("flight", flight.id);
+
+  const toggleCompare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (comparing) removeFromCompare("flight", flight.id);
+    else addToCompare({ type: "flight", data: flight });
+  };
+
   return (
     <div 
       onClick={onClick}
-      className="min-w-[260px] w-[260px] bg-card border border-border rounded-xl overflow-hidden hover:border-foreground/20 hover:shadow-lg transition-all duration-200 flex-shrink-0 cursor-pointer"
+      className="min-w-[260px] w-[260px] bg-card border border-border rounded-xl overflow-hidden hover:border-foreground/20 hover:shadow-lg transition-all duration-200 flex-shrink-0 cursor-pointer relative"
     >
       {/* City Image */}
       <div className="relative h-24 w-full">
@@ -113,7 +123,12 @@ const FlightCard = ({ flight, onClick }: FlightCardProps) => {
 
         {/* Price */}
         <div className="flex items-center justify-between pt-2 border-t border-border">
-          <span className="text-[10px] text-muted-foreground">Round trip</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-muted-foreground">Round trip</span>
+            <button onClick={toggleCompare} className={`ml-1 p-1 rounded-md transition-colors ${comparing ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}>
+              <GitCompare className="h-3 w-3" />
+            </button>
+          </div>
           <span className="text-base font-bold">
             {flight.currency}{flight.price}
           </span>
