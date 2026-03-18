@@ -265,7 +265,21 @@ const Chat = () => {
             </div>
           )}
         </div>
-        <div className="p-3 border-t border-border">
+        <div className="p-3 border-t border-border space-y-2">
+          {user ? (
+            <div className="flex items-center gap-2">
+              <Link to="/my-trips" className="flex-1 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <User className="h-4 w-4" /> My Trips
+              </Link>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut}>
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <Link to="/auth" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <User className="h-4 w-4" /> Sign in
+            </Link>
+          )}
           <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <Compass className="h-4 w-4" /> Back to home
           </Link>
