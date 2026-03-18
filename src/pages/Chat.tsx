@@ -309,7 +309,17 @@ const Chat = () => {
               </Button>
             )}
             {hasMessages && (
-              <Button variant="ghost" size="icon" onClick={handleShare} className="h-9 w-9">
+              <Button variant="ghost" size="icon" onClick={handleSaveTrip} className="h-9 w-9" title="Save trip">
+                <Save className="h-4 w-4" />
+              </Button>
+            )}
+            {hasMessages && (
+              <Button variant="ghost" size="icon" onClick={handleExportPDF} className="h-9 w-9" title="Export PDF">
+                <Download className="h-4 w-4" />
+              </Button>
+            )}
+            {hasMessages && (
+              <Button variant="ghost" size="icon" onClick={handleShare} className="h-9 w-9" title="Share">
                 <Share2 className="h-4 w-4" />
               </Button>
             )}
