@@ -411,7 +411,12 @@ const Chat = () => {
                               <TravelInfoCard info={parsed.travelInfo} />
                             )}
                             {parsed.weather && (
-                              <WeatherCard weather={parsed.weather} />
+                              <>
+                                <WeatherCard weather={parsed.weather} />
+                                {parsed.weather.packingTips && parsed.weather.packingTips.length > 0 && (
+                                  <PackingList items={parsed.weather.packingTips} />
+                                )}
+                              </>
                             )}
                             {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && (
                               <QuickReplies replies={parsed.quickReplies} onSelect={sendMessage} />
