@@ -21,6 +21,7 @@ const testimonials = [
 ];
 
 const Index = () => {
+  const { user } = useAuth();
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
