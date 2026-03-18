@@ -7,6 +7,8 @@ import { ThemeProvider } from "next-themes";
 import { TripProvider } from "@/contexts/TripContext";
 import Index from "./pages/Index";
 import Chat from "./pages/Chat";
+import Auth from "./pages/Auth";
+import MyTrips from "./pages/MyTrips";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +24,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/chat" element={<Chat />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/my-trips" element={<MyTrips />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
