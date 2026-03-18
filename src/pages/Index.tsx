@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Compass, ArrowRight, Plane, MapPin, Sparkles, Hotel, Calendar } from "lucide-react";
+import { Compass, ArrowRight, Plane, MapPin, Sparkles, Hotel, Calendar, User } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import PricingSection from "@/components/PricingSection";
+import { useAuth } from "@/hooks/useAuth";
 
 const destinations = [
   { name: "Dubai", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop", tag: "Luxury & Adventure" },
