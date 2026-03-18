@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare } from "lucide-react";
+import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
+import { useAuth } from "@/hooks/useAuth";
 import FlightCard, { FlightData } from "@/components/FlightCard";
 import FlightDetailModal from "@/components/FlightDetailModal";
 import ActivityCard, { ActivityData } from "@/components/ActivityCard";
@@ -16,8 +17,11 @@ import TravelInfoCard, { TravelInfoData } from "@/components/TravelInfoCard";
 import WeatherCard, { WeatherData } from "@/components/WeatherCard";
 import QuickReplies from "@/components/QuickReplies";
 import ComparisonModal from "@/components/ComparisonModal";
+import PackingList from "@/components/PackingList";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
 import { shareTripSummary } from "@/utils/tripSummary";
+import { exportTripPDF } from "@/utils/pdfExport";
+import { supabase } from "@/integrations/supabase/client";
 import { Link, useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -121,6 +125,7 @@ const Chat = () => {
   const [compareOpen, setCompareOpen] = useState(false);
   const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat } = useRzumaChat();
   const { compareItems } = useTripContext();
+  const { user, signOut } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [searchParams] = useSearchParams();
@@ -156,6 +161,33 @@ const Chat = () => {
       toast.success("Trip summary copied to clipboard!");
     } catch {
       toast.error("Couldn't share trip summary");
+    }
+  };
+
+  const handleExportPDF = () => {
+    const title = conversations.find(c => c.id === activeId)?.title || "My Trip Plan";
+    exportTripPDF({ title, messages });
+    toast.success("PDF downloaded!");
+  };
+
+  const handleSaveTrip = async () => {
+    if (!user) {
+      toast.error("Sign in to save trips", { action: { label: "Sign in", onClick: () => window.location.href = "/auth" } });
+      return;
+    }
+    const convo = conversations.find(c => c.id === activeId);
+    if (!convo) return;
+
+    const { error } = await supabase.from("saved_trips").insert({
+      user_id: user.id,
+      title: convo.title,
+      data_json: { messages: convo.messages },
+    } as any);
+
+    if (error) {
+      toast.error("Failed to save trip");
+    } else {
+      toast.success("Trip saved to your account!");
     }
   };
 
@@ -233,7 +265,21 @@ const Chat = () => {
             </div>
           )}
         </div>
-        <div className="p-3 border-t border-border">
+        <div className="p-3 border-t border-border space-y-2">
+          {user ? (
+            <div className="flex items-center gap-2">
+              <Link to="/my-trips" className="flex-1 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <User className="h-4 w-4" /> My Trips
+              </Link>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut}>
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <Link to="/auth" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <User className="h-4 w-4" /> Sign in
+            </Link>
+          )}
           <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <Compass className="h-4 w-4" /> Back to home
           </Link>
@@ -263,7 +309,17 @@ const Chat = () => {
               </Button>
             )}
             {hasMessages && (
-              <Button variant="ghost" size="icon" onClick={handleShare} className="h-9 w-9">
+              <Button variant="ghost" size="icon" onClick={handleSaveTrip} className="h-9 w-9" title="Save trip">
+                <Save className="h-4 w-4" />
+              </Button>
+            )}
+            {hasMessages && (
+              <Button variant="ghost" size="icon" onClick={handleExportPDF} className="h-9 w-9" title="Export PDF">
+                <Download className="h-4 w-4" />
+              </Button>
+            )}
+            {hasMessages && (
+              <Button variant="ghost" size="icon" onClick={handleShare} className="h-9 w-9" title="Share">
                 <Share2 className="h-4 w-4" />
               </Button>
             )}
@@ -355,7 +411,12 @@ const Chat = () => {
                               <TravelInfoCard info={parsed.travelInfo} />
                             )}
                             {parsed.weather && (
-                              <WeatherCard weather={parsed.weather} />
+                              <>
+                                <WeatherCard weather={parsed.weather} />
+                                {parsed.weather.packingTips && parsed.weather.packingTips.length > 0 && (
+                                  <PackingList items={parsed.weather.packingTips} />
+                                )}
+                              </>
                             )}
                             {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && (
                               <QuickReplies replies={parsed.quickReplies} onSelect={sendMessage} />

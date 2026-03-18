@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Compass, ArrowRight, Plane, MapPin, Sparkles, Hotel, Calendar } from "lucide-react";
+import { Compass, ArrowRight, Plane, MapPin, Sparkles, Hotel, Calendar, User } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import PricingSection from "@/components/PricingSection";
+import { useAuth } from "@/hooks/useAuth";
 
 const destinations = [
   { name: "Dubai", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop", tag: "Luxury & Adventure" },
@@ -19,6 +21,7 @@ const testimonials = [
 ];
 
 const Index = () => {
+  const { user } = useAuth();
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -33,12 +36,33 @@ const Index = () => {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link to="/chat">
-              <Button size="sm">
-                Start Planning
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
+            {user ? (
+              <>
+                <Link to="/my-trips">
+                  <Button variant="ghost" size="sm" className="gap-1">
+                    <User className="h-4 w-4" /> My Trips
+                  </Button>
+                </Link>
+                <Link to="/chat">
+                  <Button size="sm">
+                    Start Planning
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/auth">
+                  <Button variant="ghost" size="sm">Sign in</Button>
+                </Link>
+                <Link to="/chat">
+                  <Button size="sm">
+                    Start Planning
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </nav>
       </header>
@@ -127,6 +151,8 @@ const Index = () => {
             ))}
           </div>
         </section>
+
+        <PricingSection />
 
         {/* CTA */}
         <section className="container mx-auto px-4 py-20">

@@ -90,10 +90,10 @@ const ActivityDetailModal = ({
             </Button>
             <Button
               className="flex-1 gap-2"
-              onClick={() => window.open(`https://www.google.com/search?q=${searchQuery}+booking`, "_blank")}
+              onClick={() => window.open(`https://www.getyourguide.com/s/?q=${searchQuery}`, "_blank")}
             >
               <MapPin className="h-4 w-4" />
-              Find & Book
+              Book on GetYourGuide
               <ExternalLink className="h-3 w-3" />
             </Button>
           </div>
