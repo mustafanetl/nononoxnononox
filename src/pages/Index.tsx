@@ -36,12 +36,33 @@ const Index = () => {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link to="/chat">
-              <Button size="sm">
-                Start Planning
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
+            {user ? (
+              <>
+                <Link to="/my-trips">
+                  <Button variant="ghost" size="sm" className="gap-1">
+                    <User className="h-4 w-4" /> My Trips
+                  </Button>
+                </Link>
+                <Link to="/chat">
+                  <Button size="sm">
+                    Start Planning
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/auth">
+                  <Button variant="ghost" size="sm">Sign in</Button>
+                </Link>
+                <Link to="/chat">
+                  <Button size="sm">
+                    Start Planning
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </nav>
       </header>
