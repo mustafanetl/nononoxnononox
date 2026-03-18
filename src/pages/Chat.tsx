@@ -164,6 +164,33 @@ const Chat = () => {
     }
   };
 
+  const handleExportPDF = () => {
+    const title = conversations.find(c => c.id === activeId)?.title || "My Trip Plan";
+    exportTripPDF({ title, messages });
+    toast.success("PDF downloaded!");
+  };
+
+  const handleSaveTrip = async () => {
+    if (!user) {
+      toast.error("Sign in to save trips", { action: { label: "Sign in", onClick: () => window.location.href = "/auth" } });
+      return;
+    }
+    const convo = conversations.find(c => c.id === activeId);
+    if (!convo) return;
+
+    const { error } = await supabase.from("saved_trips").insert({
+      user_id: user.id,
+      title: convo.title,
+      data_json: { messages: convo.messages },
+    } as any);
+
+    if (error) {
+      toast.error("Failed to save trip");
+    } else {
+      toast.success("Trip saved to your account!");
+    }
+  };
+
   const suggestions = [
     "Plan a honeymoon in Bali",
     "Birthday trip to Tokyo",
