@@ -15,6 +15,7 @@ type SavedTrip = {
   status: string;
   created_at: string;
   updated_at: string;
+  data_json: any;
 };
 
 const statusColors: Record<string, string> = {
