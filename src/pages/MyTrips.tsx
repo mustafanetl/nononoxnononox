@@ -132,6 +132,23 @@ const MyTrips = () => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Continue planning"
+                      onClick={() => {
+                        const msgs = trip.data_json?.messages;
+                        if (msgs && Array.isArray(msgs) && msgs.length > 0) {
+                          openSavedTrip(trip.title, msgs);
+                          navigate("/chat");
+                        } else {
+                          navigate(`/chat?q=Continue planning my trip to ${trip.destination || trip.title}`);
+                        }
+                      }}
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => deleteTrip(trip.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />

@@ -210,6 +210,14 @@ export const useRzumaChat = () => {
     newChat();
   }, [newChat]);
 
+  const openSavedTrip = useCallback((title: string, savedMessages: Message[]) => {
+    const id = generateId();
+    const convo: Conversation = { id, title, messages: savedMessages, updatedAt: Date.now() };
+    setConversations(prev => [convo, ...prev]);
+    setActiveId(id);
+    setError(null);
+  }, []);
+
   return {
     messages,
     isLoading,
@@ -221,5 +229,6 @@ export const useRzumaChat = () => {
     newChat,
     switchChat,
     deleteChat,
+    openSavedTrip,
   };
 };

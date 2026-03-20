@@ -472,6 +472,7 @@ const Chat = () => {
                     rows={1}
                     className="flex-1 bg-transparent px-3 py-2 text-sm resize-none focus:outline-none min-h-[40px] max-h-[200px]"
                   />
+                  <VoiceInput onTranscript={(t) => setInput(prev => prev ? prev + " " + t : t)} disabled={isLoading} />
                   <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="h-9 w-9 rounded-lg shrink-0">
                     <ArrowUp className="h-4 w-4" />
                   </Button>
