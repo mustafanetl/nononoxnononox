@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
 import MyTrips from "./pages/MyTrips";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
