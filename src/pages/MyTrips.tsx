@@ -27,6 +27,7 @@ const MyTrips = () => {
   const [trips, setTrips] = useState<SavedTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { openSavedTrip } = useRzumaChat();
 
   useEffect(() => {
     const fetchTrips = async () => {
