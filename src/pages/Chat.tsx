@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut } from "lucide-react";
+import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { useAuth } from "@/hooks/useAuth";
 import FlightCard, { FlightData } from "@/components/FlightCard";
@@ -18,6 +18,9 @@ import WeatherCard, { WeatherData } from "@/components/WeatherCard";
 import QuickReplies from "@/components/QuickReplies";
 import ComparisonModal from "@/components/ComparisonModal";
 import PackingList from "@/components/PackingList";
+import VoiceInput from "@/components/VoiceInput";
+import CurrencyConverter from "@/components/CurrencyConverter";
+import TripMap, { type MapPoint } from "@/components/TripMap";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
 import { shareTripSummary } from "@/utils/tripSummary";
 import { exportTripPDF } from "@/utils/pdfExport";
@@ -408,8 +411,20 @@ const Chat = () => {
                               </HorizontalCarousel>
                             )}
                             {parsed.travelInfo && (
-                              <TravelInfoCard info={parsed.travelInfo} />
+                              <>
+                                <TravelInfoCard info={parsed.travelInfo} />
+                                {parsed.travelInfo.currency && (
+                                  <CurrencyConverter destinationCurrency={parsed.travelInfo.currency} />
+                                )}
+                              </>
                             )}
+                            {(parsed.hotels.length > 0 || parsed.activities.length > 0) && (() => {
+                              const mapPoints: MapPoint[] = [
+                                ...parsed.hotels.filter((h: any) => h.lat && h.lng).map((h: any) => ({ name: h.name, lat: h.lat, lng: h.lng, type: "hotel" as const })),
+                                ...parsed.activities.filter((a: any) => a.lat && a.lng).map((a: any) => ({ name: a.name, lat: a.lat, lng: a.lng, type: "activity" as const })),
+                              ];
+                              return mapPoints.length > 0 ? <TripMap points={mapPoints} /> : null;
+                            })()}
                             {parsed.weather && (
                               <>
                                 <WeatherCard weather={parsed.weather} />
@@ -469,6 +484,7 @@ const Chat = () => {
                     rows={1}
                     className="flex-1 bg-transparent px-3 py-2 text-sm resize-none focus:outline-none min-h-[40px] max-h-[200px]"
                   />
+                  <VoiceInput onTranscript={(t) => setInput(prev => prev ? prev + " " + t : t)} disabled={isLoading} />
                   <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="h-9 w-9 rounded-lg shrink-0">
                     <ArrowUp className="h-4 w-4" />
                   </Button>

@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Compass, Plus, MapPin, Calendar, Trash2, ArrowLeft } from "lucide-react";
+import { Compass, Plus, MapPin, Calendar, Trash2, ArrowLeft, Play } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { toast } from "sonner";
 
 type SavedTrip = {
@@ -14,6 +15,7 @@ type SavedTrip = {
   status: string;
   created_at: string;
   updated_at: string;
+  data_json: any;
 };
 
 const statusColors: Record<string, string> = {
@@ -26,12 +28,13 @@ const MyTrips = () => {
   const [trips, setTrips] = useState<SavedTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { openSavedTrip } = useRzumaChat();
 
   useEffect(() => {
     const fetchTrips = async () => {
       const { data, error } = await supabase
         .from("saved_trips")
-        .select("id, title, destination, occasion, status, created_at, updated_at")
+        .select("id, title, destination, occasion, status, created_at, updated_at, data_json")
         .order("updated_at", { ascending: false });
 
       if (error) {
@@ -125,6 +128,23 @@ const MyTrips = () => {
                     {new Date(trip.updated_at).toLocaleDateString()}
                   </span>
                   <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Continue planning"
+                      onClick={() => {
+                        const msgs = trip.data_json?.messages;
+                        if (msgs && Array.isArray(msgs) && msgs.length > 0) {
+                          openSavedTrip(trip.title, msgs);
+                          navigate("/chat");
+                        } else {
+                          navigate(`/chat?q=Continue planning my trip to ${trip.destination || trip.title}`);
+                        }
+                      }}
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
