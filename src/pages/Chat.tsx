@@ -411,8 +411,20 @@ const Chat = () => {
                               </HorizontalCarousel>
                             )}
                             {parsed.travelInfo && (
-                              <TravelInfoCard info={parsed.travelInfo} />
+                              <>
+                                <TravelInfoCard info={parsed.travelInfo} />
+                                {parsed.travelInfo.currency && (
+                                  <CurrencyConverter destinationCurrency={parsed.travelInfo.currency} />
+                                )}
+                              </>
                             )}
+                            {(parsed.hotels.length > 0 || parsed.activities.length > 0) && (() => {
+                              const mapPoints: MapPoint[] = [
+                                ...parsed.hotels.filter((h: any) => h.lat && h.lng).map((h: any) => ({ name: h.name, lat: h.lat, lng: h.lng, type: "hotel" as const })),
+                                ...parsed.activities.filter((a: any) => a.lat && a.lng).map((a: any) => ({ name: a.name, lat: a.lat, lng: a.lng, type: "activity" as const })),
+                              ];
+                              return mapPoints.length > 0 ? <TripMap points={mapPoints} /> : null;
+                            })()}
                             {parsed.weather && (
                               <>
                                 <WeatherCard weather={parsed.weather} />
