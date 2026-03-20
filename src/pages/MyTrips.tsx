@@ -34,7 +34,7 @@ const MyTrips = () => {
     const fetchTrips = async () => {
       const { data, error } = await supabase
         .from("saved_trips")
-        .select("id, title, destination, occasion, status, created_at, updated_at")
+        .select("id, title, destination, occasion, status, created_at, updated_at, data_json")
         .order("updated_at", { ascending: false });
 
       if (error) {
