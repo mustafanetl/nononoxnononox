@@ -21,6 +21,7 @@ import PackingList from "@/components/PackingList";
 import VoiceInput from "@/components/VoiceInput";
 import CurrencyConverter from "@/components/CurrencyConverter";
 import TripMap, { type MapPoint } from "@/components/TripMap";
+import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
 import { shareTripSummary } from "@/utils/tripSummary";
 import { exportTripPDF } from "@/utils/pdfExport";
@@ -360,6 +361,14 @@ const Chat = () => {
 
                   const isLastAssistant = msg.role === "assistant" && i === messages.length - 1;
 
+                  // Determine if this is a "full trip plan" (has multiple card types)
+                  const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0].filter(Boolean).length;
+                  const isFullPlan = cardTypeCount >= 2;
+                  const destination = parsed.travelInfo?.destination
+                    || parsed.flights[0]?.cityImage
+                    || parsed.hotels[0]?.location?.split(",")[0]
+                    || "";
+
                   return (
                     <div key={i} className="animate-fade-in">
                       {msg.role === "user" ? (
@@ -379,60 +388,65 @@ const Chat = () => {
                                 <ReactMarkdown>{parsed.text}</ReactMarkdown>
                               </div>
                             )}
-                            {parsed.timeline.length > 0 && (
-                              <TripTimeline legs={parsed.timeline} />
-                            )}
-                            {parsed.flights.length > 0 && (
-                              <HorizontalCarousel>
-                                {parsed.flights.map((f, idx) => (
-                                  <FlightCard key={f.id || idx} flight={f} onClick={() => handleFlightClick(f)} />
-                                ))}
-                              </HorizontalCarousel>
-                            )}
-                            {parsed.hotels.length > 0 && (
-                              <HorizontalCarousel>
-                                {parsed.hotels.map((h, idx) => (
-                                  <HotelCard key={h.id || idx} hotel={h} onClick={() => handleHotelClick(h)} />
-                                ))}
-                              </HorizontalCarousel>
-                            )}
-                            {parsed.activities.length > 0 && (
-                              <HorizontalCarousel>
-                                {parsed.activities.map((a, idx) => (
-                                  <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a)} />
-                                ))}
-                              </HorizontalCarousel>
-                            )}
-                            {parsed.itinerary.length > 0 && (
-                              <HorizontalCarousel>
-                                {parsed.itinerary.map((item, idx) => (
-                                  <ItineraryCard key={idx} item={item} />
-                                ))}
-                              </HorizontalCarousel>
-                            )}
-                            {parsed.travelInfo && (
+
+                            {/* Full plan → show summary card; otherwise show inline cards */}
+                            {isFullPlan && destination ? (
+                              <TripSummaryCard
+                                data={parsed as TripPlanData}
+                                destination={destination}
+                              />
+                            ) : (
                               <>
-                                <TravelInfoCard info={parsed.travelInfo} />
-                                {parsed.travelInfo.currency && (
-                                  <CurrencyConverter destinationCurrency={parsed.travelInfo.currency} />
+                                {parsed.timeline.length > 0 && (
+                                  <TripTimeline legs={parsed.timeline} />
+                                )}
+                                {parsed.flights.length > 0 && (
+                                  <HorizontalCarousel>
+                                    {parsed.flights.map((f, idx) => (
+                                      <FlightCard key={f.id || idx} flight={f} onClick={() => handleFlightClick(f)} />
+                                    ))}
+                                  </HorizontalCarousel>
+                                )}
+                                {parsed.hotels.length > 0 && (
+                                  <HorizontalCarousel>
+                                    {parsed.hotels.map((h, idx) => (
+                                      <HotelCard key={h.id || idx} hotel={h} onClick={() => handleHotelClick(h)} />
+                                    ))}
+                                  </HorizontalCarousel>
+                                )}
+                                {parsed.activities.length > 0 && (
+                                  <HorizontalCarousel>
+                                    {parsed.activities.map((a, idx) => (
+                                      <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a)} />
+                                    ))}
+                                  </HorizontalCarousel>
+                                )}
+                                {parsed.itinerary.length > 0 && (
+                                  <HorizontalCarousel>
+                                    {parsed.itinerary.map((item, idx) => (
+                                      <ItineraryCard key={idx} item={item} />
+                                    ))}
+                                  </HorizontalCarousel>
+                                )}
+                                {parsed.travelInfo && (
+                                  <>
+                                    <TravelInfoCard info={parsed.travelInfo} />
+                                    {parsed.travelInfo.currency && (
+                                      <CurrencyConverter destinationCurrency={parsed.travelInfo.currency} />
+                                    )}
+                                  </>
+                                )}
+                                {parsed.weather && (
+                                  <>
+                                    <WeatherCard weather={parsed.weather} />
+                                    {parsed.weather.packingTips && parsed.weather.packingTips.length > 0 && (
+                                      <PackingList items={parsed.weather.packingTips} />
+                                    )}
+                                  </>
                                 )}
                               </>
                             )}
-                            {(parsed.hotels.length > 0 || parsed.activities.length > 0) && (() => {
-                              const mapPoints: MapPoint[] = [
-                                ...parsed.hotels.filter((h: any) => h.lat && h.lng).map((h: any) => ({ name: h.name, lat: h.lat, lng: h.lng, type: "hotel" as const })),
-                                ...parsed.activities.filter((a: any) => a.lat && a.lng).map((a: any) => ({ name: a.name, lat: a.lat, lng: a.lng, type: "activity" as const })),
-                              ];
-                              return mapPoints.length > 0 ? <TripMap points={mapPoints} /> : null;
-                            })()}
-                            {parsed.weather && (
-                              <>
-                                <WeatherCard weather={parsed.weather} />
-                                {parsed.weather.packingTips && parsed.weather.packingTips.length > 0 && (
-                                  <PackingList items={parsed.weather.packingTips} />
-                                )}
-                              </>
-                            )}
+
                             {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && (
                               <QuickReplies replies={parsed.quickReplies} onSelect={sendMessage} />
                             )}

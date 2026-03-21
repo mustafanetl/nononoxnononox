@@ -10,6 +10,7 @@ import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
 import MyTrips from "./pages/MyTrips";
 import ResetPassword from "./pages/ResetPassword";
+import TripDetail from "./pages/TripDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/my-trips" element={<MyTrips />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/trip/view" element={<TripDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -33,7 +33,7 @@ const HotelCard = ({ hotel, onClick }: { hotel: HotelData; onClick: () => void }
       <div className="relative h-36">
         <img src={imgUrl} alt={hotel.name} className="w-full h-full object-cover" />
         <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-bold">
-          {hotel.currency}{hotel.pricePerNight}/night
+          from ~{hotel.currency}{hotel.pricePerNight}/night
         </div>
       </div>
       <div className="p-3 space-y-1.5">
