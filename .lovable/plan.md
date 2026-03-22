@@ -1,70 +1,41 @@
 
 
-# Redesign Trip Display & Improve Data Accuracy
+# Redesign Trip Detail Page
 
 ## Problem
-1. Trip results in chat are cluttered -- too many cards dumped inline (flights, hotels, activities, weather, etc.)
-2. Flight prices and details are fabricated by the AI with no grounding in reality
+The Trip Detail page is boring -- it's just plain cards in tabs with generic travel info (visa, weather, currency converter) that feels like filler. Nothing actionable, nothing that makes users want to pay.
 
-## Solution
+## What Changes
 
-### 1. Trip Summary Card in Chat
-Instead of showing every card inline, show a **single clickable "Trip Summary" card** in the chat that summarizes the plan at a glance, then navigates to a **dedicated Trip Detail page** with all the information organized in tabs.
+### 1. Beautiful Hero Header with Quick Stats
+Replace the plain text header with a full-width destination hero image, gradient overlay, and key trip stats (dates, budget estimate, number of days). Add Save, Export PDF, and Share buttons right in the hero.
 
-**Trip Summary Card** (shown in chat):
-- Destination name + hero image
-- Trip dates, occasion badge
-- Quick stats: X flights found, X hotels, X activities
-- "View Full Plan →" button
+### 2. Kill the "Overview" Tab -- Merge Useful Bits, Remove Filler
+- Remove the standalone TravelInfoCard and WeatherCard as separate sections (they're boring walls of text)
+- Instead, show a **compact info strip** at the top: weather icon + temp, currency, timezone -- one line, glanceable
+- Move the map to be always visible at the top (not buried in a tab)
+- Remove CurrencyConverter from the detail page (it's a utility, not a trip plan feature)
+- Remove PackingList from this page (move to PDF export only)
 
-**Trip Detail Page** (`/trip/:id` or generated from chat data):
-- Tabbed layout: Overview | Flights | Hotels | Activities | Itinerary | Info
-- Each tab shows the relevant cards in a clean grid
-- Weather, packing list, travel info in the Overview tab
-- Map view showing all points of interest
-- Export/Save/Share buttons in the header
+### 3. Redesign Flight/Hotel/Activity Cards for the Detail Page
+Make the cards wider and more informative on this page (not the tiny 260px chat cards):
+- **Flights**: Full-width cards with prominent "Search on Skyscanner" button, showing route visually
+- **Hotels**: Larger cards with description visible, "Check on Booking.com" button prominent
+- **Activities**: Show description, duration, price, and "Find on GetYourGuide" button
 
-### 2. Improve Data Accuracy
-The AI currently invents prices and flight details. Fix this by:
+### 4. Better Itinerary -- Visual Timeline
+Replace the grid of itinerary cards with a **vertical timeline** layout. Each day flows into the next with connecting lines, time-of-day icons, and expandable details.
 
-- **Update the system prompt** to explicitly tell the AI to use realistic, approximate price ranges based on common knowledge (e.g., "Economy JFK→DXB typically $600-$1200") and add a disclaimer on every price
-- **Add "Prices are approximate" disclaimers** on all cards
-- **Add real booking links** that pre-fill actual search engines (Skyscanner, Booking.com, GetYourGuide) so users see real prices with one click
-- **Label prices as "from ~$X"** instead of exact amounts to set correct expectations
+### 5. Estimated Budget Summary
+Add a budget breakdown section showing:
+- Total estimated cost (flights + hotels x nights + activities)
+- Per-category breakdown with visual bars
+- "This is an estimate" disclaimer
 
-### Files to Create
-- `src/pages/TripDetail.tsx` -- full-page trip view with tabs
-- `src/components/TripSummaryCard.tsx` -- compact card shown in chat
+### 6. Actionable Buttons Throughout
+- Every card gets a prominent booking link button
+- "Save This Trip" button in header (persists to database)
+- "Export PDF" button that generates a polished PDF of this specific trip
+- "Share" copies a formatted summary
 
-### Files to Modify
-- `src/pages/Chat.tsx` -- replace inline card dumps with TripSummaryCard, store parsed trip data for navigation
-- `src/App.tsx` -- add `/trip/:id` route
-- `supabase/functions/rzuma-chat/index.ts` -- update system prompt for realistic pricing, add disclaimers, add "from" prefix on prices
-- `src/components/FlightCard.tsx` -- show "from ~$X" and add "Book on Skyscanner" link
-- `src/components/HotelCard.tsx` -- show "from ~$X/night" and add "Book on Booking.com" link
-- `src/components/ActivityCard.tsx` -- show "from ~$X" and add "Book on GetYourGuide" link
-
-### How the New Flow Works
-
-```text
-User: "Plan a honeymoon in Bali"
-
-Chat shows:
-┌─────────────────────────────┐
-│  🌴 Bali, Indonesia        │
-│  Honeymoon · 7 days        │
-│  3 flights · 3 hotels      │
-│  4 activities               │
-│                             │
-│  [View Full Plan →]         │
-└─────────────────────────────┘
-
-Click → /trip/abc123
-
-┌─ Overview ─ Flights ─ Hotels ─ Activities ─ Itinerary ─┐
-│                                                          │
-│  Weather card, travel info, map, packing list            │
-│  (or flight cards, hotel cards, etc. per tab)            │
-└──────────────────────────────────────────────────────────┘
-```
-
+## Files
