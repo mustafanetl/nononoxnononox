@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Download, Share2, Plane, Hotel, Sparkles,
   MapPin, Clock, Sun, Banknote, Globe, CalendarDays,
-  ExternalLink, Star, Bookmark, ChevronRight
+  ExternalLink, Star, Bookmark, ChevronRight, Trophy, TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import FlightDetailModal from "@/components/FlightDetailModal";
 import HotelDetailModal from "@/components/HotelDetailModal";
 import ActivityDetailModal from "@/components/ActivityDetailModal";
@@ -59,6 +60,155 @@ const activityImageMap: Record<string, string> = {
   default: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=250&fit=crop",
 };
 
+// Trip Score calculation
+const calcTripScore = (data: TripPlanData): { score: number; tips: string[] } => {
+  let score = 0;
+  const tips: string[] = [];
+
+  if (data.flights.length > 0) { score += 20; } else { tips.push("Add flights to boost your score"); }
+  if (data.hotels.length > 0) { score += 20; } else { tips.push("Add hotels for a complete plan"); }
+  if (data.activities.length > 0) { score += 15; } else { tips.push("Add activities for more fun"); }
+  if (data.activities.length >= 3) { score += 5; }
+  if (data.itinerary.length > 0) { score += 20; } else { tips.push("Add a day-by-day itinerary"); }
+  if (data.itinerary.length >= 5) { score += 10; } else if (data.itinerary.length > 0) { tips.push("Plan 5+ days for a thorough trip"); }
+  if (data.travelInfo) { score += 10; }
+
+  return { score: Math.min(score, 100), tips };
+};
+
+// Donut Chart SVG Component
+const BudgetDonut = ({
+  segments,
+  currency,
+  total,
+}: {
+  segments: { label: string; value: number; color: string; icon: React.ElementType }[];
+  currency: string;
+  total: number;
+}) => {
+  const radius = 70;
+  const circumference = 2 * Math.PI * radius;
+  let cumulativeOffset = 0;
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-6">
+      <div className="relative w-[180px] h-[180px] shrink-0">
+        <svg viewBox="0 0 180 180" className="w-full h-full -rotate-90">
+          {segments.filter(s => s.value > 0).map((seg, i) => {
+            const pct = seg.value / total;
+            const dashLength = pct * circumference;
+            const offset = cumulativeOffset;
+            cumulativeOffset += dashLength;
+
+            return (
+              <circle
+                key={seg.label}
+                cx="90"
+                cy="90"
+                r={radius}
+                fill="none"
+                stroke={seg.color}
+                strokeWidth="14"
+                strokeDasharray={`${dashLength} ${circumference - dashLength}`}
+                strokeDashoffset={-offset}
+                strokeLinecap="round"
+                className="animate-ring-fill"
+                style={{
+                  "--ring-circumference": circumference,
+                  "--ring-offset": circumference - dashLength,
+                  animationDelay: `${i * 200}ms`,
+                } as React.CSSProperties}
+              />
+            );
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-xs text-muted-foreground">Total</span>
+          <span className="text-lg font-bold text-foreground animate-count-up">
+            ~{currency}{total.toLocaleString()}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 flex-1">
+        {segments.filter(s => s.value > 0).map((seg) => {
+          const Icon = seg.icon;
+          return (
+            <div key={seg.label} className="flex items-center gap-3 animate-count-up">
+              <div
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{ backgroundColor: seg.color }}
+              />
+              <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-sm text-foreground flex-1">{seg.label}</span>
+              <span className="text-sm font-semibold text-foreground">
+                ~{currency}{seg.value.toLocaleString()}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Trip Score Ring
+const TripScoreRing = ({ score, tips }: { score: number; tips: string[] }) => {
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color =
+    score >= 80 ? "hsl(142, 76%, 36%)" :
+    score >= 50 ? "hsl(38, 92%, 50%)" :
+    "hsl(0, 84%, 60%)";
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="relative w-[68px] h-[68px] cursor-help shrink-0">
+            <svg viewBox="0 0 68 68" className="w-full h-full -rotate-90">
+              <circle cx="34" cy="34" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="5" />
+              <circle
+                cx="34"
+                cy="34"
+                r={radius}
+                fill="none"
+                stroke={color}
+                strokeWidth="5"
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+                className="animate-ring-fill"
+                style={{
+                  "--ring-circumference": circumference,
+                  "--ring-offset": offset,
+                } as React.CSSProperties}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-sm font-bold text-foreground">{score}</span>
+              <span className="text-[8px] text-muted-foreground">score</span>
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-[200px]">
+          <p className="font-semibold text-xs mb-1">Trip Score</p>
+          {tips.length > 0 ? (
+            <ul className="text-xs text-muted-foreground space-y-0.5">
+              {tips.map((t, i) => (
+                <li key={i}>• {t}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground">Your trip plan looks great!</p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 const TripDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -70,6 +220,10 @@ const TripDetail = () => {
   const [selectedActivity, setSelectedActivity] = useState<ActivityData | null>(null);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeDay, setActiveDay] = useState<number | null>(null);
+  const [focusedCard, setFocusedCard] = useState<string | null>(null);
+
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     const raw = sessionStorage.getItem("rzuma-trip-detail");
@@ -79,22 +233,44 @@ const TripDetail = () => {
     } else { navigate("/chat"); }
   }, [navigate]);
 
+  // Clear focus effect after animation
+  useEffect(() => {
+    if (focusedCard) {
+      const timer = setTimeout(() => setFocusedCard(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [focusedCard]);
+
+  const scrollToCard = useCallback((name: string) => {
+    const el = cardRefs.current[name];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setFocusedCard(name);
+    }
+  }, []);
+
   if (!tripData) return null;
   const { data, destination } = tripData;
 
+  // Assign days to map points based on itinerary (heuristic)
   const mapPoints: MapPoint[] = [
-    ...data.hotels.filter((h: any) => h.lat && h.lng).map((h: any) => ({ name: h.name, lat: h.lat, lng: h.lng, type: "hotel" as const })),
-    ...data.activities.filter((a: any) => a.lat && a.lng).map((a: any) => ({ name: a.name, lat: a.lat, lng: a.lng, type: "activity" as const })),
+    ...data.hotels.filter((h: any) => h.lat && h.lng).map((h: any) => ({
+      name: h.name, lat: h.lat, lng: h.lng, type: "hotel" as const, day: 1,
+    })),
+    ...data.activities.filter((a: any) => a.lat && a.lng).map((a: any, i: number) => ({
+      name: a.name, lat: a.lat, lng: a.lng, type: "activity" as const,
+      day: data.itinerary.length > 0 ? ((i % data.itinerary.length) + 1) : undefined,
+    })),
   ];
 
-  // Budget calculation
   const days = data.itinerary.length || 1;
   const flightsCost = data.flights.reduce((s, f) => s + f.price, 0);
   const hotelsCost = data.hotels.reduce((s, h) => s + h.pricePerNight * days, 0);
   const activitiesCost = data.activities.reduce((s, a) => s + a.price, 0);
   const totalBudget = flightsCost + hotelsCost + activitiesCost;
   const currency = data.flights[0]?.currency || data.hotels[0]?.currency || data.activities[0]?.currency || "$";
-  const maxCost = Math.max(flightsCost, hotelsCost, activitiesCost, 1);
+
+  const { score: tripScore, tips: tripTips } = calcTripScore(data);
 
   const handleShare = async () => {
     try {
@@ -125,6 +301,10 @@ const TripDetail = () => {
     finally { setSaving(false); }
   };
 
+  const handleDayClick = (day: number) => {
+    setActiveDay((prev) => (prev === day ? null : day));
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero */}
@@ -132,68 +312,108 @@ const TripDetail = () => {
         <img src={getHeroImage(destination)} alt={destination} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
 
-        {/* Back button */}
         <div className="absolute top-4 left-4">
-          <Button variant="glass" size="icon" onClick={() => navigate("/chat")} className="rounded-full">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/chat")} className="rounded-full bg-background/50 backdrop-blur-sm hover:bg-background/80">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Hero content */}
         <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-8 pb-6">
           <div className="max-w-3xl mx-auto">
-            <div className="flex items-center gap-2 mb-1">
-              <MapPin className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Trip</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">{destination}</h1>
+            <div className="flex items-end justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Trip</span>
+                </div>
+                <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">{destination}</h1>
 
-            {/* Quick Stats */}
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              {data.itinerary.length > 0 && (
-                <span className="flex items-center gap-1.5 text-xs bg-secondary/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-foreground">
-                  <CalendarDays className="h-3 w-3" /> {data.itinerary.length} days
-                </span>
-              )}
-              {totalBudget > 0 && (
-                <span className="flex items-center gap-1.5 text-xs bg-secondary/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-foreground">
-                  <Banknote className="h-3 w-3" /> ~{currency}{totalBudget.toLocaleString()} est.
-                </span>
-              )}
-              {data.weather && (
-                <span className="flex items-center gap-1.5 text-xs bg-secondary/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-foreground">
-                  <Sun className="h-3 w-3" /> {data.weather.tempLow}°–{data.weather.tempHigh}°C
-                </span>
-              )}
-              {data.travelInfo?.currency && (
-                <span className="flex items-center gap-1.5 text-xs bg-secondary/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-foreground">
-                  <Globe className="h-3 w-3" /> {data.travelInfo.currency}
-                </span>
-              )}
-            </div>
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  {data.itinerary.length > 0 && (
+                    <span className="flex items-center gap-1.5 text-xs bg-secondary/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-foreground">
+                      <CalendarDays className="h-3 w-3" /> {data.itinerary.length} days
+                    </span>
+                  )}
+                  {totalBudget > 0 && (
+                    <span className="flex items-center gap-1.5 text-xs bg-secondary/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-foreground">
+                      <Banknote className="h-3 w-3" /> ~{currency}{totalBudget.toLocaleString()}
+                    </span>
+                  )}
+                  {data.weather && (
+                    <span className="flex items-center gap-1.5 text-xs bg-secondary/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-foreground">
+                      <Sun className="h-3 w-3" /> {data.weather.tempLow}°–{data.weather.tempHigh}°C
+                    </span>
+                  )}
+                </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
-                <Bookmark className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Trip"}
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-1.5">
-                <Download className="h-3.5 w-3.5" /> Export PDF
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleShare} className="gap-1.5">
-                <Share2 className="h-3.5 w-3.5" /> Share
-              </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
+                    <Bookmark className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Trip"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-1.5">
+                    <Download className="h-3.5 w-3.5" /> PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleShare} className="gap-1.5">
+                    <Share2 className="h-3.5 w-3.5" /> Share
+                  </Button>
+                </div>
+              </div>
+
+              {/* Trip Score */}
+              <TripScoreRing score={tripScore} tips={tripTips} />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Sticky Day Selector */}
+      {data.itinerary.length > 0 && (
+        <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border">
+          <div className="max-w-3xl mx-auto px-4 sm:px-8">
+            <div className="flex items-center gap-2 py-3 overflow-x-auto scrollbar-hide">
+              <Button
+                variant={activeDay === null ? "default" : "outline"}
+                size="sm"
+                className="shrink-0 rounded-full text-xs h-8 px-4 transition-all"
+                onClick={() => setActiveDay(null)}
+              >
+                All Days
+              </Button>
+              {data.itinerary.map((item) => (
+                <Button
+                  key={item.day}
+                  variant={activeDay === item.day ? "default" : "outline"}
+                  size="sm"
+                  className={`shrink-0 rounded-full text-xs h-8 px-4 transition-all ${
+                    activeDay === item.day ? "scale-105" : ""
+                  }`}
+                  onClick={() => handleDayClick(item.day)}
+                >
+                  Day {item.day}
+                </Button>
+              ))}
+            </div>
+            {/* Progress bar */}
+            <div className="h-0.5 bg-secondary rounded-full mb-1 overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: activeDay
+                    ? `${(activeDay / data.itinerary.length) * 100}%`
+                    : "100%",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8 space-y-10">
 
         {/* Info Strip */}
         {data.travelInfo && (
-          <div className="flex flex-wrap gap-4 p-4 rounded-2xl bg-card border border-border">
+          <div className="flex flex-wrap gap-4 p-4 rounded-2xl bg-card border border-border animate-stagger-in">
             {[
               { icon: Globe, label: "Visa", value: data.travelInfo.visa },
               { icon: Banknote, label: "Currency", value: data.travelInfo.currency },
@@ -209,12 +429,18 @@ const TripDetail = () => {
           </div>
         )}
 
-        {/* Map */}
-        {mapPoints.length > 0 && <TripMap points={mapPoints} />}
+        {/* Interactive Map */}
+        {mapPoints.length > 0 && (
+          <TripMap
+            points={mapPoints}
+            activeDay={activeDay}
+            onMarkerClick={scrollToCard}
+          />
+        )}
 
         {/* Flights */}
         {data.flights.length > 0 && (
-          <section>
+          <section className="animate-stagger-in" style={{ animationDelay: "100ms" }}>
             <div className="flex items-center gap-2 mb-4">
               <Plane className="h-5 w-5 text-foreground" />
               <h2 className="text-lg font-bold text-foreground">Flights</h2>
@@ -224,11 +450,15 @@ const TripDetail = () => {
               {data.flights.map((f, i) => (
                 <div
                   key={f.id || i}
-                  className="group relative p-4 rounded-2xl bg-card border border-border hover:border-foreground/20 transition-all cursor-pointer"
+                  ref={(el) => { cardRefs.current[f.airline + f.from + f.to] = el; }}
+                  className={`group relative p-4 rounded-2xl bg-card border transition-all duration-300 cursor-pointer hover:shadow-lg hover:scale-[1.01] ${
+                    focusedCard === f.airline + f.from + f.to
+                      ? "border-primary animate-glow-pulse"
+                      : "border-border hover:border-foreground/20"
+                  }`}
                   onClick={() => { setSelectedFlight(f); setFlightModalOpen(true); }}
                 >
                   <div className="flex items-center justify-between gap-4">
-                    {/* Route */}
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                       <div className="text-center shrink-0">
                         <p className="text-lg font-bold text-foreground">{f.departureTime}</p>
@@ -253,14 +483,12 @@ const TripDetail = () => {
                       </div>
                     </div>
 
-                    {/* Price + Airline */}
                     <div className="text-right shrink-0">
                       <p className="text-lg font-bold text-foreground">~{f.currency}{f.price}</p>
                       <p className="text-xs text-muted-foreground">{f.airline}</p>
                     </div>
                   </div>
 
-                  {/* Book button */}
                   <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">{f.date}</span>
                     <a
@@ -281,7 +509,7 @@ const TripDetail = () => {
 
         {/* Hotels */}
         {data.hotels.length > 0 && (
-          <section>
+          <section className="animate-stagger-in" style={{ animationDelay: "200ms" }}>
             <div className="flex items-center gap-2 mb-4">
               <Hotel className="h-5 w-5 text-foreground" />
               <h2 className="text-lg font-bold text-foreground">Hotels</h2>
@@ -291,11 +519,16 @@ const TripDetail = () => {
               {data.hotels.map((h, i) => (
                 <div
                   key={h.id || i}
-                  className="group rounded-2xl bg-card border border-border overflow-hidden hover:border-foreground/20 transition-all cursor-pointer"
+                  ref={(el) => { cardRefs.current[h.name] = el; }}
+                  className={`group rounded-2xl bg-card border overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-lg hover:scale-[1.02] ${
+                    focusedCard === h.name
+                      ? "border-primary animate-glow-pulse"
+                      : "border-border hover:border-foreground/20"
+                  }`}
                   onClick={() => { setSelectedHotel(h); setHotelModalOpen(true); }}
                 >
-                  <div className="relative h-40">
-                    <img src={getHotelImage(h.image)} alt={h.name} className="w-full h-full object-cover" />
+                  <div className="relative h-40 overflow-hidden">
+                    <img src={getHotelImage(h.image)} alt={h.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                     <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-background/80 backdrop-blur-sm text-xs font-bold">
                       ~{h.currency}{h.pricePerNight}/night
                     </div>
@@ -331,7 +564,7 @@ const TripDetail = () => {
 
         {/* Activities */}
         {data.activities.length > 0 && (
-          <section>
+          <section className="animate-stagger-in" style={{ animationDelay: "300ms" }}>
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="h-5 w-5 text-foreground" />
               <h2 className="text-lg font-bold text-foreground">Activities</h2>
@@ -341,11 +574,16 @@ const TripDetail = () => {
               {data.activities.map((a, i) => (
                 <div
                   key={a.id || i}
-                  className="group rounded-2xl bg-card border border-border overflow-hidden hover:border-foreground/20 transition-all cursor-pointer"
+                  ref={(el) => { cardRefs.current[a.name] = el; }}
+                  className={`group rounded-2xl bg-card border overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-lg hover:scale-[1.02] ${
+                    focusedCard === a.name
+                      ? "border-primary animate-glow-pulse"
+                      : "border-border hover:border-foreground/20"
+                  }`}
                   onClick={() => { setSelectedActivity(a); setActivityModalOpen(true); }}
                 >
-                  <div className="relative h-36">
-                    <img src={activityImageMap[a.image] || activityImageMap.default} alt={a.name} className="w-full h-full object-cover" />
+                  <div className="relative h-36 overflow-hidden">
+                    <img src={activityImageMap[a.image] || activityImageMap.default} alt={a.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                   </div>
                   <div className="p-4 space-y-2">
                     <h3 className="font-bold text-foreground">{a.name}</h3>
@@ -374,52 +612,41 @@ const TripDetail = () => {
 
         {/* Itinerary Timeline */}
         {data.itinerary.length > 0 && (
-          <section>
+          <section className="animate-stagger-in" style={{ animationDelay: "400ms" }}>
             <div className="flex items-center gap-2 mb-4">
               <CalendarDays className="h-5 w-5 text-foreground" />
               <h2 className="text-lg font-bold text-foreground">Day-by-Day Itinerary</h2>
             </div>
-            <ItineraryTimeline items={data.itinerary} />
+            <ItineraryTimeline
+              items={activeDay ? data.itinerary.filter((it) => it.day === activeDay) : data.itinerary}
+              activeDay={activeDay}
+              onDayClick={handleDayClick}
+            />
           </section>
         )}
 
-        {/* Budget Breakdown */}
+        {/* Budget Donut */}
         {totalBudget > 0 && (
-          <section className="p-5 rounded-2xl bg-card border border-border">
-            <h2 className="text-lg font-bold text-foreground mb-4">Estimated Budget</h2>
-            <div className="space-y-3">
-              {[
-                { label: "Flights", cost: flightsCost, icon: Plane },
-                { label: `Hotels (${days} nights)`, cost: hotelsCost, icon: Hotel },
-                { label: "Activities", cost: activitiesCost, icon: Sparkles },
-              ].map(({ label, cost, icon: Icon }) => cost > 0 && (
-                <div key={label} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 text-muted-foreground">
-                      <Icon className="h-3.5 w-3.5" /> {label}
-                    </span>
-                    <span className="font-medium text-foreground">~{currency}{cost.toLocaleString()}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${(cost / maxCost) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-              <div className="flex items-center justify-between pt-3 border-t border-border">
-                <span className="font-bold text-foreground">Total Estimate</span>
-                <span className="text-xl font-bold text-foreground">~{currency}{totalBudget.toLocaleString()}</span>
-              </div>
+          <section className="p-6 rounded-2xl bg-card border border-border animate-stagger-in" style={{ animationDelay: "500ms" }}>
+            <div className="flex items-center gap-2 mb-6">
+              <TrendingUp className="h-5 w-5 text-foreground" />
+              <h2 className="text-lg font-bold text-foreground">Estimated Budget</h2>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-3">
-              Prices are approximate estimates based on typical ranges. Verify on booking sites before purchasing.
+            <BudgetDonut
+              segments={[
+                { label: "Flights", value: flightsCost, color: "hsl(221, 83%, 53%)", icon: Plane },
+                { label: `Hotels (${days}n)`, value: hotelsCost, color: "hsl(142, 76%, 36%)", icon: Hotel },
+                { label: "Activities", value: activitiesCost, color: "hsl(38, 92%, 50%)", icon: Sparkles },
+              ]}
+              currency={currency}
+              total={totalBudget}
+            />
+            <p className="text-[10px] text-muted-foreground mt-4">
+              Prices are approximate estimates. Verify on booking sites before purchasing.
             </p>
           </section>
         )}
 
-        {/* Footer */}
         <p className="text-xs text-muted-foreground text-center py-4">
           Generated by Rzuma • All prices are approximate estimates
         </p>

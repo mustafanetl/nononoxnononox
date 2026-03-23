@@ -6,13 +6,20 @@ type MapPoint = {
   lat: number;
   lng: number;
   type: "hotel" | "activity";
+  day?: number;
 };
 
-type Props = { points: MapPoint[] };
+type Props = {
+  points: MapPoint[];
+  activeDay?: number | null;
+  onMarkerClick?: (name: string) => void;
+};
 
-const TripMap = ({ points }: Props) => {
+const TripMap = ({ points, activeDay, onMarkerClick }: Props) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const polylineRef = useRef<any>(null);
 
   useEffect(() => {
     if (!mapRef.current || points.length === 0) return;
@@ -25,30 +32,19 @@ const TripMap = ({ points }: Props) => {
         mapInstanceRef.current.remove();
       }
 
-      const map = L.map(mapRef.current!, { zoomControl: false }).setView([points[0].lat, points[0].lng], 13);
+      const map = L.map(mapRef.current!, { zoomControl: false }).setView(
+        [points[0].lat, points[0].lng],
+        13
+      );
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '© OpenStreetMap',
-      }).addTo(map);
-
-      const bounds = L.latLngBounds([]);
-
-      points.forEach(p => {
-        const icon = L.divIcon({
-          className: "",
-          html: `<div style="background:${p.type === "hotel" ? "hsl(0,0%,9%)" : "hsl(0,84%,60%)"};color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)">${p.type === "hotel" ? "🏨" : "🎯"}</div>`,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14],
-        });
-
-        L.marker([p.lat, p.lng], { icon }).addTo(map).bindPopup(`<b>${p.name}</b><br/>${p.type}`);
-        bounds.extend([p.lat, p.lng]);
-      });
-
-      if (points.length > 1) map.fitBounds(bounds, { padding: [30, 30] });
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        { attribution: '© OpenStreetMap © CARTO' }
+      ).addTo(map);
 
       mapInstanceRef.current = map;
+      updateMarkers(L, map);
     };
 
     loadMap();
@@ -56,19 +52,105 @@ const TripMap = ({ points }: Props) => {
     return () => {
       mapInstanceRef.current?.remove();
       mapInstanceRef.current = null;
+      markersRef.current = [];
     };
   }, [points]);
+
+  // Update markers when activeDay changes
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    const updateAsync = async () => {
+      const L = await import("leaflet");
+      updateMarkers(L, mapInstanceRef.current);
+    };
+    updateAsync();
+  }, [activeDay, points]);
+
+  const updateMarkers = (L: any, map: any) => {
+    // Clear existing markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+    if (polylineRef.current) {
+      polylineRef.current.remove();
+      polylineRef.current = null;
+    }
+
+    const filtered =
+      activeDay != null
+        ? points.filter((p) => p.day === activeDay)
+        : points;
+
+    if (filtered.length === 0) return;
+
+    const bounds = L.latLngBounds([]);
+
+    filtered.forEach((p, idx) => {
+      const isActive = activeDay != null;
+      const size = isActive ? 34 : 28;
+      const icon = L.divIcon({
+        className: "",
+        html: `<div class="${isActive ? "animate-pin-bounce" : ""}" style="background:${
+          p.type === "hotel"
+            ? "hsl(var(--primary))"
+            : "hsl(var(--destructive))"
+        };color:white;width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${isActive ? 16 : 14}px;border:2.5px solid white;box-shadow:0 3px 12px rgba(0,0,0,0.25);transition:all 0.3s ease">${
+          p.type === "hotel" ? "🏨" : "🎯"
+        }</div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+      });
+
+      const marker = L.marker([p.lat, p.lng], { icon })
+        .addTo(map)
+        .bindPopup(
+          `<div style="font-family:Inter,sans-serif;padding:2px 0"><b style="font-size:13px">${p.name}</b><br/><span style="font-size:11px;opacity:0.7">${p.type}${p.day ? ` • Day ${p.day}` : ""}</span></div>`
+        );
+
+      marker.on("click", () => {
+        onMarkerClick?.(p.name);
+      });
+
+      markersRef.current.push(marker);
+      bounds.extend([p.lat, p.lng]);
+    });
+
+    // Draw polyline connecting points in order
+    if (filtered.length > 1) {
+      const latLngs = filtered.map((p) => [p.lat, p.lng]);
+      polylineRef.current = L.polyline(latLngs as any, {
+        color: "hsl(var(--primary))",
+        weight: 2.5,
+        opacity: 0.5,
+        dashArray: "8 6",
+        smoothFactor: 1.5,
+      }).addTo(map);
+    }
+
+    if (filtered.length > 1) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    } else {
+      map.setView([filtered[0].lat, filtered[0].lng], 14);
+    }
+  };
 
   if (points.length === 0) return null;
 
   return (
-    <div className="mt-3 rounded-xl border border-border overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2 bg-card border-b border-border">
-        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground">Map View</span>
-        <span className="text-xs text-muted-foreground ml-auto">{points.length} locations</span>
+    <div className="rounded-2xl border border-border overflow-hidden shadow-sm">
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-card border-b border-border">
+        <MapPin className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs font-semibold text-foreground">Interactive Map</span>
+        {activeDay != null && (
+          <span className="text-xs text-primary font-medium ml-1">
+            Day {activeDay}
+          </span>
+        )}
+        <span className="text-xs text-muted-foreground ml-auto">
+          {points.length} locations
+        </span>
       </div>
-      <div ref={mapRef} className="h-[300px] w-full" />
+      <div ref={mapRef} className="h-[400px] w-full" />
     </div>
   );
 };
