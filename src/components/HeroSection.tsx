@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Send, Shield, Clock, Zap } from "lucide-react";
+import { Send, Users, ChevronDown } from "lucide-react";
 
 const HeroSection = () => {
   const [query, setQuery] = useState("");
@@ -18,13 +18,17 @@ const HeroSection = () => {
     if (trimmed) navigate(`/chat?q=${encodeURIComponent(trimmed)}`);
   };
 
+  const scrollToHowItWorks = () => {
+    document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <section className="relative min-h-[70vh] flex items-center pt-20 pb-12 px-4">
       <div className="container mx-auto max-w-3xl text-center">
         {/* Badge */}
         <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary mb-6 animate-fade-in">
-          <Zap className="h-4 w-4" />
-          AI-Powered Travel Planning
+          <Users className="h-4 w-4" />
+          Used by 50,000+ travelers worldwide
         </div>
 
         <h1 className="font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl lg:text-6xl animate-fade-in" style={{ animationDelay: "0.1s" }}>
@@ -73,14 +77,19 @@ const HeroSection = () => {
               </button>
             ))}
           </div>
+
+          {/* Urgency */}
+          <p className="mt-3 text-xs text-muted-foreground animate-fade-in" style={{ animationDelay: "0.35s" }}>
+            🔥 2,400+ travelers planned trips this week · No credit card required
+          </p>
         </div>
 
         {/* Stats */}
-        <div className="mt-12 grid grid-cols-3 gap-4 max-w-lg mx-auto animate-fade-in" style={{ animationDelay: "0.4s" }}>
+        <div className="mt-10 grid grid-cols-3 gap-4 max-w-lg mx-auto animate-fade-in" style={{ animationDelay: "0.4s" }}>
           {[
-            { icon: Shield, value: "50K+", label: "Trips Planned" },
-            { icon: Clock, value: "120+", label: "Destinations" },
-            { icon: Zap, value: "4.9★", label: "User Rating" },
+            { value: "50K+", label: "Trips Planned" },
+            { value: "120+", label: "Destinations" },
+            { value: "4.9★", label: "User Rating" },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <div className="font-sans text-2xl md:text-3xl font-bold text-foreground">
@@ -93,12 +102,15 @@ const HeroSection = () => {
           ))}
         </div>
 
-        {/* Social Proof Strip */}
-        <div className="mt-8 animate-fade-in" style={{ animationDelay: "0.5s" }}>
-          <p className="text-xs text-muted-foreground tracking-wide uppercase">
-            Trusted by travelers from <span className="font-semibold text-foreground/70">Google</span> · <span className="font-semibold text-foreground/70">Apple</span> · <span className="font-semibold text-foreground/70">Amazon</span> · <span className="font-semibold text-foreground/70">Meta</span> · <span className="font-semibold text-foreground/70">Microsoft</span>
-          </p>
-        </div>
+        {/* See how it works */}
+        <button
+          onClick={scrollToHowItWorks}
+          className="mt-8 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors animate-fade-in"
+          style={{ animationDelay: "0.5s" }}
+        >
+          See how it works
+          <ChevronDown className="h-4 w-4" />
+        </button>
       </div>
     </section>
   );

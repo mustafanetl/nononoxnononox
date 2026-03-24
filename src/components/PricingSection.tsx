@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +18,7 @@ const plans = [
     cta: "Start Free Trial",
     href: "/chat",
     highlighted: false,
+    subtextCta: "No credit card required",
   },
   {
     name: "Monthly",
@@ -36,6 +36,7 @@ const plans = [
     cta: "Subscribe Monthly",
     href: "/auth",
     highlighted: false,
+    subtextCta: "Cancel anytime",
   },
   {
     name: "Annual",
@@ -51,6 +52,7 @@ const plans = [
     cta: "Subscribe Annually",
     href: "/auth",
     highlighted: true,
+    subtextCta: "Cancel anytime",
   },
   {
     name: "Lifetime",
@@ -68,6 +70,7 @@ const plans = [
     href: "/auth",
     highlighted: false,
     limited: true,
+    subtextCta: "One-time payment",
   },
 ];
 
@@ -85,13 +88,13 @@ const PricingSection = () => {
             key={plan.name}
             className={`rounded-2xl border p-5 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
               plan.highlighted
-                ? "border-primary bg-card shadow-xl ring-1 ring-primary/20 scale-[1.02]"
+                ? "border-primary bg-card shadow-xl ring-2 ring-primary/30 scale-[1.03]"
                 : "border-border bg-card"
             }`}
           >
             {plan.highlighted && (
-              <span className="text-xs font-semibold bg-foreground text-background px-3 py-1 rounded-full self-start mb-3">
-                Best Value
+              <span className="text-xs font-bold bg-primary text-primary-foreground px-3 py-1 rounded-full self-start mb-3">
+                ⭐ Recommended
               </span>
             )}
             {"limited" in plan && plan.limited && (
@@ -123,6 +126,9 @@ const PricingSection = () => {
                 {plan.cta}
               </Button>
             </Link>
+            <p className="text-[11px] text-muted-foreground text-center mt-2">
+              {plan.subtextCta}
+            </p>
           </div>
         ))}
       </div>

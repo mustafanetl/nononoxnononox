@@ -1,12 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Compass, ArrowRight, Plane, MapPin, Hotel, Calendar, Star, Twitter, Instagram } from "lucide-react";
+import { Compass, ArrowRight, Star, Twitter, Instagram, MessageSquare, Sparkles, Map, BadgeCheck, User } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import HeroSection from "@/components/HeroSection";
 import PricingSection from "@/components/PricingSection";
 import { useAuth } from "@/hooks/useAuth";
-import { User } from "lucide-react";
 
 const destinations = [
   { name: "Dubai", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop", tag: "Luxury & Adventure" },
@@ -18,9 +17,15 @@ const destinations = [
 ];
 
 const testimonials = [
-  { quote: "Rzuma planned our entire honeymoon in minutes. The activity suggestions were perfect!", name: "Sarah & Mike", trip: "Bali Honeymoon", initials: "SM" },
-  { quote: "Found flights $200 cheaper than what I found manually. The budget tracker is genius.", name: "James L.", trip: "Tokyo Solo Trip", initials: "JL" },
-  { quote: "My family loved every activity suggestion. It felt like having a personal travel agent.", name: "Priya K.", trip: "Dubai Family Vacation", initials: "PK" },
+  { quote: "Rzuma planned our entire honeymoon in minutes. The activity suggestions were perfect!", name: "Sarah & Mike", trip: "Bali Honeymoon", initials: "SM", verified: true },
+  { quote: "Found flights $200 cheaper than what I found manually. The budget tracker is genius.", name: "James L.", trip: "Tokyo Solo Trip", initials: "JL", verified: true },
+  { quote: "My family loved every activity suggestion. It felt like having a personal travel agent.", name: "Priya K.", trip: "Dubai Family Vacation", initials: "PK", verified: true },
+];
+
+const steps = [
+  { num: "1", icon: MessageSquare, title: "Tell us where", desc: "Type any destination — or let us inspire you." },
+  { num: "2", icon: Sparkles, title: "Answer a few questions", desc: "Dates, budget, vibe — we personalize everything." },
+  { num: "3", icon: Map, title: "Get your full itinerary", desc: "Flights, hotels, activities — ready in seconds." },
 ];
 
 /* ---- Scroll reveal hook ---- */
@@ -68,30 +73,36 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <ThemeToggle />
+            <div className="hidden md:block">
+              <ThemeToggle />
+            </div>
             {user ? (
               <>
                 <Link to="/my-trips">
                   <Button variant="ghost" size="sm" className="gap-1">
-                    <User className="h-4 w-4" /> My Trips
+                    <User className="h-4 w-4" />
+                    <span className="hidden sm:inline">My Trips</span>
                   </Button>
                 </Link>
                 <Link to="/chat">
                   <Button size="sm">
                     Start Planning
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
                 </Link>
               </>
             ) : (
               <>
                 <Link to="/auth">
-                  <Button variant="ghost" size="sm">Sign in</Button>
+                  <Button variant="ghost" size="sm" className="gap-1">
+                    <User className="h-4 w-4 sm:hidden" />
+                    <span className="hidden sm:inline">Sign in</span>
+                  </Button>
                 </Link>
                 <Link to="/chat">
                   <Button size="sm">
                     Start Planning
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
                 </Link>
               </>
@@ -110,7 +121,6 @@ const Index = () => {
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">Popular Destinations</h2>
             <p className="text-muted-foreground text-center mb-10">Click any destination to start planning instantly</p>
             <div className="max-w-5xl mx-auto">
-              {/* Featured top 2 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-3 md:mb-4">
                 {destinations.slice(0, 2).map((d) => (
                   <Link
@@ -127,7 +137,6 @@ const Index = () => {
                   </Link>
                 ))}
               </div>
-              {/* Remaining 4 */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 {destinations.slice(2).map((d) => (
                   <Link
@@ -148,26 +157,20 @@ const Index = () => {
           </section>
         </RevealSection>
 
-        {/* Features */}
+        {/* How It Works - 3-step flow */}
         <RevealSection>
-          <section className="container mx-auto px-4 py-16 border-t border-border">
+          <section id="how-it-works" className="container mx-auto px-4 py-16 border-t border-border">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">How Rzuma Works</h2>
-            <p className="text-muted-foreground text-center mb-10">Everything you need for the perfect trip</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
-              {[
-                { icon: Plane, title: "Cheapest Flights", desc: "Compare airlines and find the best deals instantly." },
-                { icon: Hotel, title: "Hotel Picks", desc: "Curated hotel recommendations for every budget." },
-                { icon: MapPin, title: "Activities", desc: "Occasion-tailored experiences from dining to adventure." },
-                { icon: Calendar, title: "Itineraries", desc: "Day-by-day plans so you don't miss a thing." },
-              ].map((f) => (
-                <div key={f.title} className="group flex items-start gap-4 p-5 rounded-2xl border border-border bg-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
-                  <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
-                    <f.icon className="h-5 w-5 text-foreground group-hover:text-primary transition-colors" />
+            <p className="text-muted-foreground text-center mb-10">Your perfect trip in 3 simple steps</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+              {steps.map((step) => (
+                <div key={step.num} className="relative text-center p-6 rounded-2xl border border-border bg-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+                  <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold mx-auto mb-4">
+                    {step.num}
                   </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">{f.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-                  </div>
+                  <step.icon className="h-6 w-6 text-muted-foreground mx-auto mb-3" />
+                  <h3 className="font-semibold mb-1">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
                 </div>
               ))}
             </div>
@@ -181,7 +184,6 @@ const Index = () => {
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {testimonials.map((t, i) => (
                 <div key={i} className="p-6 rounded-2xl border border-border bg-card hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-                  {/* Stars */}
                   <div className="flex gap-0.5 mb-3">
                     {Array.from({ length: 5 }).map((_, si) => (
                       <Star key={si} className="h-4 w-4 fill-primary text-primary" />
@@ -193,8 +195,11 @@ const Index = () => {
                       {t.initials}
                     </div>
                     <div>
-                      <p className="font-semibold text-sm">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">{t.trip}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-semibold text-sm">{t.name}</p>
+                        {t.verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{t.trip} · Verified trip</p>
                     </div>
                   </div>
                 </div>
@@ -212,22 +217,23 @@ const Index = () => {
         <RevealSection>
           <section className="container mx-auto px-4 py-20">
             <div className="relative rounded-2xl p-8 md:p-12 text-center max-w-2xl mx-auto overflow-hidden bg-muted">
-              {/* Subtle gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
               <div className="relative z-10">
-                <h2 className="text-2xl md:text-3xl font-bold mb-2">
-                  Ready to plan your next adventure?
+                <h2 className="text-2xl md:text-3xl font-bold mb-3">
+                  Your next trip is 60 seconds away
                 </h2>
-                <p className="text-sm text-muted-foreground mb-1">Join 50K+ travelers who plan with Rzuma</p>
                 <p className="text-muted-foreground mb-6">
-                  Start chatting and discover your perfect trip.
+                  Join 50K+ travelers who plan smarter with Rzuma.
                 </p>
                 <Link to="/chat">
-                  <Button size="lg">
+                  <Button size="lg" className="text-base px-8 py-6">
                     Try Rzuma Free
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </Link>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Free for 3 days · No credit card required
+                </p>
               </div>
             </div>
           </section>
@@ -238,7 +244,6 @@ const Index = () => {
       <footer className="border-t border-border py-10">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            {/* Brand */}
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 rounded-lg bg-foreground flex items-center justify-center">
@@ -249,7 +254,6 @@ const Index = () => {
               <p className="text-sm text-muted-foreground leading-relaxed">Your AI travel companion. Plan trips in seconds, not hours.</p>
             </div>
 
-            {/* Product */}
             <div>
               <h4 className="font-semibold text-sm mb-3">Product</h4>
               <ul className="space-y-2">
@@ -258,24 +262,20 @@ const Index = () => {
               </ul>
             </div>
 
-            {/* Company */}
             <div>
               <h4 className="font-semibold text-sm mb-3">Company</h4>
               <ul className="space-y-2">
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</a></li>
+                <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign In</Link></li>
               </ul>
             </div>
 
-            {/* Social */}
             <div>
               <h4 className="font-semibold text-sm mb-3">Connect</h4>
               <div className="flex gap-3">
-                <a href="#" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
                   <Twitter className="h-4 w-4" />
                 </a>
-                <a href="#" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
                   <Instagram className="h-4 w-4" />
                 </a>
               </div>
