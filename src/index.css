@@ -193,4 +193,19 @@
     animation: stagger-in 0.4s ease-out forwards;
     opacity: 0;
   }
+
+  @keyframes day-switch {
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-day-switch {
+    animation: day-switch 0.35s ease-out forwards;
+  }
 }
