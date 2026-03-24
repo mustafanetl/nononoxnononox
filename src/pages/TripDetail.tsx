@@ -618,7 +618,7 @@ const SectionHeader = ({ icon: Icon, title, subtitle }: { icon: React.ElementTyp
   </div>
 );
 
-import React from "react";
+
 
 const FlightRow = React.forwardRef<HTMLDivElement, {
   flight: FlightData; destination: string; focused: boolean; onClick: () => void;
