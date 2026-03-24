@@ -46,8 +46,8 @@ When suggesting hotels, include hotel cards using this EXACT format:
 
 \`\`\`hotels
 [
-  {"id":"1","name":"The Ritz-Carlton","stars":5,"pricePerNight":350,"currency":"$","image":"luxury","location":"Downtown Dubai","description":"Iconic luxury hotel with stunning views of the Dubai Fountain and Burj Khalifa."},
-  {"id":"2","name":"Aloft Dubai","stars":4,"pricePerNight":120,"currency":"$","image":"city","location":"Al Mina","description":"Modern, vibrant hotel near the creek with rooftop pool and lively atmosphere."}
+  {"id":"1","name":"The Ritz-Carlton","stars":5,"pricePerNight":350,"currency":"$","image":"luxury","location":"Downtown Dubai","description":"Iconic luxury hotel with stunning views of the Dubai Fountain and Burj Khalifa.","lat":25.1972,"lng":55.2744},
+  {"id":"2","name":"Aloft Dubai","stars":4,"pricePerNight":120,"currency":"$","image":"city","location":"Al Mina","description":"Modern, vibrant hotel near the creek with rooftop pool and lively atmosphere.","lat":25.2631,"lng":55.2898}
 ]
 \`\`\`
 
@@ -58,8 +58,8 @@ When suggesting a destination or planning a trip, ALSO include activity cards us
 
 \`\`\`activities
 [
-  {"id":"1","name":"Sunset Dinner Cruise","category":"dining","duration":"3 hours","price":120,"currency":"$","image":"cruise","occasion":"honeymoon","description":"Romantic dinner on the water with stunning sunset views and a gourmet multi-course meal."},
-  {"id":"2","name":"Snorkeling Adventure","category":"adventure","duration":"4 hours","price":85,"currency":"$","image":"diving","occasion":"honeymoon","description":"Explore vibrant coral reefs and swim with tropical fish in crystal-clear waters."}
+  {"id":"1","name":"Sunset Dinner Cruise","category":"dining","duration":"3 hours","price":120,"currency":"$","image":"cruise","occasion":"honeymoon","description":"Romantic dinner on the water with stunning sunset views and a gourmet multi-course meal.","lat":25.2048,"lng":55.2708},
+  {"id":"2","name":"Snorkeling Adventure","category":"adventure","duration":"4 hours","price":85,"currency":"$","image":"diving","occasion":"honeymoon","description":"Explore vibrant coral reefs and swim with tropical fish in crystal-clear waters.","lat":25.1124,"lng":55.1390}
 ]
 \`\`\`
 
@@ -67,6 +67,7 @@ Category must be one of: dining, adventure, beach, culture, nightlife, shopping,
 Image must be one of: cruise, spa, temple, beach, hiking, market, museum, diving, safari, concert, food, waterfall, yoga, shopping, sunset.
 Occasion must match what the user wants (honeymoon, birthday, family, solo, friends, anniversary).
 Include 3-4 activities tailored to the occasion and destination.
+ALWAYS include realistic lat/lng coordinates for every hotel and activity so they appear on the interactive map. Use real-world coordinates for the actual destination.
 
 When user asks for a detailed plan or itinerary, ALSO include:
 

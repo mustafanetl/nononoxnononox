@@ -11,6 +11,8 @@ export type HotelData = {
   image: string;
   location: string;
   description: string;
+  lat?: number;
+  lng?: number;
 };
 
 type TripItem = 

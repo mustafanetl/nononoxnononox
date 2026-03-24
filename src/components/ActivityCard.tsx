@@ -10,6 +10,8 @@ export type ActivityData = {
   image: string;
   occasion: string;
   description: string;
+  lat?: number;
+  lng?: number;
 };
 
 const categoryIcons: Record<string, React.ElementType> = {
