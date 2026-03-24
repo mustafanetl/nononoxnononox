@@ -1,46 +1,33 @@
 
 
-# Redesign Homepage -- Serious, Trustworthy, No Image
+# Make Trip Planner Chat More Personal
 
-## Problem
-The hero image (`hero-adventure.jpeg`) looks casual/unserious. The overall layout feels like a template, not a trusted product.
+## What Changes
+
+Update the AI system prompt so Rzuma asks short, friendly qualifying questions before generating a full trip plan. This creates a conversational flow that gathers key details (dates, budget, travelers, vibe) resulting in much better personalized recommendations.
 
 ## Changes
 
-### 1. Remove Hero Image, Go Text-Only with Trust Signals
-- Remove the hero image entirely from `HeroSection.tsx`
-- Switch to a **single-column centered layout** -- large bold headline, subtitle, search input, suggestion chips
-- Add **trust logos/badges** below the search (e.g., "Trusted by 50K+ travelers" with small abstract trust icons)
-- Stats bar stays but moves closer to the search for visual density
-- Remove `hero-adventure.jpeg` import
+### 1. Update System Prompt (`supabase/functions/rzuma-chat/index.ts`)
 
-### 2. Tighten the Hero Copy
-- Change headline from "Your Next Adventure Starts Here" to something more confident: "Plan Any Trip in 60 Seconds"
-- Subtitle: "AI-powered itineraries with real flights, hotels, and activities -- personalized to you."
-- Feels more like a SaaS product, less like a blog
+Add a new **CONVERSATION FLOW** section near the top of the system prompt with these rules:
 
-### 3. Add Social Proof Strip
-- Below the hero stats, add a thin strip: "As used by travelers from Google, Apple, Amazon..." (company name text, no logos needed -- just text)
-- This is a common trust pattern used by serious products
+- **First message about a destination**: Don't immediately dump flights/hotels/activities. Instead, ask 2-3 short casual questions to understand the trip better. Use quick reply buttons for easy answers.
+- **Questions to gather** (one at a time or 2-3 grouped casually):
+  - When are you thinking of going? (dates/month)
+  - How many days?
+  - Solo, couple, family, or friends?
+  - What's the vibe -- chill & relax, adventure, culture, party, or mix?
+  - Any budget range in mind?
+  - Special occasion?
+- **After 2-3 exchanges of Q&A**: Generate the full personalized plan with all card types (flights, hotels, activities, itinerary, etc.)
+- **If user provides details upfront** (e.g., "Plan a 5-day honeymoon in Bali for $3000"): Skip questions, go straight to the plan
+- Quick replies on question messages should be answer options (e.g., "Solo", "Couple", "Family", "Friends")
 
-### 4. Clean Up Visual Noise
-- Remove the blur glow behind the (now-removed) image
-- Make the search input slightly more prominent with a subtle shadow
-- Reduce `min-h-[85vh]` to `min-h-[70vh]` so the page doesn't feel empty
+### 2. Update Initial Quick Replies for Context
 
-### 5. Destinations Section -- Larger, Cleaner
-- Keep the destination cards but make the top 2 larger (featured) and bottom 4 smaller
-- This creates visual hierarchy and makes it feel curated, not generic
+When Rzuma asks questions, the `quickreplies` block will contain answer options instead of generic follow-ups, making it tap-friendly and fast.
 
 ## Files to Modify
-
-### `src/components/HeroSection.tsx`
-- Remove image import and image column
-- Single-column centered layout
-- New headline and subtitle copy
-- Add trust/social proof text strip below stats
-
-### `src/pages/Index.tsx`
-- Update destinations grid: first 2 cards span full width, rest in 2-col grid
-- Minor spacing adjustments
+- `supabase/functions/rzuma-chat/index.ts` -- Update SYSTEM_PROMPT with conversation flow rules
 
