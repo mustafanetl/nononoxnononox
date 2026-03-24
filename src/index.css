@@ -208,4 +208,16 @@
   .animate-day-switch {
     animation: day-switch 0.35s ease-out forwards;
   }
+
+  /* Scroll reveal */
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .scroll-reveal.scroll-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
