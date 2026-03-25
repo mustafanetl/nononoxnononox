@@ -17,9 +17,9 @@ const destinations = [
 ];
 
 const testimonials = [
-  { quote: "Rzuma planned our entire honeymoon in minutes. The activity suggestions were perfect!", name: "Sarah & Mike", trip: "Bali Honeymoon", initials: "SM", verified: true },
-  { quote: "Found flights $200 cheaper than what I found manually. The budget tracker is genius.", name: "James L.", trip: "Tokyo Solo Trip", initials: "JL", verified: true },
-  { quote: "My family loved every activity suggestion. It felt like having a personal travel agent.", name: "Priya K.", trip: "Dubai Family Vacation", initials: "PK", verified: true },
+  { quote: "Planned our entire Bali honeymoon in one conversation. Every restaurant and activity was spot on.", name: "Sarah & Mike", trip: "Bali · 10 days", initials: "SM", verified: true },
+  { quote: "Found flights $200 cheaper than what I found on my own. The budget breakdown saved me hours.", name: "James L.", trip: "Tokyo · 7 days", initials: "JL", verified: true },
+  { quote: "First family trip abroad and every detail was handled — even kid-friendly activities.", name: "Priya K.", trip: "Dubai · 5 days", initials: "PK", verified: true },
 ];
 
 const steps = [
@@ -157,7 +157,7 @@ const Index = () => {
           </section>
         </RevealSection>
 
-        {/* How It Works - 3-step flow */}
+        {/* How It Works */}
         <RevealSection>
           <section id="how-it-works" className="container mx-auto px-4 py-16 border-t border-border">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">How Rzuma Works</h2>
@@ -199,7 +199,7 @@ const Index = () => {
                         <p className="font-semibold text-sm">{t.name}</p>
                         {t.verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
                       </div>
-                      <p className="text-xs text-muted-foreground">{t.trip} · Verified trip</p>
+                      <p className="text-xs text-muted-foreground">{t.trip}</p>
                     </div>
                   </div>
                 </div>
@@ -223,7 +223,7 @@ const Index = () => {
                   Your next trip is 60 seconds away
                 </h2>
                 <p className="text-muted-foreground mb-6">
-                  Join 50K+ travelers who plan smarter with Rzuma.
+                  Plan smarter, travel better.
                 </p>
                 <Link to="/chat">
                   <Button size="lg" className="text-base px-8 py-6">
@@ -243,47 +243,45 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border py-10">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div className="col-span-2 md:col-span-1">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 mb-8">
+            <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 rounded-lg bg-foreground flex items-center justify-center">
                   <Compass className="h-3.5 w-3.5 text-background" />
                 </div>
                 <span className="font-semibold">Rzuma</span>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">Your AI travel companion. Plan trips in seconds, not hours.</p>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+                Your AI travel companion. Plan trips in seconds, not hours.
+              </p>
             </div>
 
-            <div>
-              <h4 className="font-semibold text-sm mb-3">Product</h4>
-              <ul className="space-y-2">
-                <li><Link to="/chat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Plan a Trip</Link></li>
-                <li><Link to="/my-trips" className="text-sm text-muted-foreground hover:text-foreground transition-colors">My Trips</Link></li>
-              </ul>
-            </div>
+            <div className="flex gap-12">
+              <div>
+                <h4 className="font-semibold text-sm mb-3">Product</h4>
+                <ul className="space-y-2">
+                  <li><Link to="/chat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Plan a Trip</Link></li>
+                  <li><Link to="/my-trips" className="text-sm text-muted-foreground hover:text-foreground transition-colors">My Trips</Link></li>
+                  <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign In</Link></li>
+                </ul>
+              </div>
 
-            <div>
-              <h4 className="font-semibold text-sm mb-3">Company</h4>
-              <ul className="space-y-2">
-                <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign In</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-sm mb-3">Connect</h4>
-              <div className="flex gap-3">
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                  <Twitter className="h-4 w-4" />
-                </a>
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                  <Instagram className="h-4 w-4" />
-                </a>
+              <div>
+                <h4 className="font-semibold text-sm mb-3">Connect</h4>
+                <div className="flex gap-3">
+                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                    <Twitter className="h-4 w-4" />
+                  </a>
+                  <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                    <Instagram className="h-4 w-4" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="border-t border-border pt-6 text-center">
-            <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Rzuma. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Rzuma. All rights reserved.</p>
           </div>
         </div>
       </footer>

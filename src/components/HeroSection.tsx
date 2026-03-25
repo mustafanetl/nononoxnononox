@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Send, Users, ChevronDown } from "lucide-react";
+import { Send, ChevronDown } from "lucide-react";
 
 const HeroSection = () => {
   const [query, setQuery] = useState("");
@@ -25,23 +25,17 @@ const HeroSection = () => {
   return (
     <section className="relative min-h-[70vh] flex items-center pt-20 pb-12 px-4">
       <div className="container mx-auto max-w-3xl text-center">
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary mb-6 animate-fade-in">
-          <Users className="h-4 w-4" />
-          Used by 50,000+ travelers worldwide
-        </div>
-
-        <h1 className="font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl lg:text-6xl animate-fade-in" style={{ animationDelay: "0.1s" }}>
+        <h1 className="font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl lg:text-6xl animate-fade-in">
           Plan Any Trip in
-          <span className="block bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">60 Seconds</span>
+          <span className="block text-primary">60 Seconds</span>
         </h1>
 
-        <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto animate-fade-in" style={{ animationDelay: "0.2s" }}>
+        <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto animate-fade-in" style={{ animationDelay: "0.1s" }}>
           AI-powered itineraries with real flights, hotels, and activities — personalized to you.
         </p>
 
         {/* Search Input */}
-        <div className="mt-8 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+        <div className="mt-8 animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <form
             onSubmit={(e) => { e.preventDefault(); handleSubmit(query); }}
             className="relative bg-card border border-border rounded-2xl p-2 max-w-xl mx-auto shadow-lg"
@@ -78,35 +72,16 @@ const HeroSection = () => {
             ))}
           </div>
 
-          {/* Urgency */}
-          <p className="mt-3 text-xs text-muted-foreground animate-fade-in" style={{ animationDelay: "0.35s" }}>
-            🔥 2,400+ travelers planned trips this week · No credit card required
+          <p className="mt-4 text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: "0.25s" }}>
+            No credit card required · Free for 3 days
           </p>
-        </div>
-
-        {/* Stats */}
-        <div className="mt-10 grid grid-cols-3 gap-4 max-w-lg mx-auto animate-fade-in" style={{ animationDelay: "0.4s" }}>
-          {[
-            { value: "50K+", label: "Trips Planned" },
-            { value: "120+", label: "Destinations" },
-            { value: "4.9★", label: "User Rating" },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <div className="font-sans text-2xl md:text-3xl font-bold text-foreground">
-                {stat.value}
-              </div>
-              <div className="text-sm text-muted-foreground mt-1">
-                {stat.label}
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* See how it works */}
         <button
           onClick={scrollToHowItWorks}
           className="mt-8 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors animate-fade-in"
-          style={{ animationDelay: "0.5s" }}
+          style={{ animationDelay: "0.3s" }}
         >
           See how it works
           <ChevronDown className="h-4 w-4" />

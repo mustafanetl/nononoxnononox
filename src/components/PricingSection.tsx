@@ -5,22 +5,6 @@ import { Link } from "react-router-dom";
 
 const plans = [
   {
-    name: "Free Trial",
-    price: "$0",
-    period: "3 days",
-    description: "Try everything free for 3 days",
-    features: [
-      "Full access for 3 days",
-      "Flight & hotel suggestions",
-      "Activity recommendations",
-      "Basic itineraries",
-    ],
-    cta: "Start Free Trial",
-    href: "/chat",
-    highlighted: false,
-    subtextCta: "No credit card required",
-  },
-  {
     name: "Monthly",
     price: "$29.99",
     period: "/month",
@@ -82,11 +66,11 @@ const PricingSection = () => {
         Start with a 3-day free trial — no credit card required
       </p>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
         {plans.map((plan) => (
           <div
             key={plan.name}
-            className={`rounded-2xl border p-5 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
+            className={`rounded-2xl border p-6 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
               plan.highlighted
                 ? "border-primary bg-card shadow-xl ring-2 ring-primary/30 scale-[1.03]"
                 : "border-border bg-card"
@@ -94,7 +78,7 @@ const PricingSection = () => {
           >
             {plan.highlighted && (
               <span className="text-xs font-bold bg-primary text-primary-foreground px-3 py-1 rounded-full self-start mb-3">
-                ⭐ Recommended
+                Recommended
               </span>
             )}
             {"limited" in plan && plan.limited && (
