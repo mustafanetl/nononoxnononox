@@ -123,89 +123,80 @@ const Index = () => {
               </div>
             </div>
           </section>
-        </RevealSection>
 
         {/* How It Works */}
-        <RevealSection>
-          <section id="how-it-works" className="container mx-auto px-4 py-16 border-t border-border">
-            <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">How Rzuma Works</h2>
-            <p className="text-muted-foreground text-center mb-10">Your perfect trip in 3 simple steps</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-              {steps.map((step) => (
-                <div key={step.num} className="relative text-center p-6 rounded-2xl border border-border bg-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
-                  <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold mx-auto mb-4">
-                    {step.num}
-                  </div>
-                  <step.icon className="h-6 w-6 text-muted-foreground mx-auto mb-3" />
-                  <h3 className="font-semibold mb-1">{step.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+        <section id="how-it-works" className="container mx-auto px-4 py-16 border-t border-border">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">How Rzuma Works</h2>
+          <p className="text-muted-foreground text-center mb-10">Your perfect trip in 3 simple steps</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            {steps.map((step) => (
+              <div key={step.num} className="relative text-center p-6 rounded-2xl border border-border bg-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+                <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold mx-auto mb-4">
+                  {step.num}
                 </div>
-              ))}
-            </div>
-          </section>
-        </RevealSection>
+                <step.icon className="h-6 w-6 text-muted-foreground mx-auto mb-3" />
+                <h3 className="font-semibold mb-1">{step.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Testimonials */}
-        <RevealSection>
-          <section className="container mx-auto px-4 py-16 border-t border-border">
-            <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">What Travelers Say</h2>
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {testimonials.map((t, i) => (
-                <div key={i} className="p-6 rounded-2xl border border-border bg-card hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-                  <div className="flex gap-0.5 mb-3">
-                    {Array.from({ length: 5 }).map((_, si) => (
-                      <Star key={si} className="h-4 w-4 fill-primary text-primary" />
-                    ))}
+        <section className="container mx-auto px-4 py-16 border-t border-border">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">What Travelers Say</h2>
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {testimonials.map((t, i) => (
+              <div key={i} className="p-6 rounded-2xl border border-border bg-card hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+                <div className="flex gap-0.5 mb-3">
+                  {Array.from({ length: 5 }).map((_, si) => (
+                    <Star key={si} className="h-4 w-4 fill-primary text-primary" />
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground mb-5 leading-relaxed">"{t.quote}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-foreground">
+                    {t.initials}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-5 leading-relaxed">"{t.quote}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-foreground">
-                      {t.initials}
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-sm">{t.name}</p>
+                      {t.verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="font-semibold text-sm">{t.name}</p>
-                        {t.verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
-                      </div>
-                      <p className="text-xs text-muted-foreground">{t.trip}</p>
-                    </div>
+                    <p className="text-xs text-muted-foreground">{t.trip}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </section>
-        </RevealSection>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Pricing */}
-        <RevealSection>
-          <PricingSection />
-        </RevealSection>
+        <PricingSection />
 
         {/* CTA */}
-        <RevealSection>
-          <section className="container mx-auto px-4 py-20">
-            <div className="relative rounded-2xl p-8 md:p-12 text-center max-w-2xl mx-auto overflow-hidden bg-muted">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
-              <div className="relative z-10">
-                <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                  Your next trip is 60 seconds away
-                </h2>
-                <p className="text-muted-foreground mb-6">
-                  Plan smarter, travel better.
-                </p>
-                <Link to="/chat">
-                  <Button size="lg" className="text-base px-8 py-6">
-                    Try Rzuma Free
-                    <ArrowRight className="h-5 w-5 ml-2" />
-                  </Button>
-                </Link>
-                <p className="text-xs text-muted-foreground mt-3">
-                  Free for 3 days · No credit card required
-                </p>
-              </div>
+        <section className="container mx-auto px-4 py-20">
+          <div className="relative rounded-2xl p-8 md:p-12 text-center max-w-2xl mx-auto overflow-hidden bg-muted">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
+            <div className="relative z-10">
+              <h2 className="text-2xl md:text-3xl font-bold mb-3">
+                Your next trip is 60 seconds away
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                Plan smarter, travel better.
+              </p>
+              <Link to="/chat">
+                <Button size="lg" className="text-base px-8 py-6">
+                  Try Rzuma Free
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+              </Link>
+              <p className="text-xs text-muted-foreground mt-3">
+                Free for 3 days · No credit card required
+              </p>
             </div>
+          </div>
         </section>
-      </main>
 
       {/* Footer */}
       <footer className="border-t border-border py-10">
