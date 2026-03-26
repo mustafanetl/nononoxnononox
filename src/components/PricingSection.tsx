@@ -42,18 +42,17 @@ const plans = [
     name: "Lifetime",
     price: "$100",
     period: "one-time",
-    description: "First 1,000 subscribers only",
+    description: "Pay once, use forever",
     features: [
       "Everything in Annual",
       "Lifetime access — pay once",
       "Collaborative trip planning",
       "Cost splitting tools",
-      "Exclusive founding member perks",
+      "Founding member perks",
     ],
     cta: "Get Lifetime Access",
     href: "/auth",
     highlighted: false,
-    limited: true,
     subtextCta: "One-time payment",
   },
 ];
@@ -80,11 +79,6 @@ const PricingSection = () => {
               <span className="text-xs font-bold bg-primary text-primary-foreground px-3 py-1 rounded-full self-start mb-3">
                 Recommended
               </span>
-            )}
-            {"limited" in plan && plan.limited && (
-              <Badge variant="destructive" className="text-[10px] px-2 py-0.5 self-start mb-3">
-                Limited — 1,000 spots
-              </Badge>
             )}
             <h3 className="text-lg font-bold">{plan.name}</h3>
             <div className="mt-2 mb-1">
