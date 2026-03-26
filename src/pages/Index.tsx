@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Compass, ArrowRight, Star, Twitter, Instagram, MessageSquare, Sparkles, Map, BadgeCheck, User } from "lucide-react";
@@ -27,36 +26,6 @@ const steps = [
   { num: "2", icon: Sparkles, title: "Answer a few questions", desc: "Dates, budget, vibe — we personalize everything." },
   { num: "3", icon: Map, title: "Get your full itinerary", desc: "Flights, hotels, activities — ready in seconds." },
 ];
-
-/* ---- Scroll reveal hook ---- */
-function useScrollReveal() {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.classList.add("scroll-visible");
-          observer.unobserve(el);
-        }
-      },
-      { threshold: 0.15 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  return ref;
-}
-
-const RevealSection = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => {
-  const ref = useScrollReveal();
-  return (
-    <div ref={ref} className={`scroll-reveal ${className}`}>
-      {children}
-    </div>
-  );
-};
 
 const Index = () => {
   const { user } = useAuth();
@@ -116,8 +85,7 @@ const Index = () => {
         <HeroSection />
 
         {/* Popular Destinations */}
-        <RevealSection>
-          <section className="container mx-auto px-4 py-16 border-t border-border">
+        <section className="container mx-auto px-4 py-16 border-t border-border">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">Popular Destinations</h2>
             <p className="text-muted-foreground text-center mb-10">Click any destination to start planning instantly</p>
             <div className="max-w-5xl mx-auto">
@@ -236,8 +204,7 @@ const Index = () => {
                 </p>
               </div>
             </div>
-          </section>
-        </RevealSection>
+        </section>
       </main>
 
       {/* Footer */}
@@ -262,7 +229,6 @@ const Index = () => {
                 <ul className="space-y-2">
                   <li><Link to="/chat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Plan a Trip</Link></li>
                   <li><Link to="/my-trips" className="text-sm text-muted-foreground hover:text-foreground transition-colors">My Trips</Link></li>
-                  <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign In</Link></li>
                 </ul>
               </div>
 

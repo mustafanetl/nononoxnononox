@@ -23,11 +23,10 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="relative min-h-[70vh] flex items-center pt-20 pb-12 px-4">
+    <section className="relative min-h-[60vh] flex items-center pt-28 pb-12 px-4">
       <div className="container mx-auto max-w-3xl text-center">
         <h1 className="font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl lg:text-6xl animate-fade-in">
-          Plan Any Trip in
-          <span className="block text-primary">60 Seconds</span>
+          Plan Any Trip in <span className="text-primary">60 Seconds</span>
         </h1>
 
         <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto animate-fade-in" style={{ animationDelay: "0.1s" }}>
