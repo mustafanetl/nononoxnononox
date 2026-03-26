@@ -1,50 +1,43 @@
 
 
-# Fix "Sketchy Shopify Store" Feel -- Full Polish Pass
+# Landing Page Polish -- Fix Spacing, Trust & Scroll Issues
 
-## Problems Identified
+## Problems Found
 
-1. **App.css has Vite boilerplate** -- `#root { max-width: 1280px; margin: 0 auto; padding: 2rem; text-align: center; }` is constraining layout and adding unwanted center-align + padding to everything
-2. **Fake urgency signals** -- fire emoji "🔥 2,400+ travelers planned trips this week" feels like a scam countdown timer
-3. **Inflated social proof** -- "Used by 50,000+ travelers worldwide" badge + "50K+ Trips Planned" stats are unverifiable and feel dishonest for an early-stage product
-4. **Too many selling sections** -- Hero stats + badge + urgency text + testimonials + pricing + CTA = wall of sales copy
-5. **Testimonials feel fabricated** -- initials-only avatars (SM, JL, PK) with generic quotes
-6. **Pricing has 4 tiers** -- decision paralysis on mobile; all stacked vertically feels like a template
-7. **Emoji usage** -- 🔥, ⭐, 🎯 sprinkled around feel cheap
-8. **"60 Seconds" gradient text** -- barely readable in dark mode (foreground to muted-foreground gradient)
-9. **Footer is too sparse** -- only 2 links per column, feels like a template
+1. **No space between navbar and hero content** -- The hero has `pt-20` (80px) but the fixed header is about 56px tall. On mobile (393px), the hero title "Plan Any Trip in 60 Seconds" starts too close to the navbar with barely any breathing room.
 
-## Changes
+2. **Scroll-reveal sections are invisible on fast scroll** -- The `scroll-reveal` CSS starts at `opacity: 0` and relies on `IntersectionObserver` with `threshold: 0.15`. If a user scrolls quickly or the observer doesn't fire (common on some devices/browsers), the How It Works, Testimonials, and Pricing sections remain completely invisible. This is a critical bug -- entire sections of the page disappear.
 
-### 1. `src/App.css` -- Remove Vite boilerplate
-Delete all the default Vite CSS (`#root`, `.logo`, `.card`, `.read-the-docs`, `logo-spin` animation). This is actively breaking layout with `max-width: 1280px`, `padding: 2rem`, and `text-align: center` on `#root`.
+3. **Hero section feels empty** -- After removing the fake social proof, there's too much dead space. The `min-h-[70vh]` makes the hero oversized for the minimal content it now has.
 
-### 2. `src/components/HeroSection.tsx` -- Clean & credible hero
-- Remove the "Used by 50,000+ travelers worldwide" badge entirely -- it's unverifiable
-- Remove the urgency line with 🔥 emoji
-- Remove the stats grid (50K+, 120+, 4.9★) -- these feel fabricated
-- Keep the clean search input, suggestions, and "See how it works" link
-- Add a simple, honest subline: "No credit card required. Free for 3 days."
-- Make the "60 Seconds" text use solid foreground color instead of the hard-to-read gradient
+4. **"60 Seconds" on its own line looks odd** -- The `block` span forces "60 Seconds" onto a new line, which on mobile makes the title look unbalanced.
 
-### 3. `src/pages/Index.tsx` -- Streamline landing page
-- Remove the star emoji from "Recommended" pricing badge (replace ⭐ with text only)
-- Clean up testimonial data: add real-sounding trip details, remove generic quotes
-- Simplify footer: remove empty "Company" column with just "Sign In", consolidate links
-- Tighten section spacing for better flow
+5. **Footer "Sign In" link feels cheap** -- Having "Sign In" as a footer link under "Product" is unusual and reduces trust.
 
-### 4. `src/components/PricingSection.tsx` -- Reduce to 3 plans
-- Remove the Free Trial card (already mentioned in CTA copy)
-- Keep Monthly, Annual (highlighted), Lifetime
-- Remove the star emoji from "Recommended" badge
-- This reduces decision paralysis and looks more premium
+6. **Pricing "Limited -- 1,000 spots" badge** -- The destructive red badge on Lifetime plan feels like a scam tactic after we removed other urgency signals.
 
-### 5. `src/components/PaywallModal.tsx` -- Remove emoji from badge
-- The "Best Value" and "Limited" badges are fine but ensure no emoji leaks
+## Plan
+
+### 1. `src/components/HeroSection.tsx`
+- Increase top padding from `pt-20` to `pt-28` for proper navbar clearance
+- Reduce `min-h-[70vh]` to `min-h-[60vh]` so the hero isn't oversized
+- Keep "60 Seconds" inline with the title instead of forcing a line break -- use a `text-primary` span without `block`
+
+### 2. `src/pages/Index.tsx`
+- **Remove scroll-reveal entirely** -- replace `RevealSection` wrapper with plain `div`. The animation is causing sections to be invisible and adds no real conversion value. Clean, instant-visible sections are more trustworthy than flashy animations that break.
+- Remove "Sign In" from footer product links (it's already in the header)
+- Remove the `useScrollReveal` hook and `RevealSection` component
+
+### 3. `src/components/PricingSection.tsx`
+- Remove the "Limited -- 1,000 spots" destructive badge from Lifetime plan -- it contradicts the "no fake urgency" direction
+- Change Lifetime description to something honest like "Pay once, use forever"
+
+### 4. `src/index.css`
+- Remove the `.scroll-reveal` and `.scroll-visible` CSS rules (no longer needed)
 
 ## Files to Modify
-- `src/App.css` -- gut the Vite boilerplate
-- `src/components/HeroSection.tsx` -- remove fake social proof, fix gradient
-- `src/pages/Index.tsx` -- streamline sections, clean footer
-- `src/components/PricingSection.tsx` -- reduce to 3 plans, remove emoji
+- `src/components/HeroSection.tsx` -- fix spacing, title layout
+- `src/pages/Index.tsx` -- remove scroll-reveal, clean footer
+- `src/components/PricingSection.tsx` -- remove fake scarcity badge
+- `src/index.css` -- remove unused scroll-reveal CSS
 
