@@ -3,9 +3,8 @@ import { Crown, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const plans = [
-  { name: "Monthly", price: "$29.99", period: "/mo" },
-  { name: "Annual", price: "$44.99", period: "/yr", badge: "Best Value" },
-  { name: "Lifetime", price: "$100", period: "once", badge: "Limited" },
+  { name: "Monthly", price: "$12.99", period: "/mo" },
+  { name: "Annual", price: "$49.99", period: "/yr", badge: "Best Value" },
 ];
 
 const PaywallModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
@@ -69,7 +68,7 @@ const PaywallModal = ({ open, onClose }: { open: boolean; onClose: () => void })
         </div>
 
         <p className="text-[11px] text-muted-foreground text-center">
-          Start with a 3-day free trial · Cancel anytime
+          Start with a 3-day free trial
         </p>
       </div>
     </div>
