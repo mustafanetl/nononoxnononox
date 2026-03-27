@@ -54,15 +54,10 @@ const PricingSection = () => {
             key={plan.name}
             className={`rounded-2xl border p-6 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
               plan.highlighted
-                ? "border-primary bg-card shadow-xl ring-2 ring-primary/30 scale-[1.03]"
+                ? "border-primary bg-card shadow-lg"
                 : "border-border bg-card"
             }`}
           >
-            {plan.highlighted && (
-              <span className="text-xs font-bold bg-primary text-primary-foreground px-3 py-1 rounded-full self-start mb-3">
-                Recommended
-              </span>
-            )}
             <h3 className="text-lg font-bold">{plan.name}</h3>
             <div className="mt-2 mb-1">
               <span className="text-3xl font-bold">{plan.price}</span>
@@ -94,9 +89,6 @@ const PricingSection = () => {
         ))}
       </div>
 
-      <p className="text-xs text-muted-foreground text-center mt-6">
-        Prices shown in USD. Local currency pricing available at checkout.
-      </p>
     </section>
   );
 };
