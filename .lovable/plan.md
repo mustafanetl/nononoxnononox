@@ -1,58 +1,53 @@
 
 
-# Auth Review & Missing Pages
+# Clean Up Landing Page — High-Quality SaaS Polish
 
-## Current State
+## Problems identified
 
-**What works:**
-- Login/signup with email+password ✅
-- Google & Apple OAuth ✅
-- Password reset flow (`/reset-password`) ✅
-- Sign out (button in Chat sidebar) ✅
-- Profile auto-creation via DB trigger ✅
-- Subscription table exists but paywall is bypassed (`isPremium = true`) ✅
+The current page has several elements that feel cheap/untrustworthy:
 
-**What's missing:**
-- **No Settings/Profile page** — users can't view or edit their display name, email, or avatar
-- **No Subscription Management page** — users can't see their current plan or upgrade/downgrade (even though the subscription table and hook exist)
-- **No `/settings` or `/account` route** in App.tsx
-- Sign out only accessible from Chat sidebar — not from other pages
+1. **Fake testimonials** with fake names, fake "verified" badges (BadgeCheck icons), and fabricated quotes — classic cheap Shopify store pattern
+2. **5-star ratings** on every testimonial — looks manufactured
+3. **"Recommended" badge** on pricing — pushy sales tactic
+4. **"Click any destination to start planning instantly"** — overpromising copy
+5. **Destination tags** like "Honeymoon Paradise", "Romance & Art" — feel gimmicky
+6. **"60 Seconds" in primary color** — feels like a marketing gimmick
+7. **"Try Jolliday Free"** CTA section at bottom — redundant and salesy
+8. **"Your perfect trip in 3 simple steps"** — cliche subtitle
+9. **"Plan smarter, travel better"** — generic tagline
 
-## Plan
+## What changes
 
-### 1. Create `src/pages/Settings.tsx`
-A single settings page with two sections:
+### HeroSection.tsx
+- Rewrite headline: "Plan your next trip with AI" (no time claims, no colored spans)
+- Subtitle: "Personalized itineraries with flights, hotels, and activities." (factual, no hype)
+- Remove "Start with a 3-day free trial" from hero (keep it only in pricing)
+- Keep search bar + suggestions as-is (those are functional, not gimmicky)
 
-**Profile section:**
-- Display name (editable, saves to `profiles` table)
-- Email (read-only, from auth user)
-- Avatar URL (optional, editable)
-- Save button
+### Index.tsx — Testimonials section
+- Remove the entire testimonials section (fake reviews are the #1 cheap signal)
 
-**Subscription section:**
-- Show current plan (from `useSubscription` hook)
-- Show status & expiry date
-- Display the two plan cards (Monthly $12.99 / Annual $49.99) — disabled/informational since no payment API is connected yet
-- "Manage Subscription" button placeholder (disabled with tooltip "Coming soon")
+### Index.tsx — Destinations section
+- Remove the subtitle "Click any destination to start planning instantly"
+- Remove the tag text ("Honeymoon Paradise", "Romance & Art", etc.) — just show destination name
 
-**Account actions:**
-- Sign out button
-- "Delete Account" placeholder (disabled, future feature)
+### Index.tsx — How It Works section
+- Change subtitle to just "Three steps to your itinerary"
 
-### 2. Update `src/App.tsx`
-- Add route: `/settings` → `<Settings />`
+### Index.tsx — Bottom CTA section
+- Remove the entire bottom CTA block (redundant — pricing section already has CTAs)
 
-### 3. Add Settings link to navigation
-- **Chat sidebar**: Add a Settings/gear icon next to the existing User/LogOut buttons
-- **Landing page navbar**: Add Settings link when user is logged in (alongside "My Trips")
+### PricingSection.tsx
+- Remove the "Recommended" badge from the annual plan
+- Remove `scale-[1.03]` and `ring-2` — keep subtle highlight (just `border-primary`)
+- Remove "Local currency pricing available at checkout" (over-promising)
 
-### 4. Update `src/pages/MyTrips.tsx`
-- Add a link/button to Settings page in the header area
+### Index.tsx — Footer
+- Remove social links (Twitter/Instagram pointing to generic URLs looks fake)
+- Keep just logo, product links, and copyright
 
-## Files to Create/Modify
-1. **Create** `src/pages/Settings.tsx` — Profile editing + subscription display + sign out
-2. **Modify** `src/App.tsx` — Add `/settings` route
-3. **Modify** `src/pages/Chat.tsx` — Add Settings icon link in sidebar
-4. **Modify** `src/pages/Index.tsx` — Add Settings link in navbar for logged-in users
-5. **Modify** `src/pages/MyTrips.tsx` — Add Settings link in header
+## Files to modify
+1. `src/components/HeroSection.tsx` — cleaner headline/subtitle, remove trial text
+2. `src/pages/Index.tsx` — remove testimonials section, bottom CTA, clean destinations, simplify footer
+3. `src/components/PricingSection.tsx` — remove "Recommended" badge, tone down highlight styling
 
