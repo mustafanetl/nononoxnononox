@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-export type SubscriptionPlan = "free" | "monthly" | "annual" | "lifetime";
+export type SubscriptionPlan = "free" | "monthly" | "annual";
 
 export function useSubscription() {
   const { user } = useAuth();

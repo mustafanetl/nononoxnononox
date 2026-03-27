@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 const plans = [
   {
     name: "Monthly",
-    price: "$29.99",
+    price: "$12.99",
     period: "/month",
     description: "For frequent travelers",
     features: [
@@ -24,12 +24,12 @@ const plans = [
   },
   {
     name: "Annual",
-    price: "$44.99",
+    price: "$49.99",
     period: "/year",
-    description: "Best value — save over 68%",
+    description: "Best value — save over 67%",
     features: [
       "Everything in Monthly",
-      "Save $314/year vs monthly",
+      "Save $106/year vs monthly",
       "Priority support",
       "Early access to features",
     ],
@@ -38,23 +38,6 @@ const plans = [
     highlighted: true,
     subtextCta: "Cancel anytime",
   },
-  {
-    name: "Lifetime",
-    price: "$100",
-    period: "one-time",
-    description: "Pay once, use forever",
-    features: [
-      "Everything in Annual",
-      "Lifetime access — pay once",
-      "Collaborative trip planning",
-      "Cost splitting tools",
-      "Founding member perks",
-    ],
-    cta: "Get Lifetime Access",
-    href: "/auth",
-    highlighted: false,
-    subtextCta: "One-time payment",
-  },
 ];
 
 const PricingSection = () => {
@@ -62,10 +45,10 @@ const PricingSection = () => {
     <section className="container mx-auto px-4 py-16 border-t border-border">
       <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">Simple Pricing</h2>
       <p className="text-muted-foreground text-center mb-10">
-        Start with a 3-day free trial — no credit card required
+        Start with a 3-day free trial
       </p>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
+      <div className="grid sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
         {plans.map((plan) => (
           <div
             key={plan.name}

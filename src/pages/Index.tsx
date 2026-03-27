@@ -192,7 +192,7 @@ const Index = () => {
                 </Button>
               </Link>
               <p className="text-xs text-muted-foreground mt-3">
-                Free for 3 days · No credit card required
+                Start with a 3-day free trial
               </p>
             </div>
           </div>

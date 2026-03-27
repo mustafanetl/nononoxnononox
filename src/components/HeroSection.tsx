@@ -72,7 +72,7 @@ const HeroSection = () => {
           </div>
 
           <p className="mt-4 text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: "0.25s" }}>
-            No credit card required · Free for 3 days
+            Start with a 3-day free trial
           </p>
         </div>
 
