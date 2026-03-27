@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import MyTrips from "./pages/MyTrips";
 import ResetPassword from "./pages/ResetPassword";
 import TripDetail from "./pages/TripDetail";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/my-trips" element={<MyTrips />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/trip/view" element={<TripDetail />} />
+              <Route path="/settings" element={<Settings />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Compass, ArrowRight, Star, Twitter, Instagram, MessageSquare, Sparkles, Map, BadgeCheck, User } from "lucide-react";
+import { Compass, ArrowRight, Star, Twitter, Instagram, MessageSquare, Sparkles, Map, BadgeCheck, User, Settings } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import HeroSection from "@/components/HeroSection";
 import PricingSection from "@/components/PricingSection";
@@ -51,6 +51,11 @@ const Index = () => {
                   <Button variant="ghost" size="sm" className="gap-1">
                     <User className="h-4 w-4" />
                     <span className="hidden sm:inline">My Trips</span>
+                  </Button>
+                </Link>
+                <Link to="/settings">
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <Settings className="h-4 w-4" />
                   </Button>
                 </Link>
                 <Link to="/chat">
