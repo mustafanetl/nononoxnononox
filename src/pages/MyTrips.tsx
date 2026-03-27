@@ -93,7 +93,7 @@ const MyTrips = () => {
               <MapPin className="h-8 w-8 text-muted-foreground" />
             </div>
             <h2 className="text-xl font-semibold mb-2">No trips yet</h2>
-            <p className="text-muted-foreground mb-6">Start planning your first adventure with Rzuma</p>
+            <p className="text-muted-foreground mb-6">Start planning your first adventure with Jolliday</p>
             <Link to="/chat">
               <Button className="gap-2">
                 <Plus className="h-4 w-4" /> Plan a Trip

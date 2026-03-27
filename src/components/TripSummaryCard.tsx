@@ -52,7 +52,7 @@ const TripSummaryCard = ({ data, destination }: { data: TripPlanData; destinatio
       setShowPaywall(true);
       return;
     }
-    sessionStorage.setItem("rzuma-trip-detail", JSON.stringify({ data, destination }));
+    sessionStorage.setItem("jolliday-trip-detail", JSON.stringify({ data, destination }));
     navigate("/trip/view");
   };
 

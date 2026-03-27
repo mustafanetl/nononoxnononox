@@ -13,7 +13,7 @@ type Conversation = {
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rzuma-chat`;
-const STORAGE_KEY = "rzuma-conversations";
+const STORAGE_KEY = "jolliday-conversations";
 
 const generateId = () => crypto.randomUUID?.() || Math.random().toString(36).slice(2);
 

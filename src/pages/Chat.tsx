@@ -300,7 +300,7 @@ const Chat = () => {
             </Button>
             <div className="flex items-center gap-2">
               <Compass className="h-5 w-5" />
-              <span className="font-semibold">Rzuma</span>
+              <span className="font-semibold">Jolliday</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -490,7 +490,7 @@ const Chat = () => {
                 <div className="flex items-end gap-2">
                   <textarea
                     ref={textareaRef}
-                    placeholder="Message Rzuma..."
+                    placeholder="Message Jolliday..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -506,7 +506,7 @@ const Chat = () => {
               </div>
             </form>
             <p className="text-xs text-muted-foreground text-center mt-2">
-              Rzuma can make mistakes. Verify travel details before booking.
+              Jolliday can make mistakes. Verify travel details before booking.
             </p>
           </div>
         </div>
