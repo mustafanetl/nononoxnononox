@@ -1,25 +1,20 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Compass, ArrowRight, Star, Twitter, Instagram, MessageSquare, Sparkles, Map, BadgeCheck, User, Settings } from "lucide-react";
+import { Compass, ArrowRight, MessageSquare, Sparkles, Map, User, Settings } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import HeroSection from "@/components/HeroSection";
 import PricingSection from "@/components/PricingSection";
 import { useAuth } from "@/hooks/useAuth";
 
 const destinations = [
-  { name: "Dubai", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop", tag: "Luxury & Adventure" },
-  { name: "Bali", image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&h=400&fit=crop", tag: "Honeymoon Paradise" },
-  { name: "Tokyo", image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&h=400&fit=crop", tag: "Culture & Tech" },
-  { name: "Paris", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&h=400&fit=crop", tag: "Romance & Art" },
-  { name: "Maldives", image: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=600&h=400&fit=crop", tag: "Beach Escape" },
-  { name: "Barcelona", image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=600&h=400&fit=crop", tag: "Food & Nightlife" },
+  { name: "Dubai", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop" },
+  { name: "Bali", image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&h=400&fit=crop" },
+  { name: "Tokyo", image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&h=400&fit=crop" },
+  { name: "Paris", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&h=400&fit=crop" },
+  { name: "Maldives", image: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=600&h=400&fit=crop" },
+  { name: "Barcelona", image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=600&h=400&fit=crop" },
 ];
 
-const testimonials = [
-  { quote: "Planned our entire Bali honeymoon in one conversation. Every restaurant and activity was spot on.", name: "Sarah & Mike", trip: "Bali · 10 days", initials: "SM", verified: true },
-  { quote: "Found flights $200 cheaper than what I found on my own. The budget breakdown saved me hours.", name: "James L.", trip: "Tokyo · 7 days", initials: "JL", verified: true },
-  { quote: "First family trip abroad and every detail was handled — even kid-friendly activities.", name: "Priya K.", trip: "Dubai · 5 days", initials: "PK", verified: true },
-];
 
 const steps = [
   { num: "1", icon: MessageSquare, title: "Tell us where", desc: "Type any destination — or let us inspire you." },
@@ -92,7 +87,7 @@ const Index = () => {
         {/* Popular Destinations */}
         <section className="container mx-auto px-4 py-16 border-t border-border">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">Popular Destinations</h2>
-            <p className="text-muted-foreground text-center mb-10">Click any destination to start planning instantly</p>
+            
             <div className="max-w-5xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-3 md:mb-4">
                 {destinations.slice(0, 2).map((d) => (
@@ -121,7 +116,7 @@ const Index = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <div className="absolute bottom-3 left-3 right-3">
                       <h3 className="text-white font-bold text-base">{d.name}</h3>
-                      <p className="text-white/70 text-xs">{d.tag}</p>
+                      
                     </div>
                   </Link>
                 ))}
@@ -132,7 +127,7 @@ const Index = () => {
         {/* How It Works */}
         <section id="how-it-works" className="container mx-auto px-4 py-16 border-t border-border">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">How Jolliday Works</h2>
-          <p className="text-muted-foreground text-center mb-10">Your perfect trip in 3 simple steps</p>
+          <p className="text-muted-foreground text-center mb-10">Three steps to your itinerary</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
             {steps.map((step) => (
               <div key={step.num} className="relative text-center p-6 rounded-2xl border border-border bg-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
@@ -147,61 +142,9 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section className="container mx-auto px-4 py-16 border-t border-border">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">What Travelers Say</h2>
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {testimonials.map((t, i) => (
-              <div key={i} className="p-6 rounded-2xl border border-border bg-card hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-                <div className="flex gap-0.5 mb-3">
-                  {Array.from({ length: 5 }).map((_, si) => (
-                    <Star key={si} className="h-4 w-4 fill-primary text-primary" />
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground mb-5 leading-relaxed">"{t.quote}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-foreground">
-                    {t.initials}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-semibold text-sm">{t.name}</p>
-                      {t.verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{t.trip}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* Pricing */}
         <PricingSection />
 
-        {/* CTA */}
-        <section className="container mx-auto px-4 py-20">
-          <div className="relative rounded-2xl p-8 md:p-12 text-center max-w-2xl mx-auto overflow-hidden bg-muted">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
-            <div className="relative z-10">
-              <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                Your next trip is 60 seconds away
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                Plan smarter, travel better.
-              </p>
-              <Link to="/chat">
-                <Button size="lg" className="text-base px-8 py-6">
-                  Try Jolliday Free
-                  <ArrowRight className="h-5 w-5 ml-2" />
-                </Button>
-              </Link>
-              <p className="text-xs text-muted-foreground mt-3">
-                Start with a 3-day free trial
-              </p>
-            </div>
-          </div>
-        </section>
       </main>
 
       <footer className="border-t border-border py-10">
@@ -219,26 +162,12 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="flex gap-12">
-              <div>
-                <h4 className="font-semibold text-sm mb-3">Product</h4>
-                <ul className="space-y-2">
-                  <li><Link to="/chat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Plan a Trip</Link></li>
-                  <li><Link to="/my-trips" className="text-sm text-muted-foreground hover:text-foreground transition-colors">My Trips</Link></li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-semibold text-sm mb-3">Connect</h4>
-                <div className="flex gap-3">
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                    <Twitter className="h-4 w-4" />
-                  </a>
-                  <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                    <Instagram className="h-4 w-4" />
-                  </a>
-                </div>
-              </div>
+            <div>
+              <h4 className="font-semibold text-sm mb-3">Product</h4>
+              <ul className="space-y-2">
+                <li><Link to="/chat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Plan a Trip</Link></li>
+                <li><Link to="/my-trips" className="text-sm text-muted-foreground hover:text-foreground transition-colors">My Trips</Link></li>
+              </ul>
             </div>
           </div>
 

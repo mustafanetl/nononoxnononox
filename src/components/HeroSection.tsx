@@ -26,11 +26,11 @@ const HeroSection = () => {
     <section className="relative min-h-[60vh] flex items-center pt-28 pb-12 px-4">
       <div className="container mx-auto max-w-3xl text-center">
         <h1 className="font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl lg:text-6xl animate-fade-in">
-          Plan Any Trip in <span className="text-primary">60 Seconds</span>
+          Plan your next trip with AI
         </h1>
 
         <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          AI-powered itineraries with real flights, hotels, and activities — personalized to you.
+          Personalized itineraries with flights, hotels, and activities.
         </p>
 
         {/* Search Input */}
@@ -71,9 +71,6 @@ const HeroSection = () => {
             ))}
           </div>
 
-          <p className="mt-4 text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: "0.25s" }}>
-            Start with a 3-day free trial
-          </p>
         </div>
 
         {/* See how it works */}
