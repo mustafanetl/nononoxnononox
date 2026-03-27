@@ -26,7 +26,7 @@ export const generateTripSummary = (messages: Message[]): string => {
     allItinerary.push(...extractBlock(m.content, "itinerary"));
   });
 
-  let summary = "✈️ My Trip Plan (via Rzuma)\n\n";
+  let summary = "✈️ My Trip Plan (via Jolliday)\n\n";
 
   if (allFlights.length > 0) {
     summary += "🛫 FLIGHTS\n";
@@ -63,7 +63,7 @@ export const generateTripSummary = (messages: Message[]): string => {
     summary += "\n";
   }
 
-  summary += "Planned with Rzuma ✨";
+  summary += "Planned with Jolliday ✨";
   return summary;
 };
 
