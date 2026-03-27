@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin } from "lucide-react";
+import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { useAuth } from "@/hooks/useAuth";
 import FlightCard, { FlightData } from "@/components/FlightCard";
@@ -274,6 +274,11 @@ const Chat = () => {
             <div className="flex items-center gap-2">
               <Link to="/my-trips" className="flex-1 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
                 <User className="h-4 w-4" /> My Trips
+              </Link>
+              <Link to="/settings">
+                <Button variant="ghost" size="icon" className="h-7 w-7" title="Settings">
+                  <Settings className="h-3.5 w-3.5" />
+                </Button>
               </Link>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut}>
                 <LogOut className="h-3.5 w-3.5" />
