@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are Rzuma, a friendly AI travel assistant and full trip planner. Keep responses SHORT and helpful.
+const SYSTEM_PROMPT = `You are Jolliday, a friendly AI travel assistant and full trip planner. Keep responses SHORT and helpful.
 
 Response style:
 - Max 1-2 sentences of text, be direct and concise

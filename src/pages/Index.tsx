@@ -38,7 +38,7 @@ const Index = () => {
             <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center">
               <Compass className="h-4 w-4 text-background" />
             </div>
-            <span className="font-semibold text-lg">Rzuma</span>
+            <span className="font-semibold text-lg">Jolliday</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -126,7 +126,7 @@ const Index = () => {
 
         {/* How It Works */}
         <section id="how-it-works" className="container mx-auto px-4 py-16 border-t border-border">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">How Rzuma Works</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">How Jolliday Works</h2>
           <p className="text-muted-foreground text-center mb-10">Your perfect trip in 3 simple steps</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
             {steps.map((step) => (
@@ -187,7 +187,7 @@ const Index = () => {
               </p>
               <Link to="/chat">
                 <Button size="lg" className="text-base px-8 py-6">
-                  Try Rzuma Free
+                  Try Jolliday Free
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </Button>
               </Link>
@@ -207,7 +207,7 @@ const Index = () => {
                 <div className="w-7 h-7 rounded-lg bg-foreground flex items-center justify-center">
                   <Compass className="h-3.5 w-3.5 text-background" />
                 </div>
-                <span className="font-semibold">Rzuma</span>
+                <span className="font-semibold">Jolliday</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
                 Your AI travel companion. Plan trips in seconds, not hours.
@@ -238,7 +238,7 @@ const Index = () => {
           </div>
 
           <div className="border-t border-border pt-6 text-center">
-            <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Rzuma. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Jolliday. All rights reserved.</p>
           </div>
         </div>
       </footer>

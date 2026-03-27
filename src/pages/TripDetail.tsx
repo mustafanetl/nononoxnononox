@@ -195,7 +195,7 @@ const TripDetail = () => {
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
-    const raw = sessionStorage.getItem("rzuma-trip-detail");
+    const raw = sessionStorage.getItem("jolliday-trip-detail");
     if (raw) {
       try { setTripData(JSON.parse(raw)); }
       catch { navigate("/chat"); }
