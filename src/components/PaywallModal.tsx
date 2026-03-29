@@ -48,17 +48,8 @@ const PaywallModal = ({ open, onClose }: { open: boolean; onClose: () => void })
         <div className="space-y-2 mb-4">
           {plans.map((p) => (
             <Link key={p.name} to="/auth" onClick={onClose}>
-              <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors hover:bg-muted/50 ${
-                p.badge === "Best Value" ? "border-primary bg-primary/5" : "border-border"
-              }`}>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm">{p.name}</span>
-                  {p.badge && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
-                      {p.badge}
-                    </span>
-                  )}
-                </div>
+              <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors hover:bg-muted/50 border-border`}>
+                <span className="font-semibold text-sm">{p.name}</span>
                 <span className="font-bold text-sm">
                   {p.price}<span className="text-muted-foreground font-normal">{p.period}</span>
                 </span>
