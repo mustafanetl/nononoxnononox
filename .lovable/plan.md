@@ -1,57 +1,83 @@
 
 
-# Full App Quality Audit — Issues & Improvements
+# Trip Detail Page — Quality Overhaul
 
 ## Problems Found
 
-### 1. ActivityCard — Emojis in occasion labels (cheap feel)
-`src/components/ActivityCard.tsx` lines 47-53 has emoji-laden occasion labels like "Perfect for honeymoons 💕", "Great for birthdays 🎂", "Family-friendly 👨‍👩‍👧‍👦", "Fun with friends 🎉", "Anniversary special 💍", "Solo adventure 🎒". This contradicts the SaaS aesthetic direction.
+### 1. "Trip Score" is gimmicky and adds no real value
+The `calcTripScore` function and `TripScoreBadge` component give an arbitrary score (0-100) based on how many card types are present. Tips like "Add flights to boost your score" feel gamified and cheap — not something worth paying for. It appears in 3 places: mobile action bar, day view budget strip, and the scoring logic itself.
 
-**Fix:** Remove emojis, simplify labels to just the occasion name capitalized (e.g., "Honeymoon", "Birthday", "Family", "Solo", "Friends", "Anniversary").
+**Fix:** Remove `calcTripScore`, `TripScoreBadge`, and all references. This is filler, not premium value.
 
-### 2. MyTrips — Emoji in occasion display
-`src/pages/MyTrips.tsx` line 127: `🎯 {trip.occasion}` — another emoji.
+### 2. Map markers use emojis (🏨, 🎯)
+`TripMap.tsx` line 98-99 uses emoji characters inside map markers. Inconsistent with the SaaS aesthetic.
 
-**Fix:** Remove the 🎯 emoji, just show the occasion text.
+**Fix:** Replace emojis with simple SVG icons or single letters (H for hotel, A for activity) rendered as text inside the colored circles.
 
-### 3. PaywallModal — "Best Value" badge & "3-day free trial"
-`src/components/PaywallModal.tsx` line 8 has a "Best Value" badge on the annual plan (pushy), and line 71 says "Start with a 3-day free trial" (unsubstantiated claim since payments aren't implemented).
+### 3. Flight Detail Modal fabricates a "Return" flight
+`FlightDetailModal.tsx` lines 226-257 show a return flight section that just mirrors the outbound flight with swapped cities and identical times/duration. This is misleading — the AI only generates one-way data.
 
-**Fix:** Remove the "Best Value" badge. Remove the "3-day free trial" text. Keep it clean.
+**Fix:** Remove the fake "Return" flight block entirely. Just show the outbound flight info.
 
-### 4. PricingSection — "3-day free trial" still present
-`src/components/PricingSection.tsx` line 48 still says "Start with a 3-day free trial" — there's no payment system, so this is misleading.
+### 4. "Tap to read more" text in itinerary cards
+`ItineraryTimeline.tsx` line 135: `"Tap to read more"` is casual mobile-app language.
 
-**Fix:** Remove or change to "Free to try" or just remove the subtitle entirely.
+**Fix:** Remove this text. Users can still tap to expand — no instruction needed.
 
-### 5. Settings page — "Coming soon" buttons feel unfinished
-`src/pages/Settings.tsx` lines 153, 162 show disabled "Coming soon" buttons for subscription plans, and line 168 says "Payment integration coming soon". This looks like a half-built product.
+### 5. Redundant "Prices are approximate" text appears 4+ times
+- Section headers for Flights, Hotels, Activities all say it
+- Budget section says it again
+- Bottom footer says it again
+- Summary card says it
 
-**Fix:** Simplify the subscription section — just show current plan status. Remove the plan selection cards with "Coming soon" buttons. Replace with a simple note: "You're on the Free plan. Upgrade options coming soon."
+**Fix:** Keep it only once at the bottom footer. Remove from section headers and budget section.
 
-### 6. Settings page — "Avatar URL" field is low-quality UX
-Asking users to paste an avatar URL (line 118) is not professional. Regular users don't have image URLs handy.
+### 6. Budget donut `~` prefix on every price everywhere
+Every single price shows `~$850`, `~$120`, `~$350`. The tilde on every number is noisy.
 
-**Fix:** Remove the avatar URL field for now. It adds no value without a file upload mechanism.
+**Fix:** Show prices without `~` prefix in the detail cards. Keep the word "estimated" in one place (the bottom footer).
 
-### 7. useSubscription — `isPremium = true` hardcoded
-`src/hooks/useSubscription.ts` line 44: paywall is completely bypassed. This means the PaywallModal, pricing sections, and premium features are all theater.
+### 7. "Your Trip" label above destination name is unnecessary
+Line 301: `"Your Trip"` in tiny uppercase text adds no information.
 
-**Fix:** Leave as-is for now (this is intentional during development), but add a clearer comment.
+**Fix:** Remove it. The destination name is self-explanatory.
 
-### 8. Duplicate city image maps across 4+ files
-`FlightCard.tsx`, `HotelCard.tsx`, `TripSummaryCard.tsx`, `TripDetail.tsx` all have their own `cityImages` maps. Code duplication.
+### 8. Section header "Where You'll Stay" is inconsistent
+Other sections use noun-based headers (Flights, Activities & Experiences). "Where You'll Stay" is conversational.
 
-**Fix:** Not critical for quality but worth noting. Skip for now to keep scope tight.
+**Fix:** Change to "Hotels".
+
+### 9. Day view shows "Your plan for the day" — unnecessary subtitle
+Line 513: filler text.
+
+**Fix:** Remove the subtitle.
+
+### 10. Desktop action bar floats over hero image with no background context
+Lines 592-602: the desktop action buttons float at top-right with `shadow-lg` but can overlap the hero. On scroll they look disconnected.
+
+**Fix:** Move the desktop actions into the hero area (beside the back button) or into a sticky header bar that appears on scroll, matching the day selector bar style.
 
 ## Summary of Changes
 
 ### Files to modify:
-1. **`src/components/ActivityCard.tsx`** — Remove emojis from occasion labels
-2. **`src/pages/MyTrips.tsx`** — Remove 🎯 emoji
-3. **`src/components/PaywallModal.tsx`** — Remove "Best Value" badge and "3-day free trial"
-4. **`src/components/PricingSection.tsx`** — Remove "Start with a 3-day free trial" subtitle
-5. **`src/pages/Settings.tsx`** — Remove avatar URL field, simplify subscription section (remove plan cards with "Coming soon"), remove "Payment integration coming soon"
+1. **`src/pages/TripDetail.tsx`**
+   - Remove `calcTripScore` function and `TripScoreBadge` component
+   - Remove all TripScoreBadge usage (mobile bar, day view)
+   - Remove `~` prefix from all price displays
+   - Remove "Your Trip" label
+   - Remove "Prices are approximate" from section headers
+   - Remove "Prices are approximate" from budget section
+   - Change "Where You'll Stay" → "Hotels"
+   - Remove "Your plan for the day" subtitle
+   - Move desktop action buttons into a sticky header bar instead of floating
 
-All changes are small, targeted cleanup to match the high-quality SaaS aesthetic.
+2. **`src/components/TripMap.tsx`**
+   - Replace emoji markers (🏨, 🎯) with clean text letters (H, A)
+
+3. **`src/components/FlightDetailModal.tsx`**
+   - Remove the fabricated "Return" flight section (lines 226-257)
+   - Change "Round trip total" label to just the price without the misleading round-trip claim
+
+4. **`src/components/ItineraryTimeline.tsx`**
+   - Remove "Tap to read more" text
 
