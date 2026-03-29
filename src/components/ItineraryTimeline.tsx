@@ -131,9 +131,8 @@ const TimeCard = ({
     <p className={`text-xs text-foreground leading-relaxed transition-all duration-300 ${expanded ? "" : "line-clamp-3"}`}>
       {text}
     </p>
-    {!expanded && text.length > 100 && (
-      <span className="text-[10px] text-primary font-medium mt-1 inline-block">Tap to read more</span>
-    )}
+
+
   </div>
 );
 

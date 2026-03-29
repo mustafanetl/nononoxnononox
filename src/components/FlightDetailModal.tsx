@@ -223,42 +223,9 @@ const FlightDetailModal = ({ flight, open, onOpenChange }: FlightDetailModalProp
             </div>
           </div>
 
-          <div className="bg-muted/50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full bg-muted-foreground" />
-              <span className="text-xs font-medium uppercase tracking-wide">Return</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="text-center">
-                <p className="text-xl font-bold">{flight.arrivalTime}</p>
-                <p className="text-xs text-muted-foreground font-medium">{flight.to}</p>
-                <p className="text-xs text-muted-foreground">{toCity}</p>
-              </div>
-              <div className="flex-1 flex flex-col items-center px-3">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                  <Clock className="h-3 w-3" />
-                  <span>{flight.duration}</span>
-                </div>
-                <div className="w-full flex items-center gap-1">
-                  <div className="h-px flex-1 bg-border" />
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  <div className="h-px flex-1 bg-border" />
-                </div>
-                <span className="text-[10px] text-muted-foreground mt-1">
-                  {flight.stops === 0 ? "Direct" : `${flight.stops} stop`}
-                </span>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold">{flight.departureTime}</p>
-                <p className="text-xs text-muted-foreground font-medium">{flight.from}</p>
-                <p className="text-xs text-muted-foreground">{fromCity}</p>
-              </div>
-            </div>
-          </div>
-
           <div className="flex items-center justify-between pt-2">
             <div>
-              <p className="text-xs text-muted-foreground">Round trip total</p>
+              <p className="text-xs text-muted-foreground">Estimated price</p>
               <p className="text-2xl font-bold">{flight.currency}{flight.price}</p>
             </div>
             <div className="flex gap-2">

@@ -681,7 +681,7 @@ const ActivityRow = React.forwardRef<HTMLDivElement, {
         <a href={getGetYourGuideUrl(a.name, destination)} target="_blank" rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           className="flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline shrink-0">
-          Book <ChevronRight className="h-3 w-3" />
+          Book <ExternalLink className="h-3 w-3" />
         </a>
       </div>
     </div>
