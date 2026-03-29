@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Download, Share2, Plane, Hotel, Sparkles,
   MapPin, Clock, Sun, Banknote, Globe, CalendarDays,
-  ExternalLink, Star, Bookmark, TrendingUp, ChevronRight
+  ExternalLink, Star, Bookmark, TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 import FlightDetailModal from "@/components/FlightDetailModal";
 import HotelDetailModal from "@/components/HotelDetailModal";
 import ActivityDetailModal from "@/components/ActivityDetailModal";
@@ -60,19 +60,6 @@ const activityImageMap: Record<string, string> = {
   default: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=250&fit=crop",
 };
 
-const calcTripScore = (data: TripPlanData): { score: number; tips: string[] } => {
-  let score = 0;
-  const tips: string[] = [];
-  if (data.flights.length > 0) { score += 20; } else { tips.push("Add flights to boost your score"); }
-  if (data.hotels.length > 0) { score += 20; } else { tips.push("Add hotels for a complete plan"); }
-  if (data.activities.length > 0) { score += 15; } else { tips.push("Add activities for more fun"); }
-  if (data.activities.length >= 3) { score += 5; }
-  if (data.itinerary.length > 0) { score += 20; } else { tips.push("Add a day-by-day itinerary"); }
-  if (data.itinerary.length >= 5) { score += 10; } else if (data.itinerary.length > 0) { tips.push("Plan 5+ days for a thorough trip"); }
-  if (data.travelInfo) { score += 10; }
-  return { score: Math.min(score, 100), tips };
-};
-
 /* ───── Budget Donut ───── */
 const BudgetDonut = ({
   segments, currency, total, compact = false,
@@ -112,7 +99,7 @@ const BudgetDonut = ({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className={`font-bold text-foreground animate-count-up ${compact ? "text-xs" : "text-lg"}`}>
-            ~{currency}{total.toLocaleString()}
+            {currency}{total.toLocaleString()}
           </span>
           {!compact && <span className="text-[10px] text-muted-foreground">Total</span>}
         </div>
@@ -127,51 +114,13 @@ const BudgetDonut = ({
                 <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
                 <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-sm text-foreground flex-1">{seg.label}</span>
-                <span className="text-sm font-semibold text-foreground">~{currency}{seg.value.toLocaleString()}</span>
+                <span className="text-sm font-semibold text-foreground">{currency}{seg.value.toLocaleString()}</span>
               </div>
             );
           })}
         </div>
       )}
     </div>
-  );
-};
-
-/* ───── Trip Score Ring (small) ───── */
-const TripScoreBadge = ({ score, tips }: { score: number; tips: string[] }) => {
-  const radius = 16;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
-  const color = score >= 80 ? "hsl(142, 76%, 36%)" : score >= 50 ? "hsl(38, 92%, 50%)" : "hsl(0, 84%, 60%)";
-
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="relative w-10 h-10 cursor-help shrink-0">
-            <svg viewBox="0 0 40 40" className="w-full h-full -rotate-90">
-              <circle cx="20" cy="20" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="3" />
-              <circle cx="20" cy="20" r={radius} fill="none" stroke={color} strokeWidth="3"
-                strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
-                className="animate-ring-fill"
-                style={{ "--ring-circumference": circumference, "--ring-offset": offset } as React.CSSProperties}
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-[10px] font-bold text-foreground">{score}</span>
-            </div>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-[200px]">
-          <p className="font-semibold text-xs mb-1">Trip Score</p>
-          {tips.length > 0 ? (
-            <ul className="text-xs text-muted-foreground space-y-0.5">
-              {tips.map((t, i) => <li key={i}>• {t}</li>)}
-            </ul>
-          ) : <p className="text-xs text-muted-foreground">Your trip plan looks great!</p>}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   );
 };
 
@@ -236,7 +185,7 @@ const TripDetail = () => {
   const activitiesCost = data.activities.reduce((s, a) => s + a.price, 0);
   const totalBudget = flightsCost + hotelsCost + activitiesCost;
   const currency = data.flights[0]?.currency || data.hotels[0]?.currency || data.activities[0]?.currency || "$";
-  const { score: tripScore, tips: tripTips } = calcTripScore(data);
+  
 
   const budgetSegments = [
     { label: "Flights", value: flightsCost, color: "hsl(221, 83%, 53%)", icon: Plane },
@@ -298,7 +247,6 @@ const TripDetail = () => {
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-2 mb-1">
               <MapPin className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Your Trip</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{destination}</h1>
           </div>
@@ -357,7 +305,7 @@ const TripDetail = () => {
                 <Banknote className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase">Budget</span>
               </div>
-              <p className="text-sm font-bold text-foreground">~{currency}{totalBudget.toLocaleString()}</p>
+              <p className="text-sm font-bold text-foreground">{currency}{totalBudget.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">total est.</p>
             </div>
           )}
@@ -430,7 +378,7 @@ const TripDetail = () => {
             {/* Flights */}
             {data.flights.length > 0 && (
               <section>
-                <SectionHeader icon={Plane} title="Flights" subtitle="Prices are approximate" />
+                <SectionHeader icon={Plane} title="Flights" />
                 <div className="space-y-3">
                   {data.flights.map((f, i) => (
                     <FlightRow key={f.id || i} flight={f} destination={destination}
@@ -446,7 +394,7 @@ const TripDetail = () => {
             {/* Hotels */}
             {data.hotels.length > 0 && (
               <section>
-                <SectionHeader icon={Hotel} title="Where You'll Stay" subtitle="Prices are approximate" />
+                <SectionHeader icon={Hotel} title="Hotels" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   {data.hotels.map((h, i) => (
                     <HotelRow key={h.id || i} hotel={h} destination={destination}
@@ -470,7 +418,7 @@ const TripDetail = () => {
             {/* Activities */}
             {data.activities.length > 0 && (
               <section>
-                <SectionHeader icon={Sparkles} title="Activities & Experiences" subtitle="Prices are approximate" />
+                <SectionHeader icon={Sparkles} title="Activities & Experiences" />
                 <div className="space-y-3">
                   {data.activities.map((a, i) => (
                     <ActivityRow key={a.id || i} activity={a} destination={destination}
@@ -488,9 +436,6 @@ const TripDetail = () => {
               <section className="p-5 rounded-2xl bg-card border border-border">
                 <SectionHeader icon={TrendingUp} title="Estimated Budget" />
                 <BudgetDonut segments={budgetSegments} currency={currency} total={totalBudget} />
-                <p className="text-[10px] text-muted-foreground mt-4">
-                  Prices are approximate estimates. Verify on booking sites before purchasing.
-                </p>
               </section>
             )}
           </div>
@@ -510,7 +455,7 @@ const TripDetail = () => {
                     <h2 className="text-lg font-bold text-foreground">
                       {data.itinerary.find(it => it.day === activeDay)?.title || `Day ${activeDay}`}
                     </h2>
-                    <p className="text-xs text-muted-foreground">Your plan for the day</p>
+                    
                   </div>
                 </div>
                 <ItineraryTimeline
@@ -557,7 +502,8 @@ const TripDetail = () => {
                   <p className="text-xs font-semibold text-foreground">Total Trip Budget</p>
                   <p className="text-[10px] text-muted-foreground">Across {days} days</p>
                 </div>
-                <TripScoreBadge score={tripScore} tips={tripTips} />
+
+
               </div>
             )}
           </div>
@@ -572,8 +518,7 @@ const TripDetail = () => {
       <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden">
         <div className="bg-card/90 backdrop-blur-xl border-t border-border px-4 py-3">
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
-            <TripScoreBadge score={tripScore} tips={tripTips} />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 justify-end">
               <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 h-9">
                 <Bookmark className="h-3.5 w-3.5" /> {saving ? "..." : "Save"}
               </Button>
@@ -588,15 +533,15 @@ const TripDetail = () => {
         </div>
       </div>
 
-      {/* Desktop action bar (top-right, visible on scroll) */}
-      <div className="hidden sm:flex fixed top-4 right-4 z-40 items-center gap-2">
-        <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 shadow-lg">
+      {/* Desktop action bar in hero */}
+      <div className="hidden sm:flex absolute top-4 right-4 z-10 items-center gap-2" style={{ position: 'fixed' }}>
+        <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-background/80">
           <Bookmark className="h-3.5 w-3.5" /> {saving ? "..." : "Save Trip"}
         </Button>
-        <Button variant="outline" size="sm" onClick={handleExportPDF} className="shadow-lg gap-1.5">
+        <Button variant="outline" size="sm" onClick={handleExportPDF} className="bg-background/50 backdrop-blur-sm hover:bg-background/80 gap-1.5">
           <Download className="h-3.5 w-3.5" /> PDF
         </Button>
-        <Button variant="outline" size="sm" onClick={handleShare} className="shadow-lg gap-1.5">
+        <Button variant="outline" size="sm" onClick={handleShare} className="bg-background/50 backdrop-blur-sm hover:bg-background/80 gap-1.5">
           <Share2 className="h-3.5 w-3.5" /> Share
         </Button>
       </div>
@@ -654,7 +599,7 @@ const FlightRow = React.forwardRef<HTMLDivElement, {
         </div>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-lg font-bold text-foreground">~{f.currency}{f.price}</p>
+        <p className="text-lg font-bold text-foreground">{f.currency}{f.price}</p>
         <p className="text-xs text-muted-foreground">{f.airline}</p>
       </div>
     </div>
@@ -684,7 +629,7 @@ const HotelRow = React.forwardRef<HTMLDivElement, {
         <img src={getHotelImage(h.image)} alt={h.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
         <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-bold">
-          ~{h.currency}{h.pricePerNight}/night
+          {h.currency}{h.pricePerNight}/night
         </div>
       </div>
       <div className="p-4 flex-1 space-y-2">
@@ -731,12 +676,12 @@ const ActivityRow = React.forwardRef<HTMLDivElement, {
       <div className="flex items-center justify-between mt-2">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {a.duration}</span>
-          <span className="font-bold text-foreground">~{a.currency}{a.price}</span>
+          <span className="font-bold text-foreground">{a.currency}{a.price}</span>
         </div>
         <a href={getGetYourGuideUrl(a.name, destination)} target="_blank" rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           className="flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline shrink-0">
-          Book <ChevronRight className="h-3 w-3" />
+          Book <ExternalLink className="h-3 w-3" />
         </a>
       </div>
     </div>
