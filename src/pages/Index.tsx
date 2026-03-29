@@ -19,7 +19,7 @@ const destinations = [
 const steps = [
   { num: "1", icon: MessageSquare, title: "Tell us where", desc: "Type any destination — or let us inspire you." },
   { num: "2", icon: Sparkles, title: "Answer a few questions", desc: "Dates, budget, vibe — we personalize everything." },
-  { num: "3", icon: Map, title: "Get your full itinerary", desc: "Flights, hotels, activities — ready in seconds." },
+  { num: "3", icon: Map, title: "Get your full itinerary", desc: "Flights, hotels, local spots, date ideas — ready in seconds." },
 ];
 
 const Index = () => {

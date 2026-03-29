@@ -8,9 +8,9 @@ const HeroSection = () => {
   const navigate = useNavigate();
 
   const suggestions = [
-    "Desert safari in Dubai",
-    "Beach getaway in Maldives",
-    "Mountain trek in Nepal",
+    "Romantic date night in Paris",
+    "Weekend things to do in Tokyo",
+    "Family adventure in Bali",
   ];
 
   const handleSubmit = (q: string) => {
@@ -30,7 +30,7 @@ const HeroSection = () => {
         </h1>
 
         <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          Personalized itineraries with flights, hotels, and activities.
+          Flights, hotels, local experiences, date ideas, and more — all planned for you.
         </p>
 
         {/* Search Input */}
