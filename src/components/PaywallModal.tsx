@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 const plans = [
   { name: "Monthly", price: "$12.99", period: "/mo" },
-  { name: "Annual", price: "$49.99", period: "/yr", badge: "Best Value" },
+  { name: "Annual", price: "$49.99", period: "/yr" },
 ];
 
 const PaywallModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
@@ -68,7 +68,7 @@ const PaywallModal = ({ open, onClose }: { open: boolean; onClose: () => void })
         </div>
 
         <p className="text-[11px] text-muted-foreground text-center">
-          Start with a 3-day free trial
+          Cancel anytime
         </p>
       </div>
     </div>

@@ -124,7 +124,7 @@ const MyTrips = () => {
                 </div>
 
                 {trip.occasion && (
-                  <p className="text-xs text-muted-foreground capitalize mb-3">🎯 {trip.occasion}</p>
+                  <p className="text-xs text-muted-foreground capitalize mb-3">{trip.occasion}</p>
                 )}
 
                 <div className="flex items-center justify-between">

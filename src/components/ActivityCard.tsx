@@ -44,12 +44,12 @@ const imageMap: Record<string, string> = {
 };
 
 const occasionLabels: Record<string, string> = {
-  honeymoon: "Perfect for honeymoons 💕",
-  birthday: "Great for birthdays 🎂",
-  family: "Family-friendly 👨‍👩‍👧‍👦",
-  solo: "Solo adventure 🎒",
-  friends: "Fun with friends 🎉",
-  anniversary: "Anniversary special 💍",
+  honeymoon: "Honeymoon",
+  birthday: "Birthday",
+  family: "Family",
+  solo: "Solo",
+  friends: "Friends",
+  anniversary: "Anniversary",
 };
 
 const ActivityCard = ({ activity, onClick }: { activity: ActivityData; onClick: () => void }) => {
