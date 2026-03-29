@@ -109,16 +109,6 @@ const Settings = () => {
                 className="mt-1"
               />
             </div>
-            <div>
-              <Label htmlFor="avatarUrl">Avatar URL</Label>
-              <Input
-                id="avatarUrl"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://example.com/avatar.jpg"
-                className="mt-1"
-              />
-            </div>
             <Button onClick={handleSaveProfile} disabled={saving || !profileLoaded} className="gap-2">
               <Save className="h-4 w-4" />
               {saving ? "Saving…" : "Save Changes"}
@@ -144,28 +134,8 @@ const Settings = () => {
               </span>
             </div>
 
-            <div className="border-t border-border pt-4 space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-xl border border-border">
-                <div>
-                  <p className="font-medium text-sm">Monthly</p>
-                  <p className="text-xs text-muted-foreground">$12.99/month</p>
-                </div>
-                <Button size="sm" disabled variant="outline" className="text-xs">
-                  Coming soon
-                </Button>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-xl border border-primary/30 bg-primary/5">
-                <div>
-                  <p className="font-medium text-sm">Annual <span className="text-xs text-primary ml-1">Best Value</span></p>
-                  <p className="text-xs text-muted-foreground">$49.99/year</p>
-                </div>
-                <Button size="sm" disabled variant="outline" className="text-xs">
-                  Coming soon
-                </Button>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-3 w-3" /> Payment integration coming soon
+            <p className="text-sm text-muted-foreground">
+              Upgrade options coming soon.
             </p>
           </div>
         </section>

@@ -45,7 +45,7 @@ const PricingSection = () => {
     <section className="container mx-auto px-4 py-16 border-t border-border">
       <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">Simple Pricing</h2>
       <p className="text-muted-foreground text-center mb-10">
-        Start with a 3-day free trial
+        Choose the plan that works for you
       </p>
 
       <div className="grid sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
