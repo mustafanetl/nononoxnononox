@@ -97,6 +97,7 @@ const TripMap = ({ points, activeDay, onMarkerClick }: Props) => {
         };color:white;width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${isActive ? 16 : 14}px;border:2.5px solid white;box-shadow:0 3px 12px rgba(0,0,0,0.25);transition:all 0.3s ease">${
           p.type === "hotel" ? "🏨" : "🎯"
         }</div>`,
+
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
       });
