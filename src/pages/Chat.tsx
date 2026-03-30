@@ -196,10 +196,10 @@ const Chat = () => {
   };
 
   const suggestions = [
-    "Plan a honeymoon in Bali",
-    "Birthday trip to Tokyo",
-    "Family vacation to Dubai",
-    "Solo adventure in Europe",
+    "Romantic date night in Paris",
+    "Weekend things to do in Tokyo",
+    "Family adventure in Bali",
+    "Solo trip to Barcelona",
   ];
 
   const scrollToBottom = () => {
@@ -347,7 +347,7 @@ const Chat = () => {
                 </div>
                 <h1 className="text-2xl font-semibold mb-2">Where would you like to go?</h1>
                 <p className="text-muted-foreground text-center mb-8">
-                  I can help you plan trips, find flights, hotels, and discover activities for any occasion.
+                  Plan trips, find flights, hotels, local experiences, date ideas, and more.
                 </p>
                 <div className="grid grid-cols-2 gap-2 w-full max-w-md">
                   {suggestions.map((s) => (

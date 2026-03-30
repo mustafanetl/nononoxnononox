@@ -110,7 +110,7 @@ const TripSummaryCard = ({ data, destination }: { data: TripPlanData; destinatio
           </div>
 
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-            <span className="text-xs text-muted-foreground">Prices are approximate</span>
+            <span className="text-xs text-muted-foreground">View full details</span>
             <span className="flex items-center gap-1 text-xs font-medium text-foreground">
               {!isPremium && <Crown className="h-3 w-3 text-primary" />}
               View Full Plan <ArrowRight className="h-3 w-3" />
