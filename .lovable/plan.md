@@ -1,86 +1,72 @@
 
 
-# Real API Data Integration
+# Real Data from Free Public APIs (No API Keys Needed)
 
 ## Overview
-Replace AI-generated fake flights, hotels, activities, and photos with real data from Amadeus, Google Places, and Unsplash APIs. The AI will output **search intents** instead of fake data, and the frontend will resolve them against real APIs via edge functions.
+Replace hardcoded/AI-fabricated data with real data from completely free, no-key-required public APIs. Flights and hotels have no free public API, so those stay as AI estimates with real booking links — but weather, currency rates, and country info become real.
 
-## Architecture Change
+## Free APIs to integrate
 
-```text
-Current flow:
-  User message → AI → fake flights/hotels/activities JSON → render cards
-
-New flow:
-  User message → AI → search intent blocks → frontend calls edge functions → real API data → render cards
-```
-
-## API Keys Required (3 secrets to add)
-
-1. **AMADEUS_API_KEY** + **AMADEUS_API_SECRET** — Free signup at developers.amadeus.com (500 calls/month free tier). Covers flights + hotels.
-2. **GOOGLE_PLACES_API_KEY** — Google Cloud Console → Enable Places API. Covers activities, restaurants, and real photos.
-3. **UNSPLASH_ACCESS_KEY** — Free at unsplash.com/developers (50 req/hr). Used for hero/city images.
+| Data | API | Key needed? |
+|------|-----|-------------|
+| Weather forecast | [Open-Meteo](https://open-meteo.com) | No |
+| Currency rates | [Frankfurter](https://frankfurter.app) | No |
+| Country info (visa, language, timezone) | [REST Countries](https://restcountries.com) | No |
+| Geocoding (lat/lng from city name) | [Nominatim/OSM](https://nominatim.openstreetmap.org) | No |
 
 ## Changes
 
-### 1. New edge function: `search-flights`
-Calls Amadeus Flight Offers Search API. Accepts origin, destination, date, adults. Returns real flight data (airline, times, price, stops). Amadeus uses OAuth2 client credentials flow — the function handles token exchange internally.
+### 1. New edge function: `enrich-destination`
+Single edge function that takes a destination name and calls all 4 free APIs in parallel:
+- **Nominatim** — geocode city to lat/lng + country code
+- **Open-Meteo** — get 7-day weather forecast for those coordinates
+- **REST Countries** — get currency, language, timezone, visa info for the country
+- **Frankfurter** — get live exchange rate for destination currency vs USD
 
-### 2. New edge function: `search-hotels`
-Calls Amadeus Hotel Search API. Accepts city code, check-in/check-out dates. Returns real hotel names, star ratings, prices, coordinates.
+Returns a combined payload with real weather, real country info, and real exchange rates.
 
-### 3. New edge function: `search-places`
-Calls Google Places Nearby Search + Place Details. Accepts destination, category (restaurant, attraction, etc.). Returns real place names, ratings, photos (via Places Photos API), coordinates, descriptions.
-
-### 4. Update edge function: `rzuma-chat`
-Modify the system prompt so the AI outputs **search intent blocks** instead of fake data:
-
+### 2. Update `rzuma-chat` system prompt
+Add a new `destination_enrich` intent block. When the AI plans a trip, it emits:
 ```
-\`\`\`flight_search
-{"from":"JFK","to":"CDG","date":"2025-06-15","returnDate":"2025-06-22","adults":2}
-\`\`\`
-
-\`\`\`hotel_search  
-{"city":"Paris","checkIn":"2025-06-15","checkOut":"2025-06-22","adults":2}
-\`\`\`
-
-\`\`\`place_search
-{"destination":"Paris","categories":["restaurant","museum","landmark"],"occasion":"honeymoon"}
+\`\`\`destination_enrich
+{"destination":"Paris","travelMonth":"June"}
 \`\`\`
 ```
+The frontend detects this and calls the edge function for real data.
 
-The AI still generates itinerary, travelinfo, weather, and quickreplies blocks directly (those don't need real APIs). It also still provides a text response.
+AI still generates flights/hotels/activities as estimates (no free public API for those), but the prompt is updated to explicitly label prices as "estimated" and always include booking links.
 
-### 5. Update `src/pages/Chat.tsx` — parse search intents
-Modify `parseMessageContent` to detect `flight_search`, `hotel_search`, `place_search` blocks. When found, trigger async calls to the new edge functions and render loading skeletons while data loads, then swap in real cards.
+### 3. Update `src/pages/Chat.tsx` — parse and resolve enrichment
+Detect `destination_enrich` blocks in streamed responses. Call the edge function. Replace the AI-generated weather/travelinfo/currency blocks with real API data. Show a small "live data" badge on weather and travel info cards.
 
-### 6. Update `src/hooks/useRzumaChat.ts` — add search resolution
-Add a post-processing step after streaming completes: scan the final assistant message for search intent blocks, call the edge functions in parallel, and replace the intent blocks with real data blocks.
+### 4. Update `CurrencyConverter.tsx` — live rates
+Replace hardcoded `RATES` object. On mount, fetch live rates from Frankfurter API (`https://api.frankfurter.app/latest?from=USD`). Fall back to hardcoded rates if fetch fails.
 
-### 7. Update `src/utils/cityImages.ts`
-Add an `getUnsplashSearchImage(query)` function that calls the Unsplash Search API for real destination photos. Fall back to the current static map if the API key isn't set or the request fails.
+### 5. Update `WeatherCard.tsx` — show real forecast
+Add a "live" indicator. Accept optional `forecast` array (daily high/low for 7 days) from the enrichment response.
 
-### 8. Update card components for real data fields
-Minor adjustments to `FlightCard`, `HotelCard`, `ActivityCard` to handle real API response fields (e.g., Amadeus returns prices in a different structure, Google Places returns `place_id` for photos).
+### 6. Update `TravelInfoCard.tsx` — real country data
+Accept enriched REST Countries data (official currency, languages, timezone). Show alongside AI-provided context (visa, safety, best season — those remain AI-generated as no free API covers them well).
 
 ## Files to create
-- `supabase/functions/search-flights/index.ts`
-- `supabase/functions/search-hotels/index.ts`
-- `supabase/functions/search-places/index.ts`
+- `supabase/functions/enrich-destination/index.ts`
 
 ## Files to modify
-- `supabase/functions/rzuma-chat/index.ts` — update system prompt for search intents
-- `src/pages/Chat.tsx` — parse intent blocks, call APIs, render loading states
-- `src/hooks/useRzumaChat.ts` — post-stream search resolution
-- `src/utils/cityImages.ts` — add Unsplash search function
-- `src/components/FlightCard.tsx` — adapt to Amadeus data shape
-- `src/components/HotelCard.tsx` — adapt to Amadeus hotel data
-- `src/components/ActivityCard.tsx` — adapt to Google Places data
+- `supabase/functions/rzuma-chat/index.ts` — add `destination_enrich` intent to prompt
+- `src/pages/Chat.tsx` — parse `destination_enrich`, call edge function, merge real data
+- `src/components/CurrencyConverter.tsx` — fetch live rates from Frankfurter
+- `src/components/WeatherCard.tsx` — accept real forecast data, show "live" badge
+- `src/components/TravelInfoCard.tsx` — merge real country data with AI context
 
-## Implementation Order
-1. Add API secrets (Amadeus key+secret, Google Places key, Unsplash key)
-2. Create the 3 search edge functions
-3. Update the AI system prompt for search intents
-4. Update frontend parsing and resolution logic
-5. Adapt card components for real data fields
+## What stays AI-generated (no free API available)
+- Flight suggestions (estimates with Skyscanner booking links)
+- Hotel suggestions (estimates with Booking.com links)
+- Activity suggestions (AI knowledge with Google Maps links)
+- Visa requirements, safety info, best season (AI knowledge)
+
+## Technical Details
+- All 4 public APIs are rate-limited but generous for normal use (Nominatim: 1 req/sec, Open-Meteo: unlimited, REST Countries: unlimited, Frankfurter: unlimited)
+- Edge function adds a 1-second delay between Nominatim calls to respect their policy
+- Frontend caches enrichment results per destination in session to avoid repeat calls
+- No API keys or secrets needed — zero setup for the user
 
