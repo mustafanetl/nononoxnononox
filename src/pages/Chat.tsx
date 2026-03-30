@@ -30,6 +30,34 @@ import { Link, useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
+// Enrichment cache to avoid re-fetching
+const enrichmentCache: Record<string, any> = {};
+
+const fetchEnrichment = async (destination: string, travelMonth?: string) => {
+  const cacheKey = `${destination}-${travelMonth || ""}`;
+  if (enrichmentCache[cacheKey]) return enrichmentCache[cacheKey];
+
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/enrich-destination`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ destination, travelMonth }),
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    enrichmentCache[cacheKey] = data;
+    return data;
+  } catch {
+    return null;
+  }
+};
+
 // Parse message content to extract all block types
 const parseMessageContent = (content: string) => {
   let flights: FlightData[] = [];
@@ -40,6 +68,7 @@ const parseMessageContent = (content: string) => {
   let travelInfo: TravelInfoData | null = null;
   let weather: WeatherData | null = null;
   let quickReplies: string[] = [];
+  let destinationEnrich: { destination: string; travelMonth?: string } | null = null;
   let text = content;
 
   const extractBlock = (blockType: string) => {
@@ -62,6 +91,9 @@ const parseMessageContent = (content: string) => {
   itinerary = extractBlock("itinerary");
   timeline = extractBlock("timeline");
   
+  const enrichArr = extractBlock("destination_enrich");
+  if (enrichArr.length > 0) destinationEnrich = enrichArr[0];
+
   const travelInfoArr = extractBlock("travelinfo");
   if (travelInfoArr.length > 0) travelInfo = travelInfoArr[0];
   
@@ -73,7 +105,7 @@ const parseMessageContent = (content: string) => {
     quickReplies = Array.isArray(qrArr[0]) ? qrArr[0] : qrArr;
   }
 
-  return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies };
+  return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich };
 };
 
 const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
