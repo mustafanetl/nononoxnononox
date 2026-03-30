@@ -136,7 +136,6 @@ const TripDetail = () => {
         setTripData(parsed);
         // Restore Wikimedia cache for hero image
         if (parsed.enrichedImages?.length > 0 && parsed.destination) {
-          const { setWikimediaImage } = require("@/utils/cityImages");
           setWikimediaImage(parsed.destination, parsed.enrichedImages[0].thumbUrl || parsed.enrichedImages[0].url);
         }
       } catch { navigate("/chat"); }
