@@ -472,6 +472,7 @@ const Chat = () => {
                               <TripSummaryCard
                                 data={parsed as TripPlanData}
                                 destination={destination}
+                                enrichedImages={enrichData?.images}
                               />
                             ) : (
                               <>

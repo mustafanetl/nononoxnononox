@@ -27,7 +27,7 @@ export type TripPlanData = {
 
 const getDestinationImage = (destination: string) => getCityImage(destination);
 
-const TripSummaryCard = ({ data, destination }: { data: TripPlanData; destination: string }) => {
+const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlanData; destination: string; enrichedImages?: any[] }) => {
   const navigate = useNavigate();
   const { isPremium } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
@@ -37,7 +37,7 @@ const TripSummaryCard = ({ data, destination }: { data: TripPlanData; destinatio
       setShowPaywall(true);
       return;
     }
-    sessionStorage.setItem("jolliday-trip-detail", JSON.stringify({ data, destination }));
+    sessionStorage.setItem("jolliday-trip-detail", JSON.stringify({ data, destination, enrichedImages }));
     navigate("/trip/view");
   };
 

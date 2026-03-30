@@ -656,7 +656,7 @@ const ActivityRow = React.forwardRef<HTMLDivElement, {
     onClick={onClick}
   >
     <div className="relative w-28 sm:w-36 shrink-0 overflow-hidden">
-      <img src={activityImageMap[a.image] || activityImageMap.default} alt={a.name}
+      <img src={a.realPhoto || activityImageMap[a.image] || activityImageMap.default} alt={a.name}
         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
       <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/20" />
     </div>
