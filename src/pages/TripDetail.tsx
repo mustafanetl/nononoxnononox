@@ -17,6 +17,7 @@ import { FlightData } from "@/components/FlightCard";
 import { ActivityData } from "@/components/ActivityCard";
 import { TripPlanData } from "@/components/TripSummaryCard";
 import { shareTripSummary } from "@/utils/tripSummary";
+import { getCityImage } from "@/utils/cityImages";
 import { exportTripPlanPDF } from "@/utils/pdfExport";
 import { getSkyscannerUrl, getBookingDotComUrl, getGetYourGuideUrl } from "@/utils/bookingLinks";
 import { getHotelImage } from "@/components/HotelCard";
