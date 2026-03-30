@@ -18,30 +18,10 @@ export interface FlightData {
 
 // FlightCardProps moved below after formatCityName
 
-const cityImages: Record<string, string> = {
-  dubai: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=200&fit=crop",
-  paris: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=200&fit=crop",
-  tokyo: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=200&fit=crop",
-  bali: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&h=200&fit=crop",
-  rome: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&h=200&fit=crop",
-  london: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400&h=200&fit=crop",
-  newyork: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=200&fit=crop",
-  sydney: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=400&h=200&fit=crop",
-  maldives: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=400&h=200&fit=crop",
-  singapore: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=400&h=200&fit=crop",
-  barcelona: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400&h=200&fit=crop",
-  amsterdam: "https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=400&h=200&fit=crop",
-  santorini: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=400&h=200&fit=crop",
-  japan: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&h=200&fit=crop",
-  thailand: "https://images.unsplash.com/photo-1528181304800-259b08848526?w=400&h=200&fit=crop",
-  hawaii: "https://images.unsplash.com/photo-1507876466758-bc54f384809c?w=400&h=200&fit=crop",
-  default: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=200&fit=crop",
-};
+import { getCityImage } from "@/utils/cityImages";
 
 const getImageUrl = (city?: string): string => {
-  if (!city) return cityImages.default;
-  const key = city.toLowerCase().replace(/\s+/g, "");
-  return cityImages[key] || cityImages.default;
+  return getCityImage(city || "default", 400, 200);
 };
 
 interface FlightCardProps {
