@@ -116,6 +116,14 @@ ALWAYS include weather info when planning a trip:
 {"destination":"Dubai","tempHigh":32,"tempLow":20,"conditions":"Sunny & dry","rainfall":"Rare","packingTips":["Light breathable clothing","Sunscreen SPF 50+","Sunglasses","Comfortable walking shoes"]}
 \`\`\`
 
+ALWAYS include a destination_enrich block when planning a trip to enable real-time data enrichment:
+
+\`\`\`destination_enrich
+{"destination":"Dubai","travelMonth":"March"}
+\`\`\`
+
+The frontend will use this to fetch LIVE weather, currency rates, and country info from public APIs. The AI-generated weather/travelinfo blocks serve as fallback if live data fails.
+
 ALWAYS end your response with quick reply suggestions:
 
 \`\`\`quickreplies
