@@ -80,7 +80,7 @@ const ActivityCard = ({ activity, onClick }: { activity: ActivityData; onClick: 
           </span>
           <span className="flex items-center gap-1 font-semibold text-foreground">
             <DollarSign className="h-3 w-3" />
-            ~{activity.currency}{activity.price}
+            {activity.currency}{activity.price}
           </span>
         </div>
       </div>
