@@ -18,12 +18,25 @@ const cityImageIds: Record<string, string> = {
   default: "photo-1488646953014-85cb44e25828",
 };
 
+// Cache for real Wikimedia images fetched dynamically
+const wikimediaCache: Record<string, string> = {};
+
+export const setWikimediaImage = (city: string, url: string) => {
+  wikimediaCache[city.toLowerCase().replace(/[^a-z]/g, "")] = url;
+};
+
 export const getCityImage = (
   city: string,
   width = 600,
   height = 300
 ): string => {
   const key = city.toLowerCase().replace(/[^a-z]/g, "");
+
+  // Prefer real Wikimedia image if available
+  if (wikimediaCache[key]) {
+    return wikimediaCache[key];
+  }
+
   const id = cityImageIds[key] || cityImageIds.default;
   return `https://images.unsplash.com/${id}?w=${width}&h=${height}&fit=crop`;
 };

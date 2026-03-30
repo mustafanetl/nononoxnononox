@@ -12,6 +12,8 @@ export type ActivityData = {
   description: string;
   lat?: number;
   lng?: number;
+  realPhoto?: string;
+  isReal?: boolean;
 };
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -54,7 +56,7 @@ const occasionLabels: Record<string, string> = {
 
 const ActivityCard = ({ activity, onClick }: { activity: ActivityData; onClick: () => void }) => {
   const Icon = categoryIcons[activity.category] || Camera;
-  const imgUrl = imageMap[activity.image] || imageMap.beach;
+  const imgUrl = activity.realPhoto || imageMap[activity.image] || imageMap.beach;
   const occasionLabel = occasionLabels[activity.occasion] || activity.occasion;
 
   return (
@@ -64,8 +66,15 @@ const ActivityCard = ({ activity, onClick }: { activity: ActivityData; onClick: 
     >
       <div className="relative h-36">
         <img src={imgUrl} alt={activity.name} className="w-full h-full object-cover" />
-        <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-medium">
-          {occasionLabel}
+        <div className="absolute top-2 left-2 flex items-center gap-1">
+          <span className="px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-medium">
+            {occasionLabel}
+          </span>
+          {activity.isReal && (
+            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/90 backdrop-blur-sm text-[9px] font-medium text-white">
+              Real
+            </span>
+          )}
         </div>
       </div>
       <div className="p-3 space-y-2">

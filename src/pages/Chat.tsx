@@ -26,6 +26,7 @@ import { HotelData, useTripContext } from "@/contexts/TripContext";
 import { shareTripSummary } from "@/utils/tripSummary";
 import { exportTripPDF } from "@/utils/pdfExport";
 import { supabase } from "@/integrations/supabase/client";
+import { setWikimediaImage } from "@/utils/cityImages";
 import { Link, useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -178,6 +179,10 @@ const Chat = () => {
         fetchEnrichment(destination, travelMonth).then((data) => {
           if (data) {
             setEnrichedData((prev) => ({ ...prev, [destination]: data }));
+            // Cache Wikimedia images for cityImages utility
+            if (data.images && data.images.length > 0) {
+              setWikimediaImage(destination, data.images[0].thumbUrl || data.images[0].url);
+            }
           }
         });
       }
