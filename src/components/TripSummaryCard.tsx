@@ -25,10 +25,7 @@ export type TripPlanData = {
   text: string;
 };
 
-const getDestinationImage = (destination: string) => {
-  const key = destination.toLowerCase().replace(/[^a-z]/g, "");
-  return cityImages[key] || cityImages.default;
-};
+const getDestinationImage = (destination: string) => getCityImage(destination);
 
 const TripSummaryCard = ({ data, destination }: { data: TripPlanData; destination: string }) => {
   const navigate = useNavigate();
