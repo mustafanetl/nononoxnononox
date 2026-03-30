@@ -142,8 +142,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Pricing */}
-        <PricingSection />
+        {/* Pricing hidden */}
 
       </main>
 
