@@ -1,83 +1,68 @@
 
 
-# Trip Detail Page — Quality Overhaul
+# AI Chat Experience — Issues & Improvements
 
 ## Problems Found
 
-### 1. "Trip Score" is gimmicky and adds no real value
-The `calcTripScore` function and `TripScoreBadge` component give an arbitrary score (0-100) based on how many card types are present. Tips like "Add flights to boost your score" feel gamified and cheap — not something worth paying for. It appears in 3 places: mobile action bar, day view budget strip, and the scoring logic itself.
+### 1. FlightCard still shows `~` and "Approx." — contradicts cleanup
+`FlightCard.tsx` line 127: `"Approx."` label, line 133: `from ~{flight.currency}{flight.price}`. The TripDetail page had these removed but the chat inline cards still show them.
 
-**Fix:** Remove `calcTripScore`, `TripScoreBadge`, and all references. This is filler, not premium value.
+**Fix:** Remove "Approx." label and `~` prefix. Show just `{flight.currency}{flight.price}`.
 
-### 2. Map markers use emojis (🏨, 🎯)
-`TripMap.tsx` line 98-99 uses emoji characters inside map markers. Inconsistent with the SaaS aesthetic.
+### 2. HotelCard still shows `~` prefix
+`HotelCard.tsx` line 36: `from ~{hotel.currency}{hotel.pricePerNight}/night`.
 
-**Fix:** Replace emojis with simple SVG icons or single letters (H for hotel, A for activity) rendered as text inside the colored circles.
+**Fix:** Remove `~`. Show `from {hotel.currency}{hotel.pricePerNight}/night`.
 
-### 3. Flight Detail Modal fabricates a "Return" flight
-`FlightDetailModal.tsx` lines 226-257 show a return flight section that just mirrors the outbound flight with swapped cities and identical times/duration. This is misleading — the AI only generates one-way data.
+### 3. ActivityCard still shows `~` prefix
+`ActivityCard.tsx` line 83: `~{activity.currency}{activity.price}`.
 
-**Fix:** Remove the fake "Return" flight block entirely. Just show the outbound flight info.
+**Fix:** Remove `~`. Show `{activity.currency}{activity.price}`.
 
-### 4. "Tap to read more" text in itinerary cards
-`ItineraryTimeline.tsx` line 135: `"Tap to read more"` is casual mobile-app language.
+### 4. System prompt still tells AI to say "Prices are approximate" repeatedly
+The system prompt doesn't explicitly say this, but the AI's behavior of generating `~` everywhere is driven by the prompt saying "All prices shown are ESTIMATES." This is fine — the issue is the frontend rendering, not the prompt.
 
-**Fix:** Remove this text. Users can still tap to expand — no instruction needed.
+### 5. Chat welcome text is outdated
+`Chat.tsx` line 349-351: `"I can help you plan trips, find flights, hotels, and discover activities for any occasion."` — doesn't reflect the broader capabilities (date ideas, local experiences) that were updated on the landing page.
 
-### 5. Redundant "Prices are approximate" text appears 4+ times
-- Section headers for Flights, Hotels, Activities all say it
-- Budget section says it again
-- Bottom footer says it again
-- Summary card says it
+**Fix:** Update to match the landing page copy: `"Plan trips, find flights, hotels, local experiences, date ideas, and more."`
 
-**Fix:** Keep it only once at the bottom footer. Remove from section headers and budget section.
+### 6. Chat suggestions are narrow
+`Chat.tsx` lines 198-203: Only travel-focused suggestions. Missing broader use cases like date nights, local things to do.
 
-### 6. Budget donut `~` prefix on every price everywhere
-Every single price shows `~$850`, `~$120`, `~$350`. The tilde on every number is noisy.
+**Fix:** Update suggestions to match HeroSection:
+- `"Romantic date night in Paris"`
+- `"Weekend things to do in Tokyo"`
+- `"Family adventure in Bali"`
+- `"Solo trip to Barcelona"`
 
-**Fix:** Show prices without `~` prefix in the detail cards. Keep the word "estimated" in one place (the bottom footer).
+### 7. System prompt quick reply options sometimes feel generic
+The prompt says to include quick replies but the examples are all travel-centric. For non-travel queries (date ideas, local activities), the AI should suggest contextual follow-ups.
 
-### 7. "Your Trip" label above destination name is unnecessary
-Line 301: `"Your Trip"` in tiny uppercase text adds no information.
+**Fix:** Add a note to the system prompt: "For date/local activity queries, suggest replies like 'Add dinner reservations', 'Show more options', 'Different area'."
 
-**Fix:** Remove it. The destination name is self-explanatory.
+### 8. TripSummaryCard still shows "Prices are approximate"
+`TripSummaryCard.tsx` line 113: `"Prices are approximate"` — this was supposed to be removed from everywhere except the footer.
 
-### 8. Section header "Where You'll Stay" is inconsistent
-Other sections use noun-based headers (Flights, Activities & Experiences). "Where You'll Stay" is conversational.
+**Fix:** Change to just "View full details" or remove the text entirely.
 
-**Fix:** Change to "Hotels".
+### 9. "from" prefix on flight/hotel prices is redundant noise
+FlightCard line 133: `from ~$850`, HotelCard line 36: `from ~$120/night`. The word "from" alongside a tilde alongside "Approx." is triple-hedging.
 
-### 9. Day view shows "Your plan for the day" — unnecessary subtitle
-Line 513: filler text.
+**Fix:** Remove "from" as well. Just show the price.
 
-**Fix:** Remove the subtitle.
+### 10. System prompt uses exclamation marks excessively
+Line: `"Bali is such a dreamy choice for a honeymoon!"` — the AI tends to be excitable. The prompt says "casual like a quick text from a friend" but the actual output can feel over-enthusiastic.
 
-### 10. Desktop action bar floats over hero image with no background context
-Lines 592-602: the desktop action buttons float at top-right with `shadow-lg` but can overlap the hero. On scroll they look disconnected.
-
-**Fix:** Move the desktop actions into the hero area (beside the back button) or into a sticky header bar that appears on scroll, matching the day selector bar style.
+**Fix:** Add to system prompt: `"Avoid exclamation marks. Keep tone warm but not excitable."`
 
 ## Summary of Changes
 
 ### Files to modify:
-1. **`src/pages/TripDetail.tsx`**
-   - Remove `calcTripScore` function and `TripScoreBadge` component
-   - Remove all TripScoreBadge usage (mobile bar, day view)
-   - Remove `~` prefix from all price displays
-   - Remove "Your Trip" label
-   - Remove "Prices are approximate" from section headers
-   - Remove "Prices are approximate" from budget section
-   - Change "Where You'll Stay" → "Hotels"
-   - Remove "Your plan for the day" subtitle
-   - Move desktop action buttons into a sticky header bar instead of floating
-
-2. **`src/components/TripMap.tsx`**
-   - Replace emoji markers (🏨, 🎯) with clean text letters (H, A)
-
-3. **`src/components/FlightDetailModal.tsx`**
-   - Remove the fabricated "Return" flight section (lines 226-257)
-   - Change "Round trip total" label to just the price without the misleading round-trip claim
-
-4. **`src/components/ItineraryTimeline.tsx`**
-   - Remove "Tap to read more" text
+1. **`src/components/FlightCard.tsx`** — Remove "Approx.", `from`, and `~` from price display
+2. **`src/components/HotelCard.tsx`** — Remove `from ~` from price display
+3. **`src/components/ActivityCard.tsx`** — Remove `~` from price display
+4. **`src/components/TripSummaryCard.tsx`** — Remove "Prices are approximate" text
+5. **`src/pages/Chat.tsx`** — Update welcome text and suggestion chips to reflect broader capabilities
+6. **`supabase/functions/rzuma-chat/index.ts`** — Add tone guidance ("avoid exclamation marks") and contextual quick reply examples for non-travel queries
 
