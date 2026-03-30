@@ -1,4 +1,4 @@
-import { Globe, Banknote, Languages, Clock, Sun, ShieldCheck, Wifi } from "lucide-react";
+import { Globe, Banknote, Languages, Clock, Sun, ShieldCheck, Wifi, ArrowLeftRight } from "lucide-react";
 
 export interface TravelInfoData {
   destination: string;
@@ -15,6 +15,7 @@ export interface TravelInfoData {
 const infoItems = [
   { key: "visa" as const, icon: ShieldCheck, label: "Visa" },
   { key: "currency" as const, icon: Banknote, label: "Currency" },
+  { key: "exchangeRate" as const, icon: ArrowLeftRight, label: "Exchange Rate" },
   { key: "language" as const, icon: Languages, label: "Language" },
   { key: "timezone" as const, icon: Clock, label: "Timezone" },
   { key: "bestSeason" as const, icon: Sun, label: "Best Season" },
