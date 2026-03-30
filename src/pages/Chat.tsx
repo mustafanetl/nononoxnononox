@@ -166,6 +166,23 @@ const Chat = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [searchParams] = useSearchParams();
   const initialQuerySent = useRef(false);
+  const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
+
+  // Auto-enrich destinations from assistant messages
+  useEffect(() => {
+    messages.forEach((msg) => {
+      if (msg.role !== "assistant") return;
+      const parsed = parseMessageContent(msg.content);
+      if (parsed.destinationEnrich && !enrichedData[parsed.destinationEnrich.destination]) {
+        const { destination, travelMonth } = parsed.destinationEnrich;
+        fetchEnrichment(destination, travelMonth).then((data) => {
+          if (data) {
+            setEnrichedData((prev) => ({ ...prev, [destination]: data }));
+          }
+        });
+      }
+    });
+  }, [messages]);
 
   // Auto-send query from URL params
   useEffect(() => {
