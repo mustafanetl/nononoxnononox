@@ -136,7 +136,7 @@ const MyTrips = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-8 w-8"
                       title="Continue planning"
                       onClick={() => {
                         const msgs = trip.data_json?.messages;
@@ -153,7 +153,7 @@ const MyTrips = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-8 w-8"
                       onClick={() => deleteTrip(trip.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />

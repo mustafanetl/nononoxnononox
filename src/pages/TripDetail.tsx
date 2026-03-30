@@ -17,7 +17,7 @@ import { FlightData } from "@/components/FlightCard";
 import { ActivityData } from "@/components/ActivityCard";
 import { TripPlanData } from "@/components/TripSummaryCard";
 import { shareTripSummary } from "@/utils/tripSummary";
-import { getCityImage } from "@/utils/cityImages";
+import { getCityImage, setWikimediaImage } from "@/utils/cityImages";
 import { exportTripPlanPDF } from "@/utils/pdfExport";
 import { getSkyscannerUrl, getBookingDotComUrl, getGetYourGuideUrl } from "@/utils/bookingLinks";
 import { getHotelImage } from "@/components/HotelCard";
@@ -115,7 +115,7 @@ const BudgetDonut = ({
 const TripDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [tripData, setTripData] = useState<{ data: TripPlanData; destination: string } | null>(null);
+  const [tripData, setTripData] = useState<{ data: TripPlanData; destination: string; enrichedImages?: any[] } | null>(null);
   const [selectedFlight, setSelectedFlight] = useState<FlightData | null>(null);
   const [flightModalOpen, setFlightModalOpen] = useState(false);
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
@@ -131,8 +131,14 @@ const TripDetail = () => {
   useEffect(() => {
     const raw = sessionStorage.getItem("jolliday-trip-detail");
     if (raw) {
-      try { setTripData(JSON.parse(raw)); }
-      catch { navigate("/chat"); }
+      try {
+        const parsed = JSON.parse(raw);
+        setTripData(parsed);
+        // Restore Wikimedia cache for hero image
+        if (parsed.enrichedImages?.length > 0 && parsed.destination) {
+          setWikimediaImage(parsed.destination, parsed.enrichedImages[0].thumbUrl || parsed.enrichedImages[0].url);
+        }
+      } catch { navigate("/chat"); }
     } else { navigate("/chat"); }
   }, [navigate]);
 
@@ -649,7 +655,7 @@ const ActivityRow = React.forwardRef<HTMLDivElement, {
     onClick={onClick}
   >
     <div className="relative w-28 sm:w-36 shrink-0 overflow-hidden">
-      <img src={activityImageMap[a.image] || activityImageMap.default} alt={a.name}
+      <img src={a.realPhoto || activityImageMap[a.image] || activityImageMap.default} alt={a.name}
         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
       <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/20" />
     </div>
