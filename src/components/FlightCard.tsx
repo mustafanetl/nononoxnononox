@@ -103,9 +103,14 @@ const FlightCard = ({ flight, onClick }: FlightCardProps) => {
 
         {/* Price */}
         <div className="flex items-center justify-between pt-2 border-t border-border">
-          <button onClick={toggleCompare} className={`p-1 rounded-md transition-colors ${comparing ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}>
-            <GitCompare className="h-3 w-3" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button onClick={toggleCompare} className={`p-1 rounded-md transition-colors ${comparing ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}>
+              <GitCompare className="h-3 w-3" />
+            </button>
+            <span className="text-[9px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded-full font-medium">
+              Estimated
+            </span>
+          </div>
           <span className="text-base font-bold">
             {flight.currency}{flight.price}
           </span>

@@ -2,13 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-interface EnrichRequest {
-  destination: string;
-  travelMonth?: string;
-}
 
 interface GeoResult {
   lat: number;
@@ -20,18 +15,16 @@ interface GeoResult {
 async function geocode(destination: string): Promise<GeoResult | null> {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1&accept-language=en`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1&accept-language=en&addressdetails=1`,
       { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } }
     );
     const data = await res.json();
     if (!data || data.length === 0) return null;
     const place = data[0];
-    // Extract country code from display_name or use address
-    const countryCode = place.address?.country_code?.toUpperCase() || "";
     return {
       lat: parseFloat(place.lat),
       lng: parseFloat(place.lon),
-      countryCode,
+      countryCode: place.address?.country_code?.toUpperCase() || "",
       displayName: place.display_name,
     };
   } catch (e) {
@@ -55,7 +48,6 @@ async function getWeather(lat: number, lng: number): Promise<any> {
 async function getCountryInfo(countryCode: string): Promise<any> {
   if (!countryCode) return null;
   try {
-    // Try by country code first, fall back to name
     const res = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}?fields=name,currencies,languages,timezones,capital`);
     if (!res.ok) return null;
     const data = await res.json();
@@ -79,7 +71,61 @@ async function getExchangeRate(currencyCode: string): Promise<any> {
   }
 }
 
-// Map WMO weather codes to human-readable conditions
+async function getWikimediaImages(query: string, limit = 4): Promise<any[]> {
+  try {
+    const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(query + " city landscape")}&gsrlimit=${limit}&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=800&format=json&origin=*`;
+    const res = await fetch(searchUrl, {
+      headers: { "User-Agent": "Jolliday-TravelApp/1.0" },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const pages = data.query?.pages || {};
+    return Object.values(pages)
+      .filter((p: any) => p.imageinfo?.[0])
+      .map((p: any) => ({
+        url: p.imageinfo[0].url,
+        thumbUrl: p.imageinfo[0].thumburl || p.imageinfo[0].url,
+        width: p.imageinfo[0].width,
+        height: p.imageinfo[0].height,
+      }))
+      .filter((img: any) => !img.url.endsWith(".svg") && !img.url.endsWith(".gif") && img.width >= 400);
+  } catch (e) {
+    console.error("Wikimedia error:", e);
+    return [];
+  }
+}
+
+async function getWikipediaPlaces(lat: number, lng: number, limit = 8): Promise<any[]> {
+  try {
+    const geoUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lng}&gsradius=10000&gslimit=${limit}&format=json&origin=*`;
+    const geoRes = await fetch(geoUrl, { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } });
+    const geoData = await geoRes.json();
+    const results = geoData.query?.geosearch || [];
+    if (results.length === 0) return [];
+
+    const pageIds = results.map((r: any) => r.pageid).join("|");
+    const detailUrl = `https://en.wikipedia.org/w/api.php?action=query&pageids=${pageIds}&prop=extracts|pageimages&exintro=1&explaintext=1&exsentences=2&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
+    const detailRes = await fetch(detailUrl, { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } });
+    const detailData = await detailRes.json();
+    const pages = detailData.query?.pages || {};
+
+    return results.map((geo: any) => {
+      const page = pages[geo.pageid] || {};
+      return {
+        title: geo.title,
+        description: page.extract?.substring(0, 200) || "",
+        lat: geo.lat,
+        lng: geo.lon,
+        thumbnail: page.thumbnail?.source || null,
+        distance: geo.dist,
+      };
+    });
+  } catch (e) {
+    console.error("Wikipedia places error:", e);
+    return [];
+  }
+}
+
 function weatherCodeToCondition(code: number): string {
   if (code === 0) return "Clear sky";
   if (code <= 3) return "Partly cloudy";
@@ -100,7 +146,7 @@ serve(async (req) => {
   }
 
   try {
-    const { destination, travelMonth } = (await req.json()) as EnrichRequest;
+    const { destination, travelMonth } = await req.json();
 
     if (!destination) {
       return new Response(JSON.stringify({ error: "destination is required" }), {
@@ -111,7 +157,7 @@ serve(async (req) => {
 
     console.log(`Enriching destination: ${destination}`);
 
-    // Step 1: Geocode (needed for weather)
+    // Step 1: Geocode
     const geo = await geocode(destination);
     if (!geo) {
       return new Response(JSON.stringify({ error: "Could not find destination", destination }), {
@@ -120,13 +166,15 @@ serve(async (req) => {
       });
     }
 
-    // Step 2: Call remaining APIs in parallel
-    const [weatherData, countryData] = await Promise.all([
+    // Step 2: All APIs in parallel
+    const [weatherData, countryData, wikimediaImages, wikipediaPlaces] = await Promise.all([
       getWeather(geo.lat, geo.lng),
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
+      getWikimediaImages(destination),
+      getWikipediaPlaces(geo.lat, geo.lng),
     ]);
 
-    // Extract currency code from country data
+    // Extract currency
     let currencyCode = "";
     let currencyName = "";
     if (countryData?.currencies) {
@@ -137,7 +185,6 @@ serve(async (req) => {
       }
     }
 
-    // Step 3: Get exchange rate (depends on country data)
     const exchangeData = currencyCode ? await getExchangeRate(currencyCode) : null;
 
     // Build weather summary
@@ -177,13 +224,12 @@ serve(async (req) => {
       const languages = countryData.languages
         ? Object.values(countryData.languages).join(", ")
         : "Unknown";
-      const timezone = countryData.timezones?.[0] || "Unknown";
 
       countryInfo = {
         destination,
         currency: currencyCode ? `${currencyCode} (${currencyName})` : "Unknown",
         language: languages,
-        timezone,
+        timezone: countryData.timezones?.[0] || "Unknown",
         exchangeRate: exchangeData?.rate
           ? `1 USD ≈ ${exchangeData.rate} ${currencyCode}`
           : null,
@@ -197,9 +243,11 @@ serve(async (req) => {
       weather: weatherSummary,
       country: countryInfo,
       exchange: exchangeData,
+      images: wikimediaImages,
+      places: wikipediaPlaces,
     };
 
-    console.log(`Enrichment complete for ${destination}`);
+    console.log(`Enrichment complete for ${destination}: ${wikimediaImages.length} images, ${wikipediaPlaces.length} places`);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

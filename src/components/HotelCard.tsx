@@ -32,8 +32,13 @@ const HotelCard = ({ hotel, onClick }: { hotel: HotelData; onClick: () => void }
     >
       <div className="relative h-36">
         <img src={imgUrl} alt={hotel.name} className="w-full h-full object-cover" />
-        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-bold">
-          {hotel.currency}{hotel.pricePerNight}/night
+        <div className="absolute top-2 right-2 flex items-center gap-1">
+          <span className="px-1.5 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-sm text-[9px] font-medium text-white">
+            Est.
+          </span>
+          <span className="px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-bold">
+            {hotel.currency}{hotel.pricePerNight}/night
+          </span>
         </div>
       </div>
       <div className="p-3 space-y-1.5">
