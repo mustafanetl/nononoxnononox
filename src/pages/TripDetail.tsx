@@ -115,7 +115,7 @@ const BudgetDonut = ({
 const TripDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [tripData, setTripData] = useState<{ data: TripPlanData; destination: string } | null>(null);
+  const [tripData, setTripData] = useState<{ data: TripPlanData; destination: string; enrichedImages?: any[] } | null>(null);
   const [selectedFlight, setSelectedFlight] = useState<FlightData | null>(null);
   const [flightModalOpen, setFlightModalOpen] = useState(false);
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
