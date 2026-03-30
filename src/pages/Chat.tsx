@@ -411,7 +411,26 @@ const Chat = () => {
                 {messages.map((msg, i) => {
                   const parsed = msg.role === "assistant"
                     ? parseMessageContent(msg.content)
-                    : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [] };
+                    : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null };
+
+                  // Merge enriched live data if available
+                  const enrichDest = parsed.destinationEnrich?.destination;
+                  const enrichData = enrichDest ? enrichedData[enrichDest] : null;
+                  if (enrichData) {
+                    if (enrichData.weather && parsed.weather) {
+                      parsed.weather = { ...parsed.weather, ...enrichData.weather, packingTips: parsed.weather.packingTips || [] };
+                    }
+                    if (enrichData.country && parsed.travelInfo) {
+                      parsed.travelInfo = {
+                        ...parsed.travelInfo,
+                        currency: enrichData.country.currency || parsed.travelInfo.currency,
+                        language: enrichData.country.language || parsed.travelInfo.language,
+                        timezone: enrichData.country.timezone || parsed.travelInfo.timezone,
+                        exchangeRate: enrichData.country.exchangeRate,
+                        isLive: true,
+                      };
+                    }
+                  }
 
                   const isLastAssistant = msg.role === "assistant" && i === messages.length - 1;
 
