@@ -131,8 +131,15 @@ const TripDetail = () => {
   useEffect(() => {
     const raw = sessionStorage.getItem("jolliday-trip-detail");
     if (raw) {
-      try { setTripData(JSON.parse(raw)); }
-      catch { navigate("/chat"); }
+      try {
+        const parsed = JSON.parse(raw);
+        setTripData(parsed);
+        // Restore Wikimedia cache for hero image
+        if (parsed.enrichedImages?.length > 0 && parsed.destination) {
+          const { setWikimediaImage } = require("@/utils/cityImages");
+          setWikimediaImage(parsed.destination, parsed.enrichedImages[0].thumbUrl || parsed.enrichedImages[0].url);
+        }
+      } catch { navigate("/chat"); }
     } else { navigate("/chat"); }
   }, [navigate]);
 
