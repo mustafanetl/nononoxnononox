@@ -151,7 +151,7 @@ const TripMap = ({ points, activeDay, onMarkerClick }: Props) => {
           {points.length} locations
         </span>
       </div>
-      <div ref={mapRef} className="h-[400px] w-full" />
+      <div ref={mapRef} className="h-[250px] sm:h-[400px] w-full" />
     </div>
   );
 };

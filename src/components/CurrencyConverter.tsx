@@ -29,7 +29,7 @@ const CurrencyConverter = ({ destinationCurrency = "EUR" }: Props) => {
 
   return (
     <div className="mt-3 p-4 rounded-xl border border-border bg-card">
-      <p className="text-xs font-medium text-muted-foreground mb-3">💱 Currency Converter</p>
+      <p className="text-xs font-medium text-muted-foreground mb-3">Currency Converter</p>
       <div className="flex items-center gap-2">
         <div className="flex-1 space-y-1">
           <select value={from} onChange={e => setFrom(e.target.value)} className="w-full text-xs bg-secondary rounded-lg px-2 py-1.5 border-0 focus:outline-none">
