@@ -616,9 +616,9 @@ const Chat = () => {
                   );
                 })}
 
-                {isLoading && messages[messages.length - 1]?.role === "user" && (
+                {isLoading && (!messages.length || messages[messages.length - 1]?.role === "user" || !parsedMessages[parsedMessages.length - 1]?.parsed?.text) && (
                   <div className="flex gap-3 animate-fade-in">
-                    <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0 animate-pulse">
                       <Compass className="h-4 w-4 text-background" />
                     </div>
                     <div className="flex gap-1 py-2">
