@@ -160,6 +160,7 @@ const Chat = () => {
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat } = useRzumaChat();
   const { compareItems } = useTripContext();
   const { user, signOut } = useAuth();
@@ -168,18 +169,37 @@ const Chat = () => {
   const [searchParams] = useSearchParams();
   const initialQuerySent = useRef(false);
   const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
+  const prevActiveId = useRef(activeId);
 
-  // Auto-enrich destinations from assistant messages
+  // Memoize parsed messages to avoid re-parsing on every render
+  const parsedMessages = useMemo(() => {
+    return messages.map((msg) => ({
+      ...msg,
+      parsed: msg.role === "assistant"
+        ? parseMessageContent(msg.content)
+        : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null },
+    }));
+  }, [messages]);
+
+  // Clear enriched data when switching conversations
   useEffect(() => {
-    messages.forEach((msg) => {
+    if (activeId !== prevActiveId.current) {
+      prevActiveId.current = activeId;
+      setEnrichedData({});
+      setLastFailedMessage(null);
+    }
+  }, [activeId]);
+
+  // Auto-enrich destinations only when streaming is done
+  useEffect(() => {
+    if (isLoading) return; // Don't enrich during streaming
+    parsedMessages.forEach((msg) => {
       if (msg.role !== "assistant") return;
-      const parsed = parseMessageContent(msg.content);
-      if (parsed.destinationEnrich && !enrichedData[parsed.destinationEnrich.destination]) {
-        const { destination, travelMonth } = parsed.destinationEnrich;
+      if (msg.parsed.destinationEnrich && !enrichedData[msg.parsed.destinationEnrich.destination]) {
+        const { destination, travelMonth } = msg.parsed.destinationEnrich;
         fetchEnrichment(destination, travelMonth).then((data) => {
           if (data) {
             setEnrichedData((prev) => ({ ...prev, [destination]: data }));
-            // Cache Wikimedia images for cityImages utility
             if (data.images && data.images.length > 0) {
               setWikimediaImage(destination, data.images[0].thumbUrl || data.images[0].url);
             }
@@ -187,7 +207,7 @@ const Chat = () => {
         });
       }
     });
-  }, [messages]);
+  }, [parsedMessages, isLoading]);
 
   // Auto-send query from URL params
   useEffect(() => {
