@@ -464,7 +464,7 @@ const Chat = () => {
                     }
                   }
 
-                  const isLastAssistant = msg.role === "assistant" && i === messages.length - 1;
+                  const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
 
                   // Determine if this is a "full trip plan" (has multiple card types)
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0].filter(Boolean).length;
