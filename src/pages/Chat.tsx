@@ -295,12 +295,39 @@ const Chat = () => {
     }
   };
 
-  const suggestions = [
-    "Romantic date night in Paris",
-    "Weekend things to do in Tokyo",
-    "Family adventure in Bali",
-    "Solo trip to Barcelona",
-  ];
+  const getSeasonalSuggestions = () => {
+    const month = new Date().getMonth();
+    if (month >= 11 || month <= 1) {
+      return [
+        "Beach escape in the Maldives",
+        "Christmas markets in Vienna",
+        "Skiing trip to the Swiss Alps",
+        "Winter sun in Tenerife",
+      ];
+    } else if (month >= 2 && month <= 4) {
+      return [
+        "Cherry blossoms in Tokyo",
+        "Spring break in Cancún",
+        "Romantic week in Santorini",
+        "Road trip along Portugal's coast",
+      ];
+    } else if (month >= 5 && month <= 7) {
+      return [
+        "Greek island hopping",
+        "Safari adventure in Kenya",
+        "Summer in the Amalfi Coast",
+        "Backpacking through Southeast Asia",
+      ];
+    } else {
+      return [
+        "Fall foliage in New England",
+        "Wine tasting in Tuscany",
+        "Cultural trip to Marrakech",
+        "Weekend getaway in Istanbul",
+      ];
+    }
+  };
+  const suggestions = getSeasonalSuggestions();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
