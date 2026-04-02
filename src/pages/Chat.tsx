@@ -292,10 +292,19 @@ const Chat = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    sendMessage(input.trim());
+    const msg = input.trim();
+    setLastFailedMessage(msg);
+    sendMessage(msg);
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
+
+  const handleRetry = useCallback(() => {
+    if (lastFailedMessage) {
+      sendMessage(lastFailedMessage);
+      setLastFailedMessage(null);
+    }
+  }, [lastFailedMessage, sendMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
