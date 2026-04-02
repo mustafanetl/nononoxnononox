@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings } from "lucide-react";
+import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { useAuth } from "@/hooks/useAuth";
 import FlightCard, { FlightData } from "@/components/FlightCard";
@@ -160,6 +160,7 @@ const Chat = () => {
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat } = useRzumaChat();
   const { compareItems } = useTripContext();
   const { user, signOut } = useAuth();
@@ -168,18 +169,37 @@ const Chat = () => {
   const [searchParams] = useSearchParams();
   const initialQuerySent = useRef(false);
   const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
+  const prevActiveId = useRef(activeId);
 
-  // Auto-enrich destinations from assistant messages
+  // Memoize parsed messages to avoid re-parsing on every render
+  const parsedMessages = useMemo(() => {
+    return messages.map((msg) => ({
+      ...msg,
+      parsed: msg.role === "assistant"
+        ? parseMessageContent(msg.content)
+        : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null },
+    }));
+  }, [messages]);
+
+  // Clear enriched data when switching conversations
   useEffect(() => {
-    messages.forEach((msg) => {
+    if (activeId !== prevActiveId.current) {
+      prevActiveId.current = activeId;
+      setEnrichedData({});
+      setLastFailedMessage(null);
+    }
+  }, [activeId]);
+
+  // Auto-enrich destinations only when streaming is done
+  useEffect(() => {
+    if (isLoading) return; // Don't enrich during streaming
+    parsedMessages.forEach((msg) => {
       if (msg.role !== "assistant") return;
-      const parsed = parseMessageContent(msg.content);
-      if (parsed.destinationEnrich && !enrichedData[parsed.destinationEnrich.destination]) {
-        const { destination, travelMonth } = parsed.destinationEnrich;
+      if (msg.parsed.destinationEnrich && !enrichedData[msg.parsed.destinationEnrich.destination]) {
+        const { destination, travelMonth } = msg.parsed.destinationEnrich;
         fetchEnrichment(destination, travelMonth).then((data) => {
           if (data) {
             setEnrichedData((prev) => ({ ...prev, [destination]: data }));
-            // Cache Wikimedia images for cityImages utility
             if (data.images && data.images.length > 0) {
               setWikimediaImage(destination, data.images[0].thumbUrl || data.images[0].url);
             }
@@ -187,7 +207,7 @@ const Chat = () => {
         });
       }
     });
-  }, [messages]);
+  }, [parsedMessages, isLoading]);
 
   // Auto-send query from URL params
   useEffect(() => {
@@ -272,10 +292,19 @@ const Chat = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    sendMessage(input.trim());
+    const msg = input.trim();
+    setLastFailedMessage(msg);
+    sendMessage(msg);
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
+
+  const handleRetry = useCallback(() => {
+    if (lastFailedMessage) {
+      sendMessage(lastFailedMessage);
+      setLastFailedMessage(null);
+    }
+  }, [lastFailedMessage, sendMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -413,10 +442,8 @@ const Chat = () => {
               </div>
             ) : (
               <div className="space-y-6">
-                {messages.map((msg, i) => {
-                  const parsed = msg.role === "assistant"
-                    ? parseMessageContent(msg.content)
-                    : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null };
+                {parsedMessages.map((msg, i) => {
+                  const parsed = { ...msg.parsed };
 
                   // Merge enriched live data if available
                   const enrichDest = parsed.destinationEnrich?.destination;
@@ -437,7 +464,7 @@ const Chat = () => {
                     }
                   }
 
-                  const isLastAssistant = msg.role === "assistant" && i === messages.length - 1;
+                  const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
 
                   // Determine if this is a "full trip plan" (has multiple card types)
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0].filter(Boolean).length;
@@ -556,8 +583,13 @@ const Chat = () => {
 
         {error && (
           <div className="px-4">
-            <div className="max-w-3xl mx-auto mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
-              {error}
+            <div className="max-w-3xl mx-auto mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center justify-center gap-3">
+              <span>{error}</span>
+              {lastFailedMessage && (
+                <Button variant="ghost" size="sm" onClick={handleRetry} className="h-7 gap-1 text-destructive hover:text-destructive">
+                  <RotateCcw className="h-3 w-3" /> Retry
+                </Button>
+              )}
             </div>
           </div>
         )}
