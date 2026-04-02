@@ -5,6 +5,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const TIMEOUT_MS = 8000;
+
+function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 interface GeoResult {
   lat: number;
   lng: number;
@@ -14,7 +22,7 @@ interface GeoResult {
 
 async function geocode(destination: string): Promise<GeoResult | null> {
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1&accept-language=en&addressdetails=1`,
       { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } }
     );
@@ -35,7 +43,7 @@ async function geocode(destination: string): Promise<GeoResult | null> {
 
 async function getWeather(lat: number, lng: number): Promise<any> {
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&forecast_days=7`
     );
     return await res.json();
@@ -48,7 +56,7 @@ async function getWeather(lat: number, lng: number): Promise<any> {
 async function getCountryInfo(countryCode: string): Promise<any> {
   if (!countryCode) return null;
   try {
-    const res = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}?fields=name,currencies,languages,timezones,capital`);
+    const res = await fetchWithTimeout(`https://restcountries.com/v3.1/alpha/${countryCode}?fields=name,currencies,languages,timezones,capital`);
     if (!res.ok) return null;
     const data = await res.json();
     return Array.isArray(data) ? data[0] : data;
@@ -61,7 +69,7 @@ async function getCountryInfo(countryCode: string): Promise<any> {
 async function getExchangeRate(currencyCode: string): Promise<any> {
   if (!currencyCode || currencyCode === "USD") return { base: "USD", rate: 1 };
   try {
-    const res = await fetch(`https://api.frankfurter.app/latest?from=USD&to=${currencyCode}`);
+    const res = await fetchWithTimeout(`https://api.frankfurter.app/latest?from=USD&to=${currencyCode}`);
     if (!res.ok) return null;
     const data = await res.json();
     return { base: "USD", rate: data.rates?.[currencyCode] || null, currency: currencyCode };
@@ -74,7 +82,7 @@ async function getExchangeRate(currencyCode: string): Promise<any> {
 async function getWikimediaImages(query: string, limit = 4): Promise<any[]> {
   try {
     const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(query + " city landscape")}&gsrlimit=${limit}&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=800&format=json&origin=*`;
-    const res = await fetch(searchUrl, {
+    const res = await fetchWithTimeout(searchUrl, {
       headers: { "User-Agent": "Jolliday-TravelApp/1.0" },
     });
     if (!res.ok) return [];
@@ -98,14 +106,14 @@ async function getWikimediaImages(query: string, limit = 4): Promise<any[]> {
 async function getWikipediaPlaces(lat: number, lng: number, limit = 8): Promise<any[]> {
   try {
     const geoUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lng}&gsradius=10000&gslimit=${limit}&format=json&origin=*`;
-    const geoRes = await fetch(geoUrl, { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } });
+    const geoRes = await fetchWithTimeout(geoUrl, { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } });
     const geoData = await geoRes.json();
     const results = geoData.query?.geosearch || [];
     if (results.length === 0) return [];
 
     const pageIds = results.map((r: any) => r.pageid).join("|");
     const detailUrl = `https://en.wikipedia.org/w/api.php?action=query&pageids=${pageIds}&prop=extracts|pageimages&exintro=1&explaintext=1&exsentences=2&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
-    const detailRes = await fetch(detailUrl, { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } });
+    const detailRes = await fetchWithTimeout(detailUrl, { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } });
     const detailData = await detailRes.json();
     const pages = detailData.query?.pages || {};
 
@@ -148,7 +156,7 @@ serve(async (req) => {
   try {
     const { destination, travelMonth } = await req.json();
 
-    if (!destination) {
+    if (!destination || typeof destination !== "string") {
       return new Response(JSON.stringify({ error: "destination is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -166,7 +174,7 @@ serve(async (req) => {
       });
     }
 
-    // Step 2: All APIs in parallel
+    // Step 2: All APIs in parallel (including country → exchange rate in two phases)
     const [weatherData, countryData, wikimediaImages, wikipediaPlaces] = await Promise.all([
       getWeather(geo.lat, geo.lng),
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
@@ -174,7 +182,7 @@ serve(async (req) => {
       getWikipediaPlaces(geo.lat, geo.lng),
     ]);
 
-    // Extract currency
+    // Extract currency and fetch exchange rate in parallel with nothing blocking
     let currencyCode = "";
     let currencyName = "";
     if (countryData?.currencies) {
