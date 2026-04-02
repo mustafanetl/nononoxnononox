@@ -583,8 +583,13 @@ const Chat = () => {
 
         {error && (
           <div className="px-4">
-            <div className="max-w-3xl mx-auto mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
-              {error}
+            <div className="max-w-3xl mx-auto mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center justify-center gap-3">
+              <span>{error}</span>
+              {lastFailedMessage && (
+                <Button variant="ghost" size="sm" onClick={handleRetry} className="h-7 gap-1 text-destructive hover:text-destructive">
+                  <RotateCcw className="h-3 w-3" /> Retry
+                </Button>
+              )}
             </div>
           </div>
         )}
