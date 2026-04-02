@@ -442,10 +442,8 @@ const Chat = () => {
               </div>
             ) : (
               <div className="space-y-6">
-                {messages.map((msg, i) => {
-                  const parsed = msg.role === "assistant"
-                    ? parseMessageContent(msg.content)
-                    : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null };
+                {parsedMessages.map((msg, i) => {
+                  const parsed = { ...msg.parsed };
 
                   // Merge enriched live data if available
                   const enrichDest = parsed.destinationEnrich?.destination;
