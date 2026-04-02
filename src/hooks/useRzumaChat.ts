@@ -196,11 +196,7 @@ export const useRzumaChat = () => {
     } catch (e) {
       console.error("Chat error:", e);
       setError(e instanceof Error ? e.message : "Something went wrong");
-      // Remove the user message on error
-      setConversations(prev => prev.map(c => {
-        if (c.id !== currentId) return c;
-        return { ...c, messages: c.messages.slice(0, -1) };
-      }));
+      // Keep the user message so retry works — don't remove it
     } finally {
       setIsLoading(false);
     }

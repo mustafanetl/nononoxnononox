@@ -76,11 +76,37 @@ const parseMessageContent = (content: string) => {
     const regex = new RegExp("```" + blockType + "\\s*([\\s\\S]*?)```", "g");
     const items: any[] = [];
     for (const match of text.matchAll(regex)) {
+      let raw = match[1].trim();
       try {
-        const parsed = JSON.parse(match[1]);
+        const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) items.push(...parsed);
         else items.push(parsed);
-      } catch { /* skip */ }
+      } catch {
+        // Try auto-closing incomplete JSON during streaming
+        try {
+          if (raw.startsWith("[")) {
+            // Count open/close braces and brackets
+            const openBraces = (raw.match(/{/g) || []).length;
+            const closeBraces = (raw.match(/}/g) || []).length;
+            const openBrackets = (raw.match(/\[/g) || []).length;
+            const closeBrackets = (raw.match(/\]/g) || []).length;
+            let fixed = raw;
+            // Remove trailing comma
+            fixed = fixed.replace(/,\s*$/, "");
+            for (let j = 0; j < openBraces - closeBraces; j++) fixed += "}";
+            for (let j = 0; j < openBrackets - closeBrackets; j++) fixed += "]";
+            const parsed2 = JSON.parse(fixed);
+            if (Array.isArray(parsed2)) items.push(...parsed2);
+            else items.push(parsed2);
+          } else if (raw.startsWith("{")) {
+            let fixed = raw.replace(/,\s*$/, "");
+            const openBraces = (fixed.match(/{/g) || []).length;
+            const closeBraces = (fixed.match(/}/g) || []).length;
+            for (let j = 0; j < openBraces - closeBraces; j++) fixed += "}";
+            items.push(JSON.parse(fixed));
+          }
+        } catch { /* truly broken, skip */ }
+      }
       text = text.replace(match[0], "");
     }
     return items;
@@ -269,12 +295,39 @@ const Chat = () => {
     }
   };
 
-  const suggestions = [
-    "Romantic date night in Paris",
-    "Weekend things to do in Tokyo",
-    "Family adventure in Bali",
-    "Solo trip to Barcelona",
-  ];
+  const getSeasonalSuggestions = () => {
+    const month = new Date().getMonth();
+    if (month >= 11 || month <= 1) {
+      return [
+        "Beach escape in the Maldives",
+        "Christmas markets in Vienna",
+        "Skiing trip to the Swiss Alps",
+        "Winter sun in Tenerife",
+      ];
+    } else if (month >= 2 && month <= 4) {
+      return [
+        "Cherry blossoms in Tokyo",
+        "Spring break in Cancún",
+        "Romantic week in Santorini",
+        "Road trip along Portugal's coast",
+      ];
+    } else if (month >= 5 && month <= 7) {
+      return [
+        "Greek island hopping",
+        "Safari adventure in Kenya",
+        "Summer in the Amalfi Coast",
+        "Backpacking through Southeast Asia",
+      ];
+    } else {
+      return [
+        "Fall foliage in New England",
+        "Wine tasting in Tuscany",
+        "Cultural trip to Marrakech",
+        "Weekend getaway in Istanbul",
+      ];
+    }
+  };
+  const suggestions = getSeasonalSuggestions();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -563,9 +616,9 @@ const Chat = () => {
                   );
                 })}
 
-                {isLoading && messages[messages.length - 1]?.role === "user" && (
+                {isLoading && (!messages.length || messages[messages.length - 1]?.role === "user" || !parsedMessages[parsedMessages.length - 1]?.parsed?.text) && (
                   <div className="flex gap-3 animate-fade-in">
-                    <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0 animate-pulse">
                       <Compass className="h-4 w-4 text-background" />
                     </div>
                     <div className="flex gap-1 py-2">
