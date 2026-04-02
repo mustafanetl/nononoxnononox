@@ -76,11 +76,37 @@ const parseMessageContent = (content: string) => {
     const regex = new RegExp("```" + blockType + "\\s*([\\s\\S]*?)```", "g");
     const items: any[] = [];
     for (const match of text.matchAll(regex)) {
+      let raw = match[1].trim();
       try {
-        const parsed = JSON.parse(match[1]);
+        const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) items.push(...parsed);
         else items.push(parsed);
-      } catch { /* skip */ }
+      } catch {
+        // Try auto-closing incomplete JSON during streaming
+        try {
+          if (raw.startsWith("[")) {
+            // Count open/close braces and brackets
+            const openBraces = (raw.match(/{/g) || []).length;
+            const closeBraces = (raw.match(/}/g) || []).length;
+            const openBrackets = (raw.match(/\[/g) || []).length;
+            const closeBrackets = (raw.match(/\]/g) || []).length;
+            let fixed = raw;
+            // Remove trailing comma
+            fixed = fixed.replace(/,\s*$/, "");
+            for (let j = 0; j < openBraces - closeBraces; j++) fixed += "}";
+            for (let j = 0; j < openBrackets - closeBrackets; j++) fixed += "]";
+            const parsed2 = JSON.parse(fixed);
+            if (Array.isArray(parsed2)) items.push(...parsed2);
+            else items.push(parsed2);
+          } else if (raw.startsWith("{")) {
+            let fixed = raw.replace(/,\s*$/, "");
+            const openBraces = (fixed.match(/{/g) || []).length;
+            const closeBraces = (fixed.match(/}/g) || []).length;
+            for (let j = 0; j < openBraces - closeBraces; j++) fixed += "}";
+            items.push(JSON.parse(fixed));
+          }
+        } catch { /* truly broken, skip */ }
+      }
       text = text.replace(match[0], "");
     }
     return items;
