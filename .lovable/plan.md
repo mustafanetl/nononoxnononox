@@ -1,66 +1,65 @@
 
 
-# Full Trip Flow — Audit & Improvements
-
-## Current State Summary
-The trip flow works: User chats → AI generates structured blocks (flights, hotels, activities, itinerary, weather, travelInfo) → Chat renders a TripSummaryCard → clicking it opens TripDetail page with day-by-day view, map, budget donut, and action bar. Live enrichment (weather, currency, country info, Wikimedia images, Wikipedia places) runs via edge functions.
+# AI Chat Testing & Improvement Plan
 
 ## Issues Found
 
-### 1. TripDetail uses hardcoded Unsplash images for activities
-`TripDetail.tsx` has its own `activityImageMap` (line 31-46) and `ActivityRow` uses it directly (line 652), completely ignoring the `realPhoto` field from Wikipedia/Wikimedia enrichment. The enriched real photos never appear on the trip detail page.
+### 1. System Prompt Issues (rzuma-chat)
+- **CORS headers incomplete** — missing newer Supabase client headers (`x-supabase-client-platform`, etc.), which can cause CORS failures on some browsers
+- **No input validation** — `messages` is taken from `req.json()` without any validation; could crash on malformed input
+- **System prompt is extremely long** (~4000 tokens) — uses significant context window, increases latency and cost per request
+- **Prompt asks AI to generate estimated prices but labels them inconsistently** — sometimes "prices are estimates", sometimes just the badge on the card; the text disclaimer often gets buried
 
-### 2. TripDetail hero image doesn't use Wikimedia cache
-`getHeroImage` calls `getCityImage` which checks `wikimediaCache`, but the cache is only populated during Chat.tsx rendering. If the user navigates directly or refreshes, the cache is empty and falls back to Unsplash.
+### 2. Streaming / Parsing Issues (Chat.tsx)
+- **`parseMessageContent` runs on every render for every message** — it does regex parsing + JSON.parse on each message during each render cycle; should be memoized
+- **Enrichment `useEffect` has `messages` as dependency but no `enrichedData`** — can cause stale closure issues; also re-triggers on every streaming token since messages updates frequently
+- **Quick replies parse as nested arrays** — `qrArr[0]` can be a flat array or a nested one; line 106 handles this but inconsistently (if AI returns `["a","b"]` it works, but `[["a","b"]]` gets flattened differently)
 
-### 3. Enrichment data not passed to TripDetail
-When the TripSummaryCard stores data to sessionStorage (`jolliday-trip-detail`), it only saves the parsed `TripPlanData` — it does NOT include enriched weather/travelInfo/images from the `enrichedData` state. So the TripDetail page never shows "Live" badges or real enriched data.
+### 3. UX / Visual Issues
+- **Loading dots only show when last message is from user** (line 539) — if the AI starts streaming, the dots disappear but there's no indication the response is still loading if the first token hasn't arrived yet
+- **No error retry button** — error message shows but user must retype their message
+- **TripSummaryCard is gated by paywall** — `isPremium` check blocks "View Full Plan" with a paywall modal, but the paywall/subscription system may not be configured, blocking all users
+- **Enrichment fires during streaming** — as the AI streams tokens, `parseMessageContent` finds a `destination_enrich` block mid-stream and fires the enrichment API call, potentially multiple times before the block is complete
 
-### 4. MyTrips action buttons hidden on mobile
-The "Continue Planning" and "Delete" buttons use `opacity-0 group-hover:opacity-100` (line 139, 157) which is invisible on mobile touch devices. The memory says these should be "always visible" but the code still has hover-only visibility.
+### 4. Data Flow Issues
+- **Wikimedia cache is in-memory only** — lost on page refresh; `TripDetail` restores from `enrichedImages` in sessionStorage, but Chat.tsx doesn't restore on refresh
+- **`enrichedData` state in Chat.tsx is never cleared between conversations** — switching chats keeps stale enrichment data from previous destinations
 
-### 5. Weather forecast data not displayed
-The `WeatherCard` accepts a `forecast` array but never renders it — only shows the summary (high/low/conditions/rainfall). The 7-day forecast from Open-Meteo goes unused.
+### 5. Edge Function Issues
+- **`enrich-destination` makes sequential call for exchange rate** after parallel calls — `getExchangeRate` is called after `Promise.all`, adding latency; should be included in the parallel batch
+- **No timeout on external API calls** — if Nominatim or Open-Meteo is slow/down, the function hangs until the default timeout
 
-### 6. TravelInfo missing exchange rate display
-`TravelInfoCard` has `exchangeRate` in its type but the `infoItems` array doesn't include it, so live exchange rates are never shown.
+## Improvement Plan
 
-### 7. No loading state for enrichment
-When the edge function fetches live data, there's no visual indicator. Cards just silently update (or don't).
+### Step 1: Fix CORS headers in rzuma-chat
+Update `corsHeaders` to include the full set of Supabase client headers.
 
-### 8. ActivityDetailModal ignores realPhoto
-The detail modal uses its own hardcoded `imageMap` (line 7-23), so even if an activity has a `realPhoto`, the modal shows a generic Unsplash image.
+### Step 2: Add input validation to rzuma-chat
+Validate that `messages` is an array and each item has `role` and `content` strings. Return 400 on invalid input.
 
-## Plan
+### Step 3: Optimize system prompt
+- Trim redundant examples and verbose instructions
+- Remove duplicated formatting rules
+- Target ~30% reduction in token count while keeping all functionality
 
-### Step 1: Pass enrichment data to TripDetail
-In `Chat.tsx`, when building the `TripPlanData` for `TripSummaryCard`, merge enriched data into the parsed content before passing it. Store the enriched images array in sessionStorage alongside the trip data so `TripDetail` can access them.
+### Step 4: Memoize message parsing in Chat.tsx
+- Wrap `parseMessageContent` results in `useMemo` or cache by message content string to avoid re-parsing on every render
 
-### Step 2: Fix TripDetail to use real photos
-- Update `ActivityRow` in `TripDetail.tsx` to use `activity.realPhoto` when available, falling back to `activityImageMap`
-- Store and restore Wikimedia hero images so `TripDetail` uses them
-- Pass enriched `travelInfo` and `weather` (with `isLive` flag) so the detail page shows Live badges
+### Step 5: Fix enrichment timing
+- Only trigger enrichment when a message is complete (not during streaming) — check `!isLoading` before firing enrichment
+- Clear `enrichedData` when switching conversations
 
-### Step 3: Show 7-day weather forecast
-Add a simple daily forecast row in `WeatherCard.tsx` when `forecast` data exists — show date, high/low, and condition icon for each day.
+### Step 6: Add error retry
+- When an error occurs, keep the failed user message and show a "Retry" button next to the error banner
 
-### Step 4: Show exchange rate in TravelInfoCard
-Add `exchangeRate` to the `infoItems` array in `TravelInfoCard.tsx` so it renders when available.
+### Step 7: Fix enrich-destination parallelism
+- Move `getExchangeRate` into the `Promise.all` block (requires extracting currency code from country data first, so use a two-phase approach or fetch USD rates for common currencies)
 
-### Step 5: Fix MyTrips mobile button visibility
-Remove `opacity-0 group-hover:opacity-100` from the Continue and Delete buttons — make them always visible.
-
-### Step 6: Use realPhoto in ActivityDetailModal
-Update `ActivityDetailModal.tsx` to prefer `activity.realPhoto` over the hardcoded image map.
-
-### Step 7: Add enrichment loading indicator
-Show a small shimmer/skeleton on weather and travel info cards while enrichment is in progress.
+### Step 8: Add request timeouts to edge functions
+- Use `AbortController` with 8-second timeouts on all external API calls in `enrich-destination`
 
 ## Files to Modify
-- `src/pages/Chat.tsx` — merge enrichment into TripSummaryCard data, store enriched images in sessionStorage
-- `src/pages/TripDetail.tsx` — use real photos, show live badges, restore Wikimedia cache
-- `src/components/WeatherCard.tsx` — render 7-day forecast
-- `src/components/TravelInfoCard.tsx` — add exchange rate row
-- `src/components/ActivityDetailModal.tsx` — use realPhoto
-- `src/pages/MyTrips.tsx` — fix mobile button visibility
+- `supabase/functions/rzuma-chat/index.ts` — CORS, validation, prompt optimization
+- `supabase/functions/enrich-destination/index.ts` — parallelism fix, timeouts
+- `src/pages/Chat.tsx` — memoize parsing, fix enrichment timing, add retry, clear enrichment on conversation switch
 
