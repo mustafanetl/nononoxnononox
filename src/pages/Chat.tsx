@@ -515,6 +515,10 @@ const Chat = () => {
                         isLive: true,
                       };
                     }
+                    // Replace AI-estimated hotels with real Xotelo hotels
+                    if (enrichData.hotels && enrichData.hotels.length > 0) {
+                      parsed.hotels = enrichData.hotels;
+                    }
                   }
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;

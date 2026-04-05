@@ -13,6 +13,11 @@ export type HotelData = {
   description: string;
   lat?: number;
   lng?: number;
+  realImage?: string;
+  priceRange?: { min: number; max: number };
+  rating?: number;
+  isLive?: boolean;
+  hotelKey?: string;
 };
 
 type TripItem = 

@@ -15,7 +15,7 @@ const hotelImages: Record<string, string> = {
 export const getHotelImage = (image: string) => hotelImages[image] || hotelImages.default;
 
 const HotelCard = ({ hotel, onClick }: { hotel: HotelData; onClick: () => void }) => {
-  const imgUrl = getHotelImage(hotel.image);
+  const imgUrl = hotel.realImage || getHotelImage(hotel.image);
   const { addToCompare, removeFromCompare, isInCompare } = useTripContext();
   const comparing = isInCompare("hotel", hotel.id);
 
@@ -33,13 +33,21 @@ const HotelCard = ({ hotel, onClick }: { hotel: HotelData; onClick: () => void }
       <div className="relative h-36">
         <img src={imgUrl} alt={hotel.name} className="w-full h-full object-cover" />
         <div className="absolute top-2 right-2 flex items-center gap-1">
-          <span className="px-1.5 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-sm text-[9px] font-medium text-white">
-            Est.
+          <span className={`px-1.5 py-0.5 rounded-full backdrop-blur-sm text-[9px] font-medium text-white ${hotel.isLive ? "bg-green-500/90" : "bg-amber-500/90"}`}>
+            {hotel.isLive ? "Live" : "Est."}
           </span>
           <span className="px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-bold">
-            {hotel.currency}{hotel.pricePerNight}/night
+            {hotel.priceRange
+              ? `${hotel.currency}${hotel.priceRange.min}–${hotel.priceRange.max}/night`
+              : `${hotel.currency}${hotel.pricePerNight}/night`}
           </span>
         </div>
+        {hotel.rating && (
+          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-bold flex items-center gap-0.5">
+            <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+            {hotel.rating}
+          </div>
+        )}
       </div>
       <div className="p-3 space-y-1.5">
         <div className="flex items-center justify-between">
