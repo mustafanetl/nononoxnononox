@@ -27,7 +27,7 @@ import { shareTripSummary } from "@/utils/tripSummary";
 import { exportTripPDF } from "@/utils/pdfExport";
 import { supabase } from "@/integrations/supabase/client";
 import { setWikimediaImage } from "@/utils/cityImages";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, Navigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
@@ -177,6 +177,24 @@ const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
 };
 
 const Chat = () => {
+  const { user, loading: authLoading, signOut } = useAuth();
+
+  if (authLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <ChatInner user={user} signOut={signOut} />;
+};
+
+const ChatInner = ({ user, signOut }: { user: any; signOut: () => Promise<void> }) => {
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<FlightData | null>(null);
