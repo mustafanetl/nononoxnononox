@@ -1,5 +1,5 @@
 import { Crown, Check, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
 
 const plans = [
   { name: "Monthly", price: "$12.99", period: "/mo", label: "Start Monthly" },

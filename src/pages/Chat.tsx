@@ -207,7 +207,7 @@ const ChatInner = ({ user, signOut }: { user: any; signOut: () => Promise<void> 
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat } = useRzumaChat();
   const { compareItems } = useTripContext();
-  const { user, signOut } = useAuth();
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [searchParams] = useSearchParams();
