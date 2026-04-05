@@ -187,14 +187,10 @@ const Chat = () => {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  return <ChatInner user={user} signOut={signOut} />;
+  return <ChatInner user={user ?? null} signOut={signOut} />;
 };
 
-const ChatInner = ({ user, signOut }: { user: any; signOut: () => Promise<void> }) => {
+const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise<void> }) => {
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<FlightData | null>(null);
@@ -205,7 +201,7 @@ const ChatInner = ({ user, signOut }: { user: any; signOut: () => Promise<void> 
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
-  const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat } = useRzumaChat();
+  const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences } = useRzumaChat();
   const { compareItems } = useTripContext();
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
