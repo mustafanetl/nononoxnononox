@@ -27,7 +27,7 @@ import { shareTripSummary } from "@/utils/tripSummary";
 import { exportTripPDF } from "@/utils/pdfExport";
 import { supabase } from "@/integrations/supabase/client";
 import { setWikimediaImage } from "@/utils/cityImages";
-import { Link, useSearchParams, Navigate } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 

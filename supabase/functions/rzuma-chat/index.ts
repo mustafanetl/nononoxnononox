@@ -92,7 +92,7 @@ serve(async (req) => {
       );
     }
 
-    const { messages } = body;
+    const { messages, preferences } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
