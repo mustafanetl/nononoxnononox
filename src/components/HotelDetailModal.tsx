@@ -18,7 +18,7 @@ const HotelDetailModal = ({
 
   if (!hotel) return null;
 
-  const imgUrl = getHotelImage(hotel.image);
+  const imgUrl = hotel.realImage || getHotelImage(hotel.image);
   const searchQuery = encodeURIComponent(hotel.name + " " + hotel.location);
   const inTrip = isInTrip("hotel", hotel.id);
 
@@ -51,9 +51,26 @@ const HotelDetailModal = ({
         <div className="p-5 space-y-4">
           <p className="text-sm leading-relaxed text-muted-foreground">{hotel.description}</p>
 
+          {hotel.isLive && (
+            <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              Live prices
+            </div>
+          )}
+
           <div className="text-2xl font-bold">
-            {hotel.currency}{hotel.pricePerNight}<span className="text-sm font-normal text-muted-foreground"> / night</span>
+            {hotel.priceRange
+              ? <>{hotel.currency}{hotel.priceRange.min}–{hotel.priceRange.max}<span className="text-sm font-normal text-muted-foreground"> / night</span></>
+              : <>{hotel.currency}{hotel.pricePerNight}<span className="text-sm font-normal text-muted-foreground"> / night</span></>
+            }
           </div>
+
+          {hotel.rating && (
+            <div className="flex items-center gap-1 text-sm">
+              <span className="font-semibold">{hotel.rating}</span>
+              <span className="text-muted-foreground">/ 5 rating</span>
+            </div>
+          )}
 
           <div className="p-3 rounded-xl bg-muted/50 border border-border">
             <div className="flex items-start gap-2">

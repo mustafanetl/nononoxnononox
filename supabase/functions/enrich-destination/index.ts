@@ -217,11 +217,12 @@ serve(async (req) => {
     }
 
     // Step 2: All APIs in parallel (including country → exchange rate in two phases)
-    const [weatherData, countryData, wikimediaImages, wikipediaPlaces] = await Promise.all([
+    const [weatherData, countryData, wikimediaImages, wikipediaPlaces, xoteloHotels] = await Promise.all([
       getWeather(geo.lat, geo.lng),
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
       getWikimediaImages(destination),
       getWikipediaPlaces(geo.lat, geo.lng),
+      searchXoteloHotels(destination),
     ]);
 
     // Extract currency and fetch exchange rate in parallel with nothing blocking
