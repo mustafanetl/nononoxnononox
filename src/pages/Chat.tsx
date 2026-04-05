@@ -201,7 +201,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
-  const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences } = useRzumaChat();
+  const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData } = useRzumaChat();
   const { compareItems } = useTripContext();
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -210,6 +210,28 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const initialQuerySent = useRef(false);
   const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
   const prevActiveId = useRef(activeId);
+  const prefsSynced = useRef(false);
+
+  // Sync localStorage preferences to DB when user logs in
+  useEffect(() => {
+    if (!user || prefsSynced.current) return;
+    prefsSynced.current = true;
+    const syncPrefs = async () => {
+      const localPrefs = preferences;
+      if (localPrefs.visitedPlaces.length === 0 && localPrefs.likedCategories.length === 0 && localPrefs.dislikedCategories.length === 0) return;
+      
+      const { data: existing } = await supabase.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle();
+      if (!existing) {
+        await supabase.from("user_preferences").insert({
+          user_id: user.id,
+          visited_places: localPrefs.visitedPlaces,
+          liked_categories: localPrefs.likedCategories,
+          disliked_categories: localPrefs.dislikedCategories,
+        } as any);
+      }
+    };
+    syncPrefs();
+  }, [user, preferences]);
 
   // Memoize parsed messages to avoid re-parsing on every render
   const parsedMessages = useMemo(() => {
