@@ -117,7 +117,24 @@ serve(async (req) => {
       throw new Error("AI service is not configured");
     }
 
-    console.log("Processing chat request with", messages.length, "messages");
+    console.log("Processing chat request with", messages.length, "messages", preferences ? "with preferences" : "");
+
+    // Build system messages with optional preferences context
+    const systemMessages: any[] = [{ role: "system", content: SYSTEM_PROMPT }];
+    
+    if (preferences && (preferences.visitedPlaces?.length > 0 || preferences.likedCategories?.length > 0 || preferences.dislikedCategories?.length > 0)) {
+      const parts: string[] = [];
+      if (preferences.visitedPlaces?.length > 0) {
+        parts.push(`Previously visited: ${preferences.visitedPlaces.map((p: any) => `${p.name} (${p.rating})`).join(", ")}`);
+      }
+      if (preferences.likedCategories?.length > 0) {
+        parts.push(`Likes: ${preferences.likedCategories.join(", ")}`);
+      }
+      if (preferences.dislikedCategories?.length > 0) {
+        parts.push(`Dislikes: ${preferences.dislikedCategories.join(", ")}`);
+      }
+      systemMessages.push({ role: "system", content: `User preferences: ${parts.join(". ")}. Use these to personalize recommendations — avoid disliked categories and previously visited places, favor liked categories.` });
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -128,7 +145,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          ...systemMessages,
           ...messages,
         ],
         stream: true,
