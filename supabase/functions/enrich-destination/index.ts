@@ -296,9 +296,10 @@ serve(async (req) => {
       exchange: exchangeData,
       images: wikimediaImages,
       places: wikipediaPlaces,
+      hotels: xoteloHotels,
     };
 
-    console.log(`Enrichment complete for ${destination}: ${wikimediaImages.length} images, ${wikipediaPlaces.length} places`);
+    console.log(`Enrichment complete for ${destination}: ${wikimediaImages.length} images, ${wikipediaPlaces.length} places, ${xoteloHotels.length} hotels`);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
