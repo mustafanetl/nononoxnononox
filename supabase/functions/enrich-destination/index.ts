@@ -103,6 +103,48 @@ async function getWikimediaImages(query: string, limit = 4): Promise<any[]> {
   }
 }
 
+async function searchXoteloHotels(destination: string, limit = 6): Promise<any[]> {
+  try {
+    // Step 1: Search for location key
+    const searchRes = await fetchWithTimeout(
+      `https://data.xotelo.com/api/search?query=${encodeURIComponent(destination)}&location_type=geo`
+    );
+    if (!searchRes.ok) return [];
+    const searchData = await searchRes.json();
+    const locationKey = searchData?.result?.location_key;
+    if (!locationKey) return [];
+
+    // Step 2: Get hotel list for this location
+    const listRes = await fetchWithTimeout(
+      `https://data.xotelo.com/api/list?location_key=${locationKey}&limit=${limit}&sort=best_value`
+    );
+    if (!listRes.ok) return [];
+    const listData = await listRes.json();
+    const hotels = listData?.result?.hotels || listData?.result || [];
+
+    return (Array.isArray(hotels) ? hotels : []).slice(0, limit).map((h: any, idx: number) => ({
+      id: `xotelo-${h.hotel_key || idx}`,
+      name: h.name || "Hotel",
+      stars: h.hotel_class || h.stars || 3,
+      pricePerNight: h.price?.avg || h.price?.min || 0,
+      currency: "$",
+      image: "default",
+      location: h.address || destination,
+      description: h.subcategory || h.type || "Hotel accommodation",
+      realImage: h.photo || h.image || null,
+      priceRange: h.price ? { min: h.price.min || 0, max: h.price.max || 0 } : null,
+      rating: h.rating || h.overall_rating || null,
+      isLive: true,
+      hotelKey: h.hotel_key || null,
+      lat: h.latitude || null,
+      lng: h.longitude || null,
+    }));
+  } catch (e) {
+    console.error("Xotelo hotel search error:", e);
+    return [];
+  }
+}
+
 async function getWikipediaPlaces(lat: number, lng: number, limit = 8): Promise<any[]> {
   try {
     const geoUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lng}&gsradius=10000&gslimit=${limit}&format=json&origin=*`;
