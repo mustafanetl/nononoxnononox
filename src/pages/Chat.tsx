@@ -295,39 +295,34 @@ const Chat = () => {
     }
   };
 
-  const getSeasonalSuggestions = () => {
+  const getSmartSuggestions = () => {
     const month = new Date().getMonth();
-    if (month >= 11 || month <= 1) {
-      return [
-        "Beach escape in the Maldives",
-        "Christmas markets in Vienna",
-        "Skiing trip to the Swiss Alps",
-        "Winter sun in Tenerife",
-      ];
-    } else if (month >= 2 && month <= 4) {
-      return [
-        "Cherry blossoms in Tokyo",
-        "Spring break in Cancún",
-        "Romantic week in Santorini",
-        "Road trip along Portugal's coast",
-      ];
-    } else if (month >= 5 && month <= 7) {
-      return [
-        "Greek island hopping",
-        "Safari adventure in Kenya",
-        "Summer in the Amalfi Coast",
-        "Backpacking through Southeast Asia",
-      ];
+    const hour = new Date().getHours();
+    
+    // Always include local/date options
+    const local: string[] = [];
+    if (hour >= 17) {
+      local.push("Date night ideas in my city");
     } else {
-      return [
-        "Fall foliage in New England",
-        "Wine tasting in Tuscany",
-        "Cultural trip to Marrakech",
-        "Weekend getaway in Istanbul",
-      ];
+      local.push("Fun things to do this weekend");
     }
+    local.push("Best restaurants near me for a date");
+    
+    // Seasonal travel suggestions
+    let travel: string[] = [];
+    if (month >= 11 || month <= 1) {
+      travel = ["Beach escape in the Maldives", "Christmas markets in Vienna"];
+    } else if (month >= 2 && month <= 4) {
+      travel = ["Cherry blossoms in Tokyo", "Romantic week in Santorini"];
+    } else if (month >= 5 && month <= 7) {
+      travel = ["Greek island hopping", "Summer in the Amalfi Coast"];
+    } else {
+      travel = ["Wine tasting in Tuscany", "Weekend getaway in Istanbul"];
+    }
+    
+    return [...local, ...travel];
   };
-  const suggestions = getSeasonalSuggestions();
+  const suggestions = getSmartSuggestions();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -481,9 +476,9 @@ const Chat = () => {
                     <Compass className="h-6 w-6 text-background" />
                   </div>
                 </div>
-                <h1 className="text-2xl font-semibold mb-2">Where would you like to go?</h1>
+                <h1 className="text-2xl font-semibold mb-2">What are you up to?</h1>
                 <p className="text-muted-foreground text-center mb-8">
-                  Plan trips, find flights, hotels, local experiences, date ideas, and more.
+                  Plan a trip, find a date spot, or discover what's happening near you.
                 </p>
                 <div className="grid grid-cols-2 gap-2 w-full max-w-md">
                   {suggestions.map((s) => (
