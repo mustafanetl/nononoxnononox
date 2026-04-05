@@ -40,8 +40,7 @@ export function useSubscription() {
     fetchSub();
   }, [user]);
 
-  // DEV OVERRIDE: Paywall disabled during development. To re-enable, replace with: const isPremium = plan !== "free";
-  const isPremium = true;
+  const isPremium = plan !== "free";
 
   return { plan, isPremium, loading };
 }

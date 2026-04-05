@@ -1,10 +1,9 @@
-import { Link } from "react-router-dom";
 import { Crown, Check, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
 
 const plans = [
-  { name: "Monthly", price: "$12.99", period: "/mo" },
-  { name: "Annual", price: "$49.99", period: "/yr" },
+  { name: "Monthly", price: "$12.99", period: "/mo", label: "Start Monthly" },
+  { name: "Annual", price: "$49.99", period: "/yr", label: "Start Annual — Best Value" },
 ];
 
 const PaywallModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
@@ -47,19 +46,24 @@ const PaywallModal = ({ open, onClose }: { open: boolean; onClose: () => void })
 
         <div className="space-y-2 mb-4">
           {plans.map((p) => (
-            <Link key={p.name} to="/auth" onClick={onClose}>
-              <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors hover:bg-muted/50 border-border`}>
-                <span className="font-semibold text-sm">{p.name}</span>
-                <span className="font-bold text-sm">
-                  {p.price}<span className="text-muted-foreground font-normal">{p.period}</span>
-                </span>
-              </div>
-            </Link>
+            <button
+              key={p.name}
+              onClick={() => {
+                // TODO: integrate Stripe checkout
+                onClose();
+              }}
+              className="w-full flex items-center justify-between p-3 rounded-xl border transition-colors hover:bg-muted/50 border-border"
+            >
+              <span className="font-semibold text-sm">{p.label}</span>
+              <span className="font-bold text-sm">
+                {p.price}<span className="text-muted-foreground font-normal">{p.period}</span>
+              </span>
+            </button>
           ))}
         </div>
 
         <p className="text-[11px] text-muted-foreground text-center">
-          Cancel anytime
+          3-day free trial · Cancel anytime
         </p>
       </div>
     </div>
