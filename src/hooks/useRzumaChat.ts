@@ -12,8 +12,15 @@ type Conversation = {
   updatedAt: number;
 };
 
+export type UserPreferences = {
+  visitedPlaces: { name: string; rating: string; category: string }[];
+  likedCategories: string[];
+  dislikedCategories: string[];
+};
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rzuma-chat`;
 const STORAGE_KEY = "jolliday-conversations";
+const PREFS_KEY = "jolliday-preferences";
 
 const generateId = () => crypto.randomUUID?.() || Math.random().toString(36).slice(2);
 
@@ -28,6 +35,17 @@ const saveConversations = (convos: Conversation[]) => {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(convos)); } catch { /* quota */ }
 };
 
+const loadPreferences = (): UserPreferences => {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    return raw ? JSON.parse(raw) : { visitedPlaces: [], likedCategories: [], dislikedCategories: [] };
+  } catch { return { visitedPlaces: [], likedCategories: [], dislikedCategories: [] }; }
+};
+
+const savePreferences = (prefs: UserPreferences) => {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* quota */ }
+};
+
 const titleFromMessage = (msg: string) => msg.slice(0, 40) + (msg.length > 40 ? "…" : "");
 
 export const useRzumaChat = () => {
@@ -38,22 +56,22 @@ export const useRzumaChat = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState<UserPreferences>(loadPreferences);
   const convosRef = useRef(conversations);
   convosRef.current = conversations;
 
-  // Persist on change
   useEffect(() => { saveConversations(conversations); }, [conversations]);
+  useEffect(() => { savePreferences(preferences); }, [preferences]);
 
   const activeConvo = conversations.find(c => c.id === activeId);
   const messages = activeConvo?.messages || [];
 
-  const setMessagesForActive = useCallback((updater: (prev: Message[]) => Message[]) => {
-    setConversations(prev => prev.map(c =>
-      c.id === (convosRef.current.find(x => x.id === activeId)?.id ?? activeId)
-        ? { ...c, messages: updater(c.messages), updatedAt: Date.now() }
-        : c
-    ));
-  }, [activeId]);
+  const updatePreferences = useCallback((updater: (prev: UserPreferences) => UserPreferences) => {
+    setPreferences(prev => {
+      const next = updater(prev);
+      return next;
+    });
+  }, []);
 
   const newChat = useCallback(() => {
     const id = generateId();
@@ -81,7 +99,6 @@ export const useRzumaChat = () => {
   const sendMessage = useCallback(async (input: string) => {
     let currentId = activeId;
 
-    // Auto-create conversation if none active
     if (!currentId) {
       const id = generateId();
       const convo: Conversation = { id, title: titleFromMessage(input), messages: [], updatedAt: Date.now() };
@@ -92,7 +109,6 @@ export const useRzumaChat = () => {
 
     const userMsg: Message = { role: "user", content: input };
 
-    // Update title if first message
     setConversations(prev => prev.map(c => {
       if (c.id !== currentId) return c;
       const isFirst = c.messages.length === 0;
@@ -124,9 +140,12 @@ export const useRzumaChat = () => {
     };
 
     try {
-      // Get current messages for this convo
       const currentMessages = [...(convosRef.current.find(c => c.id === currentId)?.messages || []), userMsg]
         .filter(m => m.role === "user" || m.role === "assistant");
+
+      // Build preferences context
+      const prefsContext = preferences.visitedPlaces.length > 0 || preferences.likedCategories.length > 0 || preferences.dislikedCategories.length > 0
+        ? preferences : undefined;
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -134,7 +153,7 @@ export const useRzumaChat = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: currentMessages }),
+        body: JSON.stringify({ messages: currentMessages, preferences: prefsContext }),
       });
 
       if (!resp.ok) {
@@ -177,7 +196,6 @@ export const useRzumaChat = () => {
         }
       }
 
-      // Final flush
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split("\n")) {
           if (!raw) continue;
@@ -196,11 +214,10 @@ export const useRzumaChat = () => {
     } catch (e) {
       console.error("Chat error:", e);
       setError(e instanceof Error ? e.message : "Something went wrong");
-      // Keep the user message so retry works — don't remove it
     } finally {
       setIsLoading(false);
     }
-  }, [activeId]);
+  }, [activeId, preferences]);
 
   const clearChat = useCallback(() => {
     newChat();
@@ -214,6 +231,10 @@ export const useRzumaChat = () => {
     setError(null);
   }, []);
 
+  const exportLocalData = useCallback(() => {
+    return { conversations, preferences };
+  }, [conversations, preferences]);
+
   return {
     messages,
     isLoading,
@@ -226,5 +247,8 @@ export const useRzumaChat = () => {
     switchChat,
     deleteChat,
     openSavedTrip,
+    preferences,
+    updatePreferences,
+    exportLocalData,
   };
 };

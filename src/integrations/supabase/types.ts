@@ -104,6 +104,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          disliked_categories: Json | null
+          id: string
+          liked_categories: Json | null
+          updated_at: string | null
+          user_id: string
+          visited_places: Json | null
+        }
+        Insert: {
+          disliked_categories?: Json | null
+          id?: string
+          liked_categories?: Json | null
+          updated_at?: string | null
+          user_id: string
+          visited_places?: Json | null
+        }
+        Update: {
+          disliked_categories?: Json | null
+          id?: string
+          liked_categories?: Json | null
+          updated_at?: string | null
+          user_id?: string
+          visited_places?: Json | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
