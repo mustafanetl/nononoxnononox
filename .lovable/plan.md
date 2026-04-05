@@ -1,25 +1,42 @@
 
 
-# Let the AI Talk More + View Plan Card
+# Full SaaS Flow: Login Required + Paywall on View Plan
 
-## What Changes
+## Current State
+- Chat is accessible without login
+- TripSummaryCard navigates directly to `/trip/view` with no gate
+- `useSubscription` has `isPremium = true` hardcoded (dev override)
+- PaywallModal exists but isn't used in the plan flow
 
-The user wants the AI to feel more conversational — not restricted to 1 sentence — while still showing the "View Plan" summary card when a full plan is ready.
+## Plan
 
-### Step 1: Update system prompt to allow more natural conversation
-**File: `supabase/functions/rzuma-chat/index.ts`**
+### Step 1: Require login to access Chat
+**File: `src/pages/Chat.tsx`**
+- Add auth check at top of component using `useAuth`
+- If no user and not loading, redirect to `/auth` (or show a prompt to sign in)
+- Already imports `useAuth` — just add the redirect logic
 
-- Change "max 1 sentence of plain text per reply" → allow 2-3 sentences of friendly, conversational text. The AI should feel like a friend texting — casual, warm, helpful.
-- Remove the strict "1 sentence MAX" rule (line 19). Replace with: "Keep it short and friendly — 2-3 sentences max. Be conversational, share a thought or tip about the destination. Don't repeat what cards already show."
-- Keep the rule about not using exclamation marks and staying chill.
+### Step 2: Paywall gate on "View Full Plan" click
+**File: `src/components/TripSummaryCard.tsx`**
+- Import `useSubscription` and `PaywallModal`
+- On click: if `isPremium` is true, navigate to `/trip/view` as before
+- If not premium, show the PaywallModal instead of navigating
+- Add local state `showPaywall` to control the modal
 
-### Step 2: No changes needed to card/plan rendering
-The current flow already works correctly:
-- AI generates all card blocks → `isFullPlan` detects 2+ card types → shows TripSummaryCard with "View Full Plan" button
-- User clicks → navigates to `/trip/view` with full detail page
+### Step 3: Re-enable subscription check
+**File: `src/hooks/useSubscription.ts`**
+- Change `const isPremium = true` back to `const isPremium = plan !== "free"`
+- This activates the paywall for all free users
 
-This is purely a prompt tone adjustment — no frontend changes needed.
+### Step 4: Update PaywallModal CTA buttons
+**File: `src/components/PaywallModal.tsx`**
+- Currently links to `/auth` — keep that for unauthenticated users
+- For authenticated users, the buttons should eventually link to a checkout flow (Stripe)
+- For now, update copy to say "Start Free Trial" and keep linking to auth/settings
 
 ## Files to Modify
-- `supabase/functions/rzuma-chat/index.ts` — relax the 1-sentence constraint to 2-3 sentences
+- `src/pages/Chat.tsx` — redirect unauthenticated users to `/auth`
+- `src/components/TripSummaryCard.tsx` — paywall gate before navigation
+- `src/hooks/useSubscription.ts` — re-enable real subscription check
+- `src/components/PaywallModal.tsx` — minor copy update
 
