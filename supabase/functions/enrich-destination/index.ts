@@ -236,7 +236,7 @@ serve(async (req) => {
     // imageOnly mode: just fetch 1 Google Places photo, skip everything else
     if (imageOnly) {
       console.log(`Image-only enrichment for: ${destination}`);
-      const images = await getGooglePlacePhotos(destination, 1);
+      const images = await getGooglePlacePhotos(destination, 3);
       return new Response(JSON.stringify({ destination, images }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
