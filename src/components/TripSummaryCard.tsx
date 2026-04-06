@@ -99,7 +99,16 @@ const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlan
         </div>
       </div>
 
-      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} />
+      <PaywallModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        destination={destination}
+        tripStats={{
+          activities: data.activities.length,
+          hotels: data.hotels.length,
+          days: data.itinerary.length,
+        }}
+      />
     </>
   );
 };
