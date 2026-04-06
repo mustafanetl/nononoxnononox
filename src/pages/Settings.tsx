@@ -6,9 +6,12 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Compass, ArrowLeft, LogOut, Save, Crown, Calendar, Shield } from "lucide-react";
+import { Compass, ArrowLeft, LogOut, Save, Crown, Shield, MapPin, Utensils } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { toast } from "sonner";
+
+const TRAVEL_STYLES = ["budget", "mid-range", "luxury"] as const;
+const DIETARY_OPTIONS = ["Vegetarian", "Vegan", "Halal", "Kosher", "Gluten-free", "Dairy-free", "Nut allergy", "Pescatarian"];
 
 const Settings = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -17,6 +20,9 @@ const Settings = () => {
 
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [homeCity, setHomeCity] = useState("");
+  const [travelStyle, setTravelStyle] = useState("");
+  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
 
@@ -28,34 +34,60 @@ const Settings = () => {
 
   useEffect(() => {
     if (!user) return;
-    const fetchProfile = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("display_name, avatar_url")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (data) {
-        setDisplayName(data.display_name || "");
-        setAvatarUrl(data.avatar_url || "");
+    const fetchData = async () => {
+      const [{ data: profile }, { data: prefs }] = await Promise.all([
+        supabase.from("profiles").select("display_name, avatar_url").eq("user_id", user.id).maybeSingle(),
+        supabase.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle(),
+      ]);
+      if (profile) {
+        setDisplayName(profile.display_name || "");
+        setAvatarUrl(profile.avatar_url || "");
+      }
+      if (prefs) {
+        setHomeCity((prefs as any).home_city || "");
+        setTravelStyle((prefs as any).travel_style || "");
+        setDietaryRestrictions((prefs as any).dietary_restrictions || []);
       }
       setProfileLoaded(true);
     };
-    fetchProfile();
+    fetchData();
   }, [user]);
 
-  const handleSaveProfile = async () => {
+  const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ display_name: displayName, avatar_url: avatarUrl || null })
-      .eq("user_id", user.id);
+
+    const [profileRes, prefsRes] = await Promise.all([
+      supabase.from("profiles").update({ display_name: displayName, avatar_url: avatarUrl || null }).eq("user_id", user.id),
+      (async () => {
+        const { data: existing } = await supabase.from("user_preferences").select("id").eq("user_id", user.id).maybeSingle();
+        const payload = {
+          user_id: user.id,
+          home_city: homeCity || null,
+          travel_style: travelStyle || null,
+          dietary_restrictions: dietaryRestrictions,
+          display_name: displayName || null,
+          updated_at: new Date().toISOString(),
+        } as any;
+        if (existing) {
+          return supabase.from("user_preferences").update(payload).eq("user_id", user.id);
+        }
+        return supabase.from("user_preferences").insert(payload);
+      })(),
+    ]);
+
     setSaving(false);
-    if (error) {
-      toast.error("Failed to save profile");
+    if (profileRes.error || prefsRes.error) {
+      toast.error("Failed to save settings");
     } else {
-      toast.success("Profile updated");
+      toast.success("Settings saved — Jolliday will remember your preferences ✨");
     }
+  };
+
+  const toggleDietary = (item: string) => {
+    setDietaryRestrictions(prev =>
+      prev.includes(item) ? prev.filter(d => d !== item) : [...prev, item]
+    );
   };
 
   const handleSignOut = async () => {
@@ -108,13 +140,80 @@ const Settings = () => {
                 placeholder="Your name"
                 className="mt-1"
               />
+              <p className="text-xs text-muted-foreground mt-1">Jolliday will use this to personalize your experience</p>
             </div>
-            <Button onClick={handleSaveProfile} disabled={saving || !profileLoaded} className="gap-2">
-              <Save className="h-4 w-4" />
-              {saving ? "Saving…" : "Save Changes"}
-            </Button>
           </div>
         </section>
+
+        {/* Travel Preferences Section */}
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <MapPin className="h-4 w-4" /> Travel Preferences
+          </h2>
+          <div className="border border-border rounded-2xl p-5 bg-card space-y-5">
+            <div>
+              <Label htmlFor="homeCity">Home City</Label>
+              <Input
+                id="homeCity"
+                value={homeCity}
+                onChange={(e) => setHomeCity(e.target.value)}
+                placeholder="e.g. Rotterdam, London, NYC"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Used for local recommendations & departure suggestions</p>
+            </div>
+
+            <div>
+              <Label>Travel Style</Label>
+              <div className="flex gap-2 mt-2">
+                {TRAVEL_STYLES.map((style) => (
+                  <button
+                    key={style}
+                    onClick={() => setTravelStyle(travelStyle === style ? "" : style)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors capitalize ${
+                      travelStyle === style
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {style}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Jolliday will match prices & suggestions to your style</p>
+            </div>
+
+            <div>
+              <Label className="flex items-center gap-2">
+                <Utensils className="h-3.5 w-3.5" /> Dietary Restrictions
+              </Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {DIETARY_OPTIONS.map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => toggleDietary(item)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      dietaryRestrictions.includes(item)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Restaurant suggestions will automatically filter for these</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Save Button */}
+        <div className="mb-8">
+          <Button onClick={handleSave} disabled={saving || !profileLoaded} className="w-full gap-2">
+            <Save className="h-4 w-4" />
+            {saving ? "Saving…" : "Save All Changes"}
+          </Button>
+        </div>
 
         {/* Subscription Section */}
         <section className="mb-8">
@@ -133,22 +232,15 @@ const Settings = () => {
                 {plan}
               </span>
             </div>
-
-            <p className="text-sm text-muted-foreground">
-              Upgrade options coming soon.
-            </p>
           </div>
         </section>
 
         {/* Account Actions */}
         <section>
           <h2 className="text-lg font-semibold mb-4">Account</h2>
-          <div className="border border-border rounded-2xl p-5 bg-card space-y-3">
+          <div className="border border-border rounded-2xl p-5 bg-card">
             <Button onClick={handleSignOut} variant="outline" className="w-full justify-start gap-2">
               <LogOut className="h-4 w-4" /> Sign Out
-            </Button>
-            <Button disabled variant="ghost" className="w-full justify-start gap-2 text-destructive opacity-50">
-              Delete Account (coming soon)
             </Button>
           </div>
         </section>

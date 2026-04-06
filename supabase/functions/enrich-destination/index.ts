@@ -81,12 +81,8 @@ async function getExchangeRate(currencyCode: string): Promise<any> {
 
 async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any[]> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
-  if (!apiKey) {
-    console.warn("GOOGLE_PLACES_API_KEY not set, skipping place photos");
-    return [];
-  }
+  if (!apiKey) return [];
   try {
-    // Text Search to find the destination place
     const searchRes = await fetchWithTimeout(
       "https://places.googleapis.com/v1/places:searchText",
       {
@@ -99,15 +95,11 @@ async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any
         body: JSON.stringify({ textQuery: destination, maxResultCount: 1 }),
       }
     );
-    if (!searchRes.ok) {
-      console.error("Google Places search error:", await searchRes.text());
-      return [];
-    }
+    if (!searchRes.ok) return [];
     const searchData = await searchRes.json();
     const place = searchData.places?.[0];
     if (!place?.photos?.length) return [];
 
-    // Get photo URLs (up to limit)
     const photos = place.photos.slice(0, limit);
     return photos.map((photo: any) => ({
       url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=800&key=${apiKey}`,
@@ -124,7 +116,6 @@ async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any
 
 async function searchXoteloHotels(destination: string, limit = 6): Promise<any[]> {
   try {
-    // Step 1: Search for location key
     const searchRes = await fetchWithTimeout(
       `https://data.xotelo.com/api/search?query=${encodeURIComponent(destination)}&location_type=geo`
     );
@@ -133,7 +124,6 @@ async function searchXoteloHotels(destination: string, limit = 6): Promise<any[]
     const locationKey = searchData?.result?.location_key;
     if (!locationKey) return [];
 
-    // Step 2: Get hotel list for this location
     const listRes = await fetchWithTimeout(
       `https://data.xotelo.com/api/list?location_key=${locationKey}&limit=${limit}&sort=best_value`
     );
@@ -164,60 +154,54 @@ async function searchXoteloHotels(destination: string, limit = 6): Promise<any[]
   }
 }
 
-async function getGoogleNearbyPlaces(lat: number, lng: number, limit = 8): Promise<any[]> {
+// Per-activity Google Places Text Search — returns a map of activity name → photo/rating
+async function searchActivitiesPhotos(
+  activities: string[],
+  destination: string
+): Promise<Record<string, { photo: string; thumbPhoto: string; rating: number | null; address: string | null }>> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
-  if (!apiKey) {
-    console.warn("GOOGLE_PLACES_API_KEY not set, skipping nearby places");
-    return [];
-  }
-  try {
-    const res = await fetchWithTimeout(
-      "https://places.googleapis.com/v1/places:searchNearby",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.priceLevel,places.photos,places.location,places.primaryType,places.editorialSummary",
-        },
-        body: JSON.stringify({
-          includedTypes: ["tourist_attraction", "museum", "restaurant", "park", "cafe"],
-          maxResultCount: limit,
-          locationRestriction: {
-            circle: { center: { latitude: lat, longitude: lng }, radius: 10000.0 },
-          },
-          rankPreference: "POPULARITY",
-        }),
-      }
-    );
-    if (!res.ok) {
-      console.error("Google Nearby Search error:", await res.text());
-      return [];
-    }
-    const data = await res.json();
-    const places = data.places || [];
+  if (!apiKey || activities.length === 0) return {};
 
-    return places.map((p: any) => {
-      const photoRef = p.photos?.[0]?.name;
-      return {
-        title: p.displayName?.text || "Unknown",
-        description: p.editorialSummary?.text || p.formattedAddress || "",
-        lat: p.location?.latitude || lat,
-        lng: p.location?.longitude || lng,
-        thumbnail: photoRef
-          ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}`
-          : null,
-        rating: p.rating || null,
-        userRatingsTotal: p.userRatingCount || 0,
-        priceLevel: p.priceLevel || null,
-        type: p.primaryType || "point_of_interest",
-        distance: null,
+  const results: Record<string, any> = {};
+
+  // Process in parallel but cap at 5 concurrent to avoid rate limits
+  const batch = activities.slice(0, 8);
+  const promises = batch.map(async (actName) => {
+    try {
+      const res = await fetchWithTimeout(
+        "https://places.googleapis.com/v1/places:searchText",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress",
+          },
+          body: JSON.stringify({
+            textQuery: `${actName} in ${destination}`,
+            maxResultCount: 1,
+          }),
+        }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      const place = data.places?.[0];
+      if (!place) return;
+
+      const photoRef = place.photos?.[0]?.name;
+      results[actName] = {
+        photo: photoRef ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}` : null,
+        thumbPhoto: photoRef ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}` : null,
+        rating: place.rating || null,
+        address: place.formattedAddress || null,
       };
-    });
-  } catch (e) {
-    console.error("Google nearby places error:", e);
-    return [];
-  }
+    } catch (e) {
+      console.error(`Activity photo search error for "${actName}":`, e);
+    }
+  });
+
+  await Promise.all(promises);
+  return results;
 }
 
 function weatherCodeToCondition(code: number): string {
@@ -240,7 +224,7 @@ serve(async (req) => {
   }
 
   try {
-    const { destination, travelMonth } = await req.json();
+    const { destination, travelMonth, activities } = await req.json();
 
     if (!destination || typeof destination !== "string") {
       return new Response(JSON.stringify({ error: "destination is required" }), {
@@ -249,9 +233,8 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Enriching destination: ${destination}`);
+    console.log(`Enriching destination: ${destination}`, activities?.length ? `with ${activities.length} activities` : "");
 
-    // Step 1: Geocode
     const geo = await geocode(destination);
     if (!geo) {
       return new Response(JSON.stringify({ error: "Could not find destination", destination }), {
@@ -260,16 +243,16 @@ serve(async (req) => {
       });
     }
 
-    // Step 2: All APIs in parallel (including country → exchange rate in two phases)
-    const [weatherData, countryData, googleImages, googlePlaces, xoteloHotels] = await Promise.all([
+    // All APIs in parallel — including per-activity photo lookup
+    const activityNames: string[] = Array.isArray(activities) ? activities : [];
+    const [weatherData, countryData, googleImages, xoteloHotels, activityPhotos] = await Promise.all([
       getWeather(geo.lat, geo.lng),
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
       getGooglePlacePhotos(destination),
-      getGoogleNearbyPlaces(geo.lat, geo.lng),
       searchXoteloHotels(destination),
+      activityNames.length > 0 ? searchActivitiesPhotos(activityNames, destination) : Promise.resolve({}),
     ]);
 
-    // Extract currency and fetch exchange rate in parallel with nothing blocking
     let currencyCode = "";
     let currencyName = "";
     if (countryData?.currencies) {
@@ -282,7 +265,6 @@ serve(async (req) => {
 
     const exchangeData = currencyCode ? await getExchangeRate(currencyCode) : null;
 
-    // Build weather summary
     let weatherSummary = null;
     if (weatherData?.daily) {
       const daily = weatherData.daily;
@@ -313,7 +295,6 @@ serve(async (req) => {
       };
     }
 
-    // Build country info
     let countryInfo = null;
     if (countryData) {
       const languages = countryData.languages
@@ -339,11 +320,12 @@ serve(async (req) => {
       country: countryInfo,
       exchange: exchangeData,
       images: googleImages,
-      places: googlePlaces,
+      places: [], // Replaced by activityPhotos
       hotels: xoteloHotels,
+      activityPhotos, // Map of activity name → { photo, thumbPhoto, rating, address }
     };
 
-    console.log(`Enrichment complete for ${destination}: ${googleImages.length} images, ${googlePlaces.length} places, ${xoteloHotels.length} hotels`);
+    console.log(`Enrichment complete for ${destination}: ${googleImages.length} images, ${Object.keys(activityPhotos).length} activity photos, ${xoteloHotels.length} hotels`);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
