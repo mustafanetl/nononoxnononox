@@ -1,5 +1,5 @@
 import { Lock, Plane, Hotel, Sparkles, MapPin, Calendar } from "lucide-react";
-import { ActivityData } from "@/components/ActivityCard";
+
 import { getCityImage } from "@/utils/cityImages";
 import { TripPlanData } from "@/components/TripSummaryCard";
 
@@ -49,7 +49,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate">{act.name}</p>
-              {act.time && <p className="text-[10px] text-muted-foreground">{act.time}</p>}
+              {(act as any).time && <p className="text-[10px] text-muted-foreground">{(act as any).time}</p>}
             </div>
           </div>
         ))}
