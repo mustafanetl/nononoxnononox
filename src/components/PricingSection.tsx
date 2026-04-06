@@ -24,9 +24,9 @@ const plans = [
   },
   {
     name: "Annual",
-    price: "$49.99",
-    period: "/year",
-    description: "Best value — save over 67%",
+    price: "$4.17",
+    period: "/month",
+    description: "Billed $49.99/year — save over 67%",
     features: [
       "Everything in Monthly",
       "Save $106/year vs monthly",

@@ -226,35 +226,80 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   }, [isLoading, messages]);
 
   // Detect when AI is building a full plan for free users → show crafting animation
-  const isCraftingPlan = useMemo(() => {
+  const planBlocksDetected = useMemo(() => {
     if (!isLoading || isPremium) return false;
     const lastMsg = messages[messages.length - 1];
     if (!lastMsg || lastMsg.role !== "assistant") return false;
     const c = lastMsg.content;
-    const hasPlanBlocks = /```(flights|hotels|activities|itinerary)/s.test(c);
-    return hasPlanBlocks;
+    return /```(flights|hotels|activities|itinerary)/s.test(c);
   }, [isLoading, messages, isPremium]);
 
-  // Track crafting progress animation
+  // Crafting active state — decoupled from isLoading, enforces minimum 12s duration
+  const [craftingActive, setCraftingActive] = useState(false);
+  const craftingStarted = useRef(false);
+  const craftingTimerDone = useRef(false);
+  const streamingDone = useRef(false);
+
+  // When plan blocks first detected, start crafting mode
   useEffect(() => {
-    if (isCraftingPlan) {
+    if (planBlocksDetected && !craftingStarted.current) {
+      craftingStarted.current = true;
+      craftingTimerDone.current = false;
+      streamingDone.current = false;
+      setCraftingActive(true);
+
       const lastMsg = messages[messages.length - 1];
       const destMatch = lastMsg?.content.match(/```travelinfo\s*\{[^}]*"destination"\s*:\s*"([^"]+)"/);
       const dest = destMatch?.[1] || "";
       setCraftingPlan({ destination: dest, progress: 0 });
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 3 + 1.5;
-        if (progress > 90) progress = 90;
-        setCraftingPlan(prev => prev ? { ...prev, progress } : null);
-      }, 1000);
-      return () => clearInterval(interval);
-    } else if (craftingPlan) {
-      setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
-      const timer = setTimeout(() => setCraftingPlan(null), 500);
-      return () => clearTimeout(timer);
+
+      // Minimum 12-second timer
+      setTimeout(() => {
+        craftingTimerDone.current = true;
+        // If streaming already done, finish up
+        if (streamingDone.current) {
+          setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
+          setTimeout(() => {
+            setCraftingActive(false);
+            setCraftingPlan(null);
+            craftingStarted.current = false;
+          }, 600);
+        }
+      }, 12000);
     }
-  }, [isCraftingPlan]);
+  }, [planBlocksDetected]);
+
+  // When streaming ends while crafting is active
+  useEffect(() => {
+    if (!isLoading && craftingStarted.current && !streamingDone.current) {
+      streamingDone.current = true;
+      if (craftingTimerDone.current) {
+        // Timer already done, finish now
+        setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
+        setTimeout(() => {
+          setCraftingActive(false);
+          setCraftingPlan(null);
+          craftingStarted.current = false;
+        }, 600);
+      }
+      // else: timer still running, it will handle the finish
+    }
+  }, [isLoading]);
+
+  // Steady progress animation while crafting is active
+  useEffect(() => {
+    if (!craftingActive) return;
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 2 + 1;
+      if (progress > 90) progress = 90;
+      setCraftingPlan(prev => prev ? { ...prev, progress } : null);
+    }, 800);
+    return () => clearInterval(interval);
+  }, [craftingActive]);
+
+  // Use craftingActive instead of isCraftingPlan for UI
+  const isCraftingPlan = craftingActive;
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -282,6 +327,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       setEnrichedData({});
       setLastFailedMessage(null);
       setPlanGenerated(false);
+      setCraftingActive(false);
+      setCraftingPlan(null);
+      craftingStarted.current = false;
+      craftingTimerDone.current = false;
+      streamingDone.current = false;
     }
   }, [activeId]);
 
