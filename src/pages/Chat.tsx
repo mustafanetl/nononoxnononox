@@ -244,10 +244,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       setCraftingPlan({ destination: dest, progress: 0 });
       let progress = 0;
       const interval = setInterval(() => {
-        progress += Math.random() * 15 + 5;
+        progress += Math.random() * 3 + 1.5;
         if (progress > 90) progress = 90;
         setCraftingPlan(prev => prev ? { ...prev, progress } : null);
-      }, 600);
+      }, 1000);
       return () => clearInterval(interval);
     } else if (craftingPlan) {
       setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
@@ -704,50 +704,65 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                               )
                             ) : (
                               <>
-                                {parsed.timeline.length > 0 && (
-                                  <TripTimeline legs={parsed.timeline} />
-                                )}
-                                {parsed.flights.length > 0 && (
-                                  <HorizontalCarousel>
-                                    {parsed.flights.map((f, idx) => (
-                                      <FlightCard key={f.id || idx} flight={f} onClick={() => handleFlightClick(f)} />
-                                    ))}
-                                  </HorizontalCarousel>
-                                )}
-                                {parsed.hotels.length > 0 && (
-                                  <HorizontalCarousel>
-                                    {parsed.hotels.map((h, idx) => (
-                                      <HotelCard key={h.id || idx} hotel={h} onClick={() => handleHotelClick(h)} />
-                                    ))}
-                                  </HorizontalCarousel>
-                                )}
-                                {parsed.activities.length > 0 && (
-                                  <HorizontalCarousel>
-                                    {parsed.activities.map((a, idx) => (
-                                      <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a)} />
-                                    ))}
-                                  </HorizontalCarousel>
-                                )}
-                                {parsed.itinerary.length > 0 && (
-                                  <HorizontalCarousel>
-                                    {parsed.itinerary.map((item, idx) => (
-                                      <ItineraryCard key={idx} item={item} />
-                                    ))}
-                                  </HorizontalCarousel>
-                                )}
-                                {parsed.travelInfo && (
+                                {/* If plan already generated and user is free, gate ALL card blocks */}
+                                {planGenerated && !isPremium ? (
+                                  (parsed.flights.length > 0 || parsed.hotels.length > 0 || parsed.activities.length > 0 || parsed.itinerary.length > 0) ? (
+                                    <div className="mt-4 p-4 rounded-xl border border-border bg-muted/30 text-center">
+                                      <p className="text-sm font-medium text-foreground mb-2">🔒 Unlock your full plan</p>
+                                      <p className="text-xs text-muted-foreground mb-3">Start your free trial to see everything</p>
+                                      <Button size="sm" onClick={() => setShowPaywall(true)} className="gap-1.5">
+                                        <Crown className="h-3.5 w-3.5" /> Start Free Trial
+                                      </Button>
+                                    </div>
+                                  ) : null
+                                ) : (
                                   <>
-                                    <TravelInfoCard info={parsed.travelInfo} />
-                                    {parsed.travelInfo.currency && (
-                                      <CurrencyConverter destinationCurrency={parsed.travelInfo.currency} />
+                                    {parsed.timeline.length > 0 && (
+                                      <TripTimeline legs={parsed.timeline} />
                                     )}
-                                  </>
-                                )}
-                                {parsed.weather && (
-                                  <>
-                                    <WeatherCard weather={parsed.weather} />
-                                    {parsed.weather.packingTips && parsed.weather.packingTips.length > 0 && (
-                                      <PackingList items={parsed.weather.packingTips} />
+                                    {parsed.flights.length > 0 && (
+                                      <HorizontalCarousel>
+                                        {parsed.flights.map((f, idx) => (
+                                          <FlightCard key={f.id || idx} flight={f} onClick={() => handleFlightClick(f)} />
+                                        ))}
+                                      </HorizontalCarousel>
+                                    )}
+                                    {parsed.hotels.length > 0 && (
+                                      <HorizontalCarousel>
+                                        {parsed.hotels.map((h, idx) => (
+                                          <HotelCard key={h.id || idx} hotel={h} onClick={() => handleHotelClick(h)} />
+                                        ))}
+                                      </HorizontalCarousel>
+                                    )}
+                                    {parsed.activities.length > 0 && (
+                                      <HorizontalCarousel>
+                                        {parsed.activities.map((a, idx) => (
+                                          <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a)} />
+                                        ))}
+                                      </HorizontalCarousel>
+                                    )}
+                                    {parsed.itinerary.length > 0 && (
+                                      <HorizontalCarousel>
+                                        {parsed.itinerary.map((item, idx) => (
+                                          <ItineraryCard key={idx} item={item} />
+                                        ))}
+                                      </HorizontalCarousel>
+                                    )}
+                                    {parsed.travelInfo && (
+                                      <>
+                                        <TravelInfoCard info={parsed.travelInfo} />
+                                        {parsed.travelInfo.currency && (
+                                          <CurrencyConverter destinationCurrency={parsed.travelInfo.currency} />
+                                        )}
+                                      </>
+                                    )}
+                                    {parsed.weather && (
+                                      <>
+                                        <WeatherCard weather={parsed.weather} />
+                                        {parsed.weather.packingTips && parsed.weather.packingTips.length > 0 && (
+                                          <PackingList items={parsed.weather.packingTips} />
+                                        )}
+                                      </>
                                     )}
                                   </>
                                 )}
@@ -782,15 +797,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                           : "Crafting your perfect plan..."}
                       </p>
                       <p className="text-sm text-muted-foreground mb-6">
-                        {craftingPlan.progress < 20
-                          ? "Searching the best spots..."
-                          : craftingPlan.progress < 40
-                          ? "Finding hidden gems..."
-                          : craftingPlan.progress < 60
-                          ? "Building your itinerary..."
+                        {craftingPlan.progress < 15
+                          ? "Searching flights and routes..."
+                          : craftingPlan.progress < 30
+                          ? "Scouting the best hotels..."
+                          : craftingPlan.progress < 50
+                          ? "Curating must-see experiences..."
+                          : craftingPlan.progress < 65
+                          ? "Building your day-by-day itinerary..."
                           : craftingPlan.progress < 80
                           ? "Adding insider recommendations..."
-                          : "Almost done — final touches ✨"}
+                          : "Polishing final details ✨"}
                       </p>
                       <div className="flex items-center gap-3 max-w-xs mx-auto">
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
