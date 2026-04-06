@@ -1,5 +1,6 @@
 import { Crown, Check, X, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { getCurrencyPrices } from "@/utils/currencyLocale";
 
 interface PaywallModalProps {
   open: boolean;
@@ -7,11 +8,6 @@ interface PaywallModalProps {
   destination?: string;
   tripStats?: { activities?: number; hotels?: number; days?: number };
 }
-
-const plans = [
-  { name: "annual", price: "$4.17", period: "/mo", monthly: "billed $49.99/yr", label: "Annual", badge: "Save 67%" },
-  { name: "monthly", price: "$12.99", period: "/mo", monthly: null, label: "Monthly", badge: null },
-];
 
 const features = [
   "View complete trip itineraries",
@@ -23,10 +19,16 @@ const features = [
 
 const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalProps) => {
   const [selected, setSelected] = useState("annual");
+  const prices = getCurrencyPrices();
 
   if (!open) return null;
 
   const hasContext = destination && destination.length > 0;
+
+  const plans = [
+    { name: "annual", price: `${prices.symbol}${prices.annualMonthly}`, period: "/mo", label: "Annual", badge: "Save 67%" },
+    { name: "monthly", price: `${prices.symbol}${prices.monthly}`, period: "/mo", label: "Monthly", badge: null },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -98,10 +100,7 @@ const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalPro
                   </span>
                 )}
               </div>
-              <div className="text-right">
-                <span className="font-bold text-sm">{p.price}<span className="text-muted-foreground font-normal">{p.period}</span></span>
-                {p.monthly && <p className="text-[10px] text-muted-foreground">{p.monthly}</p>}
-              </div>
+              <span className="font-bold text-sm">{p.price}<span className="text-muted-foreground font-normal">{p.period}</span></span>
             </button>
           ))}
         </div>
@@ -109,7 +108,6 @@ const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalPro
         {/* CTA */}
         <button
           onClick={() => {
-            // TODO: integrate Stripe checkout with selected plan
             onClose();
           }}
           className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"

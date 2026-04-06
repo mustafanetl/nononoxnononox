@@ -854,17 +854,29 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                           : "Crafting your perfect plan..."}
                       </p>
                       <p className="text-sm text-muted-foreground mb-6">
-                        {craftingPlan.progress < 15
-                          ? "Searching flights and routes..."
-                          : craftingPlan.progress < 30
-                          ? "Scouting the best hotels..."
-                          : craftingPlan.progress < 50
-                          ? "Curating must-see experiences..."
-                          : craftingPlan.progress < 65
-                          ? "Building your day-by-day itinerary..."
-                          : craftingPlan.progress < 80
-                          ? "Adding insider recommendations..."
-                          : "Polishing final details ✨"}
+                        {craftingPlanType === "local" ? (
+                          craftingPlan.progress < 20
+                            ? "Finding the best spots nearby..."
+                            : craftingPlan.progress < 40
+                            ? "Curating must-see experiences..."
+                            : craftingPlan.progress < 60
+                            ? "Building your day-by-day plan..."
+                            : craftingPlan.progress < 80
+                            ? "Adding insider tips & hidden gems..."
+                            : "Polishing final details ✨"
+                        ) : (
+                          craftingPlan.progress < 15
+                            ? "Searching flights and routes..."
+                            : craftingPlan.progress < 30
+                            ? "Scouting the best hotels..."
+                            : craftingPlan.progress < 50
+                            ? "Curating must-see experiences..."
+                            : craftingPlan.progress < 65
+                            ? "Building your day-by-day itinerary..."
+                            : craftingPlan.progress < 80
+                            ? "Adding insider recommendations..."
+                            : "Polishing final details ✨"
+                        )}
                       </p>
                       <div className="flex items-center gap-3 max-w-xs mx-auto">
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">

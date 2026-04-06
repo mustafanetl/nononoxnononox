@@ -1,46 +1,48 @@
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-
-const plans = [
-  {
-    name: "Monthly",
-    price: "$12.99",
-    period: "/month",
-    description: "For frequent travelers",
-    features: [
-      "Unlimited trip plans",
-      "Save trips to your account",
-      "PDF export & sharing",
-      "Smart packing lists",
-      "Multi-city planning",
-      "Priority AI responses",
-    ],
-    cta: "Subscribe Monthly",
-    href: "/auth",
-    highlighted: false,
-    subtextCta: "Cancel anytime",
-  },
-  {
-    name: "Annual",
-    price: "$4.17",
-    period: "/month",
-    description: "Billed $49.99/year — save over 67%",
-    features: [
-      "Everything in Monthly",
-      "Save $106/year vs monthly",
-      "Priority support",
-      "Early access to features",
-    ],
-    cta: "Subscribe Annually",
-    href: "/auth",
-    highlighted: true,
-    subtextCta: "Cancel anytime",
-  },
-];
+import { getCurrencyPrices } from "@/utils/currencyLocale";
 
 const PricingSection = () => {
+  const prices = getCurrencyPrices();
+
+  const plans = [
+    {
+      name: "Monthly",
+      price: `${prices.symbol}${prices.monthly}`,
+      period: "/month",
+      description: "For frequent travelers",
+      features: [
+        "Unlimited trip plans",
+        "Save trips to your account",
+        "PDF export & sharing",
+        "Smart packing lists",
+        "Multi-city planning",
+        "Priority AI responses",
+      ],
+      cta: "Subscribe Monthly",
+      href: "/auth",
+      highlighted: false,
+      subtextCta: "Cancel anytime",
+    },
+    {
+      name: "Annual",
+      price: `${prices.symbol}${prices.annualMonthly}`,
+      period: "/month",
+      description: "Best value — save over 67%",
+      features: [
+        "Everything in Monthly",
+        "Biggest savings",
+        "Priority support",
+        "Early access to features",
+      ],
+      cta: "Subscribe Annually",
+      href: "/auth",
+      highlighted: true,
+      subtextCta: "Cancel anytime",
+    },
+  ];
+
   return (
     <section className="container mx-auto px-4 py-16 border-t border-border">
       <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">Simple Pricing</h2>
@@ -88,7 +90,6 @@ const PricingSection = () => {
           </div>
         ))}
       </div>
-
     </section>
   );
 };
