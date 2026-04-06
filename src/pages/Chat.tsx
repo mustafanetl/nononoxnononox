@@ -600,6 +600,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             ) : (
               <div className="space-y-6">
                 {parsedMessages.map((msg, i) => {
+                  // Hide the streaming assistant message while crafting plan
+                  const isLastMsg = i === parsedMessages.length - 1;
+                  if (isCraftingPlan && isLastMsg && msg.role === "assistant") return null;
+
                   const parsed = { ...msg.parsed };
 
                   // Merge enriched live data if available
@@ -671,10 +675,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                               </div>
                             )}
 
-                            {/* Inline place image showcases during discovery */}
-                            {parsed.placeImages.length > 0 && parsed.placeImages.map((pi, pidx) => (
-                              <PlaceShowcase key={pidx} place={pi.place} vibes={pi.vibes} />
-                            ))}
 
                             {/* Full plan → show summary card; otherwise show inline cards */}
                             {isFullPlan && destination ? (
@@ -767,37 +767,41 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {/* Plan crafting animation */}
+                {/* Plan crafting animation — full width, prominent */}
                 {isCraftingPlan && craftingPlan && (
-                  <div className="flex gap-3 animate-fade-in">
-                    <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0">
-                      <Compass className="h-4 w-4 text-background" />
-                    </div>
-                    <div className="flex-1 max-w-sm">
-                      <div className="rounded-2xl border border-border bg-card p-5">
-                        <div className="animate-pulse mb-3">
-                          <Compass className="h-8 w-8 text-primary mx-auto" />
+                  <div className="flex flex-col items-center justify-center py-12 animate-fade-in">
+                    <div className="w-full max-w-md mx-auto text-center">
+                      <div className="relative mb-6">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto animate-pulse">
+                          <Compass className="h-8 w-8 text-primary" />
                         </div>
-                        <p className="text-sm font-semibold text-foreground text-center">
-                          {craftingPlan.destination
-                            ? `Crafting your ${craftingPlan.destination} plan...`
-                            : "Crafting your perfect plan..."}
-                        </p>
-                        <p className="text-xs text-muted-foreground text-center mt-1 mb-3">
-                          {craftingPlan.progress < 25
-                            ? "Searching flights & deals..."
-                            : craftingPlan.progress < 50
-                            ? "Finding the best hotels..."
-                            : craftingPlan.progress < 75
-                            ? "Building your itinerary..."
-                            : "Almost done — adding final touches ✨"}
-                        </p>
-                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                      </div>
+                      <p className="text-lg font-semibold text-foreground mb-1">
+                        {craftingPlan.destination
+                          ? `Crafting your ${craftingPlan.destination} plan...`
+                          : "Crafting your perfect plan..."}
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-6">
+                        {craftingPlan.progress < 20
+                          ? "Searching the best spots..."
+                          : craftingPlan.progress < 40
+                          ? "Finding hidden gems..."
+                          : craftingPlan.progress < 60
+                          ? "Building your itinerary..."
+                          : craftingPlan.progress < 80
+                          ? "Adding insider recommendations..."
+                          : "Almost done — final touches ✨"}
+                      </p>
+                      <div className="flex items-center gap-3 max-w-xs mx-auto">
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                           <div
                             className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
                             style={{ width: `${craftingPlan.progress}%` }}
                           />
                         </div>
+                        <span className="text-sm font-medium text-foreground tabular-nums w-10">
+                          {Math.round(craftingPlan.progress)}%
+                        </span>
                       </div>
                     </div>
                   </div>
