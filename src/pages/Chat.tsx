@@ -676,7 +676,12 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             )}
 
                             {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && (
-                              <QuickReplies replies={parsed.quickReplies} onSelect={sendMessage} />
+                              <QuickReplies replies={parsed.quickReplies} onSelect={(reply) => {
+                                setIsThinking(true);
+                                if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
+                                thinkingTimerRef.current = setTimeout(() => setIsThinking(false), 800 + Math.random() * 600);
+                                sendMessage(reply);
+                              }} />
                             )}
                           </div>
                         </div>
