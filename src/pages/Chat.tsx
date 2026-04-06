@@ -137,6 +137,18 @@ const parseMessageContent = (content: string) => {
     quickReplies = Array.isArray(qrArr[0]) ? qrArr[0] : qrArr;
   }
 
+  // Fallback: parse plain-text quickreplies like `quickreplies: ["a", "b"]`
+  if (quickReplies.length === 0) {
+    const plainQrMatch = text.match(/quickreplies:\s*\[([^\]]*)\]/i);
+    if (plainQrMatch) {
+      try {
+        const parsed = JSON.parse(`[${plainQrMatch[1]}]`);
+        if (Array.isArray(parsed)) quickReplies = parsed;
+      } catch { /* ignore */ }
+      text = text.replace(plainQrMatch[0], "");
+    }
+  }
+
   const piArr = extractBlock("place_images");
   if (piArr.length > 0) {
     placeImages = piArr.map((p: any) => ({ place: p.place || "", vibes: p.vibes }));
