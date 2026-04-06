@@ -281,8 +281,25 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       prevActiveId.current = activeId;
       setEnrichedData({});
       setLastFailedMessage(null);
+      setPlanGenerated(false);
     }
   }, [activeId]);
+
+  // Detect when a full plan has been generated for free users
+  useEffect(() => {
+    if (isPremium || isLoading) return;
+    const hasFullPlan = parsedMessages.some((msg) => {
+      if (msg.role !== "assistant") return false;
+      const p = msg.parsed;
+      let blockTypes = 0;
+      if (p.flights.length > 0) blockTypes++;
+      if (p.hotels.length > 0) blockTypes++;
+      if (p.activities.length > 0) blockTypes++;
+      if (p.itinerary.length > 0) blockTypes++;
+      return blockTypes >= 2;
+    });
+    if (hasFullPlan) setPlanGenerated(true);
+  }, [parsedMessages, isLoading, isPremium]);
 
   // Auto-enrich destinations when streaming is done
   // Premium: full enrichment. Free: imageOnly (1 Google photo for the paywall card)
@@ -423,6 +440,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (planGenerated && !isPremium) {
+      setShowPaywall(true);
+      return;
+    }
     if (!input.trim() || isLoading) return;
     const msg = input.trim();
     setLastFailedMessage(msg);
@@ -733,8 +754,9 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                               </>
                             )}
 
-                            {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && (
+                            {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && !(planGenerated && !isPremium) && (
                               <QuickReplies replies={parsed.quickReplies} onSelect={(reply) => {
+                                if (planGenerated && !isPremium) { setShowPaywall(true); return; }
                                 sendMessage(reply);
                               }} />
                             )}
@@ -808,29 +830,47 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
         <div className="p-4 pb-6">
           <div className="max-w-3xl mx-auto">
-            <form onSubmit={handleSubmit}>
-              <div className="chat-input-container p-2">
-                <div className="flex items-end gap-2">
-                  <textarea
-                    ref={textareaRef}
-                    placeholder="Message Jolliday..."
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    disabled={isLoading}
-                    rows={1}
-                    className="flex-1 bg-transparent px-3 py-2 text-sm resize-none focus:outline-none min-h-[40px] max-h-[200px]"
-                  />
-                  <VoiceInput onTranscript={(t) => setInput(prev => prev ? prev + " " + t : t)} disabled={isLoading} />
-                  <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="h-9 w-9 rounded-lg shrink-0">
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                </div>
+            {planGenerated && !isPremium ? (
+              <div className="chat-input-container p-4 text-center">
+                <p className="text-sm font-medium text-foreground mb-2">
+                  ✨ Want to refine your plan? Upgrade to continue chatting
+                </p>
+                <Button
+                  onClick={() => setShowPaywall(true)}
+                  className="gap-2"
+                  variant="default"
+                >
+                  <Crown className="h-4 w-4" />
+                  Upgrade Now
+                </Button>
               </div>
-            </form>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Jolliday can make mistakes. Verify travel details before booking.
-            </p>
+            ) : (
+              <>
+                <form onSubmit={handleSubmit}>
+                  <div className="chat-input-container p-2">
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        ref={textareaRef}
+                        placeholder="Message Jolliday..."
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        disabled={isLoading}
+                        rows={1}
+                        className="flex-1 bg-transparent px-3 py-2 text-sm resize-none focus:outline-none min-h-[40px] max-h-[200px]"
+                      />
+                      <VoiceInput onTranscript={(t) => setInput(prev => prev ? prev + " " + t : t)} disabled={isLoading} />
+                      <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="h-9 w-9 rounded-lg shrink-0">
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Jolliday can make mistakes. Verify travel details before booking.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </main>
