@@ -80,6 +80,19 @@ const Settings = () => {
     if (profileRes.error || prefsRes.error) {
       toast.error("Failed to save settings");
     } else {
+      // Sync to localStorage and notify chat hook
+      try {
+        const currentPrefs = JSON.parse(localStorage.getItem("jolliday-preferences") || "{}");
+        const merged = {
+          ...currentPrefs,
+          displayName: displayName || "",
+          homeCity: homeCity || "",
+          travelStyle: travelStyle || "",
+          dietaryRestrictions: dietaryRestrictions || [],
+        };
+        localStorage.setItem("jolliday-preferences", JSON.stringify(merged));
+        window.dispatchEvent(new Event("jolliday-preferences-updated"));
+      } catch { /* ignore */ }
       toast.success("Settings saved — Jolliday will remember your preferences ✨");
     }
   };

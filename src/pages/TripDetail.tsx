@@ -525,7 +525,7 @@ const TripDetail = () => {
       </div>
 
       {/* Desktop action bar in hero */}
-      <div className="hidden sm:flex absolute top-4 right-4 z-10 items-center gap-2" style={{ position: 'fixed' }}>
+      <div className="hidden sm:flex fixed top-4 right-4 z-10 items-center gap-2">
         <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 bg-background/50 backdrop-blur-sm hover:bg-background/80">
           <Bookmark className="h-3.5 w-3.5" /> {saving ? "..." : "Save Trip"}
         </Button>
@@ -617,7 +617,7 @@ const HotelRow = React.forwardRef<HTMLDivElement, {
   >
     <div className="flex flex-col sm:flex-row">
       <div className="relative h-36 sm:h-auto sm:w-40 overflow-hidden shrink-0">
-        <img src={getHotelImage(h.image)} alt={h.name}
+        <img src={h.realImage || getHotelImage(h.image)} alt={h.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
         <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-bold">
           {h.currency}{h.pricePerNight}/night

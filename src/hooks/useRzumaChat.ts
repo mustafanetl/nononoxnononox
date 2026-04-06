@@ -82,6 +82,15 @@ export const useRzumaChat = () => {
   useEffect(() => { saveConversations(conversations); }, [conversations]);
   useEffect(() => { savePreferences(preferences); }, [preferences]);
 
+  // Listen for preference changes from Settings page
+  useEffect(() => {
+    const handler = () => {
+      setPreferences(loadPreferences());
+    };
+    window.addEventListener("jolliday-preferences-updated", handler);
+    return () => window.removeEventListener("jolliday-preferences-updated", handler);
+  }, []);
+
   // Load preferences from DB on mount (if user is logged in)
   useEffect(() => {
     if (dbSyncedRef.current) return;
@@ -167,10 +176,9 @@ export const useRzumaChat = () => {
   }, []);
 
   const newChat = useCallback(() => {
-    const id = generateId();
-    const convo: Conversation = { id, title: "New chat", messages: [], updatedAt: Date.now() };
-    setConversations(prev => [convo, ...prev]);
-    setActiveId(id);
+    // Don't create an empty conversation — just reset activeId.
+    // sendMessage will create one on the first message.
+    setActiveId(null);
     setError(null);
   }, []);
 
