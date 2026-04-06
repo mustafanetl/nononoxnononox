@@ -1,8 +1,11 @@
-import { Plane, Hotel, Sparkles, MapPin, Calendar, ArrowRight, Check, Lock, Star } from "lucide-react";
+import { Plane, Hotel, Sparkles, MapPin, Calendar, ArrowRight, Check, Lock, Star, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { getCityImage } from "@/utils/cityImages";
 import { TripPlanData } from "@/components/TripSummaryCard";
 import { getCurrencyPrices } from "@/utils/currencyLocale";
+import { useAuth } from "@/hooks/useAuth";
+import { startCheckout } from "@/lib/stripeCheckout";
+import { useNavigate } from "react-router-dom";
 
 interface PlanPreviewGateProps {
   data: TripPlanData;
@@ -20,6 +23,9 @@ const features = [
 
 const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanPreviewGateProps) => {
   const [selectedPlan, setSelectedPlan] = useState<"annual" | "monthly">("annual");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const days = data.itinerary.length;
   const heroImg = enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl || getCityImage(destination, 800, 500);
   const prices = getCurrencyPrices();
@@ -123,10 +129,19 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
 
         {/* CTA */}
         <button
-          onClick={onUpgrade}
-          className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+          onClick={async () => {
+            if (!user) {
+              navigate("/auth");
+              return;
+            }
+            setCheckoutLoading(true);
+            await startCheckout(selectedPlan);
+            setCheckoutLoading(false);
+          }}
+          disabled={checkoutLoading}
+          className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          <Lock className="h-3.5 w-3.5" />
+          {checkoutLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
           Start Free Trial — 3 Days Free
         </button>
 

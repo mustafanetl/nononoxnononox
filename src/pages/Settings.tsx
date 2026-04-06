@@ -6,16 +6,18 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Compass, ArrowLeft, LogOut, Save, Crown, Shield, MapPin, Utensils } from "lucide-react";
+import { Compass, ArrowLeft, LogOut, Save, Crown, Shield, MapPin, Utensils, CreditCard, Loader2 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import CancelSubscriptionModal from "@/components/CancelSubscriptionModal";
 import { toast } from "sonner";
+import { startCheckout } from "@/lib/stripeCheckout";
 
 const TRAVEL_STYLES = ["budget", "mid-range", "luxury"] as const;
 const DIETARY_OPTIONS = ["Vegetarian", "Vegan", "Halal", "Kosher", "Gluten-free", "Dairy-free", "Nut allergy", "Pescatarian"];
 
 const Settings = () => {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { plan, isPremium, loading: subLoading } = useSubscription();
+  const { plan, isPremium, loading: subLoading, subscriptionEnd, cancelAtPeriodEnd, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
 
   const [displayName, setDisplayName] = useState("");
@@ -25,6 +27,8 @@ const Settings = () => {
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -80,7 +84,6 @@ const Settings = () => {
     if (profileRes.error || prefsRes.error) {
       toast.error("Failed to save settings");
     } else {
-      // Sync to localStorage and notify chat hook
       try {
         const currentPrefs = JSON.parse(localStorage.getItem("jolliday-preferences") || "{}");
         const merged = {
@@ -106,6 +109,20 @@ const Settings = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleManagePortal = async () => {
+    setPortalLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("customer-portal");
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch {
+      toast.error("Failed to open subscription portal");
+    }
+    setPortalLoading(false);
   };
 
   if (authLoading || !user) {
@@ -238,13 +255,55 @@ const Settings = () => {
               <div>
                 <p className="font-medium capitalize">{plan} Plan</p>
                 <p className="text-sm text-muted-foreground">
-                  {isPremium ? "All features unlocked" : "Upgrade for full access"}
+                  {isPremium
+                    ? cancelAtPeriodEnd
+                      ? "Cancels at end of period"
+                      : "All features unlocked"
+                    : "Upgrade for full access"}
                 </p>
+                {isPremium && subscriptionEnd && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {cancelAtPeriodEnd ? "Access until" : "Renews"}: {new Date(subscriptionEnd).toLocaleDateString()}
+                  </p>
+                )}
               </div>
               <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium capitalize">
                 {plan}
               </span>
             </div>
+
+            {isPremium ? (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Button
+                  onClick={handleManagePortal}
+                  disabled={portalLoading}
+                  variant="outline"
+                  className="w-full gap-2"
+                >
+                  {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  Manage Billing
+                </Button>
+                {!cancelAtPeriodEnd && (
+                  <Button
+                    onClick={() => setShowCancelModal(true)}
+                    variant="ghost"
+                    className="w-full text-muted-foreground hover:text-destructive"
+                  >
+                    Cancel Subscription
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="pt-2 border-t border-border">
+                <Button
+                  onClick={() => startCheckout("annual")}
+                  className="w-full gap-2"
+                >
+                  <Crown className="h-4 w-4" />
+                  Upgrade to Premium
+                </Button>
+              </div>
+            )}
           </div>
         </section>
 
@@ -258,6 +317,12 @@ const Settings = () => {
           </div>
         </section>
       </main>
+
+      <CancelSubscriptionModal
+        open={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onCanceled={refreshSubscription}
+      />
     </div>
   );
 };

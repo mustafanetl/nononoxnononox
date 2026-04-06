@@ -1,5 +1,8 @@
-import { Crown, Check, X, Sparkles } from "lucide-react";
+import { Crown, Check, X, Sparkles, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { startCheckout } from "@/lib/stripeCheckout";
+import { useNavigate } from "react-router-dom";
 import { getCurrencyPrices } from "@/utils/currencyLocale";
 
 interface PaywallModalProps {
@@ -19,6 +22,9 @@ const features = [
 
 const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalProps) => {
   const [selected, setSelected] = useState("annual");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const prices = getCurrencyPrices();
 
   if (!open) return null;
@@ -107,12 +113,20 @@ const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalPro
 
         {/* CTA */}
         <button
-          onClick={() => {
-            onClose();
+          onClick={async () => {
+            if (!user) {
+              onClose();
+              navigate("/auth");
+              return;
+            }
+            setCheckoutLoading(true);
+            await startCheckout(selected as "monthly" | "annual");
+            setCheckoutLoading(false);
           }}
-          className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+          disabled={checkoutLoading}
+          className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          <Sparkles className="h-4 w-4" />
+          {checkoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Start Free Trial — 3 Days Free
         </button>
 
