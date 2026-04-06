@@ -1,63 +1,58 @@
 
 
-# Visual Discovery: Show Places While Chatting
+# Polish the Conversion Funnel: Real Images + Build Anticipation
 
-## Concept
+## Summary
 
-During the discovery conversation, the AI will embed inline destination/place images as it mentions them. When it says "how about Bali?" it shows a photo carousel of Bali right there in the chat. This makes the experience feel immersive and real — users see the places as they discuss them, building emotional investment before the paywall.
+Three targeted changes to make the free-user experience feel premium and worth paying for:
 
-All images use Unsplash stock photos (zero API cost). No Google API calls during discovery.
+1. **Real Google Places hero image on the paywall card** — fetch just 1 city photo (no hotels, weather, etc.) for free users so the "View Full Plan" card looks stunning with a real photo instead of generic Unsplash stock.
+
+2. **"Crafting your plan" loading animation** — when the AI generates a full plan (detected by streaming multiple card blocks), show a progress state with destination name: *"Putting together your Bali plan..."* with a subtle progress bar. This builds anticipation and makes the user feel effort went into it.
+
+3. **AI prompt tuning** — instruct the AI to take at least 3-4 discovery steps before generating the plan. Add a rule: "NEVER generate the full plan until you've asked at least 3 questions. Make the user feel heard." Also reinforce personalization per mode.
 
 ## Changes
 
-### 1. New card block: `place_images` (AI prompt + parser)
+### 1. Lightweight image fetch for free users (`Chat.tsx`)
 
-Add a new markdown block format the AI can emit during discovery:
+When a free user's message contains `destination_enrich`, fetch **only** a Google Places city photo (1 API call, no hotels/weather/Xotelo). Create a new minimal edge function or add a `imageOnly=true` param to the existing `enrich-destination` function.
 
-```
-```place_images
-{"place":"Bali","images":["beach","temple","sunset","food"]}
-```
-```
+**`supabase/functions/enrich-destination/index.ts`** — Add support for `imageOnly: true` in the request body. When set, skip weather, country, hotels, activity photos — only run `getGooglePlacePhotos(destination, 1)` and return `{ images: [...] }`. This costs 1 Google API call vs ~10+ for full enrichment.
 
-The `images` array maps to Unsplash photo IDs from a curated set per destination. The parser extracts this like other blocks.
+**`src/pages/Chat.tsx`** — For free users (`!isPremium`), when `destinationEnrich` is detected, call `fetchEnrichment` with a new `imageOnly` flag. Store the result so `PlanPreviewGate` gets `enrichedImages`.
 
-### 2. New component: `PlaceShowcase.tsx`
+### 2. Plan crafting animation (`Chat.tsx` + `PlanPreviewGate.tsx`)
 
-A horizontal image carousel that renders inline in chat during discovery. Shows 2-4 beautiful photos of a place with the place name overlaid. Compact, swipeable, visually rich. Uses curated Unsplash IDs — no API calls.
+When the AI is streaming and we detect it's building a full plan (content contains ` ```flights` or ` ```hotels` or ` ```activities`), show a "crafting" overlay instead of raw streaming cards:
 
-### 3. Expand `cityImages.ts` with multi-image sets
+- Text: "Putting together your {destination} plan..." 
+- Subtle animated progress bar
+- Small destination image in background
+- Once streaming completes → fade into the `PlanPreviewGate` card
 
-Currently stores 1 image per city. Expand to store 3-4 images per destination covering different vibes (beach, food, architecture, nightlife). These are all free Unsplash photo IDs.
+This replaces the current behavior where free users watch cards stream in then get blocked. Instead they see a beautiful loading state, then the polished gate card.
 
-### 4. Update AI system prompt (`rzuma-chat/index.ts`)
+### 3. AI prompt: slow down discovery (`rzuma-chat/index.ts`)
 
-Add instruction: during discovery steps, when mentioning a specific place, include a `place_images` block to show photos. Different behavior per mode:
-- **TRIP**: Show destination photos — "how about Bali?" + beach/temple/sunset images
-- **LOCAL**: Show venue/neighborhood vibes — restaurant interiors, street scenes
-- **DATE**: Show romantic spot imagery — cozy restaurants, rooftop bars, sunset views
-
-Also instruct the AI to sometimes show 2 places side by side for comparison: "Rome or Barcelona?" with images of both.
-
-### 5. Update `Chat.tsx` parser + renderer
-
-- Add `placeImages` to `parseMessageContent` output
-- Render `PlaceShowcase` inline in message flow (between text and quickreplies)
-- Works for both free and premium users (no gating — this is the hook)
+Add to the system prompt:
+- "NEVER generate the full plan until you've completed at least 3 discovery steps. The user should feel like you're really thinking about their trip."
+- "After the last discovery question is answered, say something like 'okay give me a sec, putting this together for you...' before generating the plan blocks. This builds anticipation."
+- Reinforce showing `place_images` during each discovery step.
 
 ## Files
 
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/utils/cityImages.ts` | Add multi-image sets per destination |
-| `src/components/PlaceShowcase.tsx` | New — inline image carousel component |
-| `src/pages/Chat.tsx` | Parse + render `place_images` blocks |
-| `supabase/functions/rzuma-chat/index.ts` | Update prompt with `place_images` format + per-mode instructions |
+| `supabase/functions/enrich-destination/index.ts` | Add `imageOnly` mode — returns only 1 Google Places photo |
+| `src/pages/Chat.tsx` | Fetch image-only enrichment for free users; add plan crafting detection + animation |
+| `src/components/PlanPreviewGate.tsx` | Accept + display enriched Google image as hero |
+| `supabase/functions/rzuma-chat/index.ts` | Add minimum 3-step rule + anticipation message before plan |
 
-## What This Achieves
+## What this achieves
 
-- Discovery feels visual and alive — users see real photos as they chat
-- Zero API cost — all Unsplash stock IDs, no Google calls
-- Builds emotional investment before paywall ("I can already picture myself there")
-- Differentiates modes visually (trip vs date vs local get different imagery vibes)
+- Free users see a **real photo** of their destination on the paywall card — feels premium
+- The "crafting" animation makes them feel effort went into their plan — increases willingness to pay
+- Slower discovery with more questions = more emotional investment before the gate
+- Only 1 Google API call per free plan generation (vs 10+ for premium) — cost controlled
 
