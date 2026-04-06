@@ -747,7 +747,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             <Compass className="h-4 w-4 text-background" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            {parsed.text && (
+                            {parsed.text && !(isLastAssistant && isCraftingPlan) && (
                               <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">
                                 <ReactMarkdown>{parsed.text}</ReactMarkdown>
                               </div>
