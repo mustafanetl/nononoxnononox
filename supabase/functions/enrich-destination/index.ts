@@ -79,26 +79,45 @@ async function getExchangeRate(currencyCode: string): Promise<any> {
   }
 }
 
-async function getWikimediaImages(query: string, limit = 4): Promise<any[]> {
+async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any[]> {
+  const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
+  if (!apiKey) {
+    console.warn("GOOGLE_PLACES_API_KEY not set, skipping place photos");
+    return [];
+  }
   try {
-    const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(query + " city landscape")}&gsrlimit=${limit}&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=800&format=json&origin=*`;
-    const res = await fetchWithTimeout(searchUrl, {
-      headers: { "User-Agent": "Jolliday-TravelApp/1.0" },
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const pages = data.query?.pages || {};
-    return Object.values(pages)
-      .filter((p: any) => p.imageinfo?.[0])
-      .map((p: any) => ({
-        url: p.imageinfo[0].url,
-        thumbUrl: p.imageinfo[0].thumburl || p.imageinfo[0].url,
-        width: p.imageinfo[0].width,
-        height: p.imageinfo[0].height,
-      }))
-      .filter((img: any) => !img.url.endsWith(".svg") && !img.url.endsWith(".gif") && img.width >= 400);
+    // Text Search to find the destination place
+    const searchRes = await fetchWithTimeout(
+      "https://places.googleapis.com/v1/places:searchText",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": "places.id,places.photos,places.displayName",
+        },
+        body: JSON.stringify({ textQuery: destination, maxResultCount: 1 }),
+      }
+    );
+    if (!searchRes.ok) {
+      console.error("Google Places search error:", await searchRes.text());
+      return [];
+    }
+    const searchData = await searchRes.json();
+    const place = searchData.places?.[0];
+    if (!place?.photos?.length) return [];
+
+    // Get photo URLs (up to limit)
+    const photos = place.photos.slice(0, limit);
+    return photos.map((photo: any) => ({
+      url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=800&key=${apiKey}`,
+      thumbUrl: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=400&key=${apiKey}`,
+      width: photo.widthPx || 800,
+      height: photo.heightPx || 600,
+      attributions: photo.authorAttributions || [],
+    }));
   } catch (e) {
-    console.error("Wikimedia error:", e);
+    console.error("Google Places photos error:", e);
     return [];
   }
 }
@@ -145,33 +164,58 @@ async function searchXoteloHotels(destination: string, limit = 6): Promise<any[]
   }
 }
 
-async function getWikipediaPlaces(lat: number, lng: number, limit = 8): Promise<any[]> {
+async function getGoogleNearbyPlaces(lat: number, lng: number, limit = 8): Promise<any[]> {
+  const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
+  if (!apiKey) {
+    console.warn("GOOGLE_PLACES_API_KEY not set, skipping nearby places");
+    return [];
+  }
   try {
-    const geoUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lng}&gsradius=10000&gslimit=${limit}&format=json&origin=*`;
-    const geoRes = await fetchWithTimeout(geoUrl, { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } });
-    const geoData = await geoRes.json();
-    const results = geoData.query?.geosearch || [];
-    if (results.length === 0) return [];
+    const res = await fetchWithTimeout(
+      "https://places.googleapis.com/v1/places:searchNearby",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.priceLevel,places.photos,places.location,places.primaryType,places.editorialSummary",
+        },
+        body: JSON.stringify({
+          includedTypes: ["tourist_attraction", "museum", "restaurant", "park", "point_of_interest"],
+          maxResultCount: limit,
+          locationRestriction: {
+            circle: { center: { latitude: lat, longitude: lng }, radius: 10000.0 },
+          },
+          rankPreference: "POPULARITY",
+        }),
+      }
+    );
+    if (!res.ok) {
+      console.error("Google Nearby Search error:", await res.text());
+      return [];
+    }
+    const data = await res.json();
+    const places = data.places || [];
 
-    const pageIds = results.map((r: any) => r.pageid).join("|");
-    const detailUrl = `https://en.wikipedia.org/w/api.php?action=query&pageids=${pageIds}&prop=extracts|pageimages&exintro=1&explaintext=1&exsentences=2&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
-    const detailRes = await fetchWithTimeout(detailUrl, { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } });
-    const detailData = await detailRes.json();
-    const pages = detailData.query?.pages || {};
-
-    return results.map((geo: any) => {
-      const page = pages[geo.pageid] || {};
+    return places.map((p: any) => {
+      const photoRef = p.photos?.[0]?.name;
       return {
-        title: geo.title,
-        description: page.extract?.substring(0, 200) || "",
-        lat: geo.lat,
-        lng: geo.lon,
-        thumbnail: page.thumbnail?.source || null,
-        distance: geo.dist,
+        title: p.displayName?.text || "Unknown",
+        description: p.editorialSummary?.text || p.formattedAddress || "",
+        lat: p.location?.latitude || lat,
+        lng: p.location?.longitude || lng,
+        thumbnail: photoRef
+          ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}`
+          : null,
+        rating: p.rating || null,
+        userRatingsTotal: p.userRatingCount || 0,
+        priceLevel: p.priceLevel || null,
+        type: p.primaryType || "point_of_interest",
+        distance: null,
       };
     });
   } catch (e) {
-    console.error("Wikipedia places error:", e);
+    console.error("Google nearby places error:", e);
     return [];
   }
 }
@@ -217,11 +261,11 @@ serve(async (req) => {
     }
 
     // Step 2: All APIs in parallel (including country → exchange rate in two phases)
-    const [weatherData, countryData, wikimediaImages, wikipediaPlaces, xoteloHotels] = await Promise.all([
+    const [weatherData, countryData, googleImages, googlePlaces, xoteloHotels] = await Promise.all([
       getWeather(geo.lat, geo.lng),
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
-      getWikimediaImages(destination),
-      getWikipediaPlaces(geo.lat, geo.lng),
+      getGooglePlacePhotos(destination),
+      getGoogleNearbyPlaces(geo.lat, geo.lng),
       searchXoteloHotels(destination),
     ]);
 
@@ -294,12 +338,12 @@ serve(async (req) => {
       weather: weatherSummary,
       country: countryInfo,
       exchange: exchangeData,
-      images: wikimediaImages,
-      places: wikipediaPlaces,
+      images: googleImages,
+      places: googlePlaces,
       hotels: xoteloHotels,
     };
 
-    console.log(`Enrichment complete for ${destination}: ${wikimediaImages.length} images, ${wikipediaPlaces.length} places, ${xoteloHotels.length} hotels`);
+    console.log(`Enrichment complete for ${destination}: ${googleImages.length} images, ${googlePlaces.length} places, ${xoteloHotels.length} hotels`);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
