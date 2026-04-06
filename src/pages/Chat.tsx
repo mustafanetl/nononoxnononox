@@ -23,6 +23,7 @@ import CurrencyConverter from "@/components/CurrencyConverter";
 import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
 import PlanPreviewGate from "@/components/PlanPreviewGate";
+import PlaceShowcase from "@/components/PlaceShowcase";
 import PaywallModal from "@/components/PaywallModal";
 import { useSubscription } from "@/hooks/useSubscription";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
@@ -73,6 +74,7 @@ const parseMessageContent = (content: string) => {
   let weather: WeatherData | null = null;
   let quickReplies: string[] = [];
   let destinationEnrich: { destination: string; travelMonth?: string } | null = null;
+  let placeImages: { place: string; vibes?: string[] }[] = [];
   let text = content;
 
   const extractBlock = (blockType: string) => {
@@ -135,7 +137,12 @@ const parseMessageContent = (content: string) => {
     quickReplies = Array.isArray(qrArr[0]) ? qrArr[0] : qrArr;
   }
 
-  return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich };
+  const piArr = extractBlock("place_images");
+  if (piArr.length > 0) {
+    placeImages = piArr.map((p: any) => ({ place: p.place || "", vibes: p.vibes }));
+  }
+
+  return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich, placeImages };
 };
 
 const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
@@ -231,7 +238,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       ...msg,
       parsed: msg.role === "assistant"
         ? parseMessageContent(msg.content)
-        : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null },
+        : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null, placeImages: [] },
     }));
   }, [messages]);
 
