@@ -22,6 +22,9 @@ import VoiceInput from "@/components/VoiceInput";
 import CurrencyConverter from "@/components/CurrencyConverter";
 import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
+import PlanPreviewGate from "@/components/PlanPreviewGate";
+import PaywallModal from "@/components/PaywallModal";
+import { useSubscription } from "@/hooks/useSubscription";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
 import { shareTripSummary } from "@/utils/tripSummary";
 import { exportTripPDF } from "@/utils/pdfExport";
@@ -191,6 +194,9 @@ const Chat = () => {
 };
 
 const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise<void> }) => {
+  const { isPremium } = useSubscription();
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallContext, setPaywallContext] = useState<{ destination?: string; tripStats?: any }>({});
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<FlightData | null>(null);
@@ -238,14 +244,14 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     }
   }, [activeId]);
 
-  // Auto-enrich destinations only when streaming is done
+  // Auto-enrich destinations only when streaming is done AND user is premium
   useEffect(() => {
     if (isLoading) return;
+    if (!isPremium) return; // Skip API calls for free users
     parsedMessages.forEach((msg) => {
       if (msg.role !== "assistant") return;
       if (msg.parsed.destinationEnrich && !enrichedData[msg.parsed.destinationEnrich.destination]) {
         const { destination, travelMonth } = msg.parsed.destinationEnrich;
-        // Extract activity names from this message to do per-activity photo lookup
         const activityNames = msg.parsed.activities.map((a: any) => a.name).filter(Boolean);
         fetchEnrichment(destination, travelMonth, activityNames).then((data) => {
           if (data) {
@@ -257,7 +263,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         });
       }
     });
-  }, [parsedMessages, isLoading]);
+  }, [parsedMessages, isLoading, isPremium]);
 
   // Auto-send query from URL params
   useEffect(() => {
@@ -293,6 +299,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   };
 
   const handleExportPDF = () => {
+    if (!isPremium) {
+      setPaywallContext({});
+      setShowPaywall(true);
+      return;
+    }
     const title = conversations.find(c => c.id === activeId)?.title || "My Trip Plan";
     exportTripPDF({ title, messages });
     toast.success("PDF downloaded!");
@@ -592,11 +603,29 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
                             {/* Full plan → show summary card; otherwise show inline cards */}
                             {isFullPlan && destination ? (
-                              <TripSummaryCard
-                                data={parsed as TripPlanData}
-                                destination={destination}
-                                enrichedImages={enrichData?.images}
-                              />
+                              isPremium ? (
+                                <TripSummaryCard
+                                  data={parsed as TripPlanData}
+                                  destination={destination}
+                                  enrichedImages={enrichData?.images}
+                                />
+                              ) : (
+                                <PlanPreviewGate
+                                  data={parsed as TripPlanData}
+                                  destination={destination}
+                                  onUpgrade={() => {
+                                    setPaywallContext({
+                                      destination,
+                                      tripStats: {
+                                        activities: parsed.activities.length,
+                                        hotels: parsed.hotels.length,
+                                        days: parsed.itinerary.length,
+                                      },
+                                    });
+                                    setShowPaywall(true);
+                                  }}
+                                />
+                              )
                             ) : (
                               <>
                                 {parsed.timeline.length > 0 && (
@@ -726,6 +755,12 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       <FlightDetailModal flight={selectedFlight} open={flightModalOpen} onOpenChange={setFlightModalOpen} />
       <ActivityDetailModal activity={selectedActivity} open={activityModalOpen} onOpenChange={setActivityModalOpen} />
       <HotelDetailModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={setHotelModalOpen} />
+      <PaywallModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        destination={paywallContext.destination}
+        tripStats={paywallContext.tripStats}
+      />
     </div>
   );
 };
