@@ -327,6 +327,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       setEnrichedData({});
       setLastFailedMessage(null);
       setPlanGenerated(false);
+      setCraftingActive(false);
+      setCraftingPlan(null);
+      craftingStarted.current = false;
+      craftingTimerDone.current = false;
+      streamingDone.current = false;
     }
   }, [activeId]);
 
