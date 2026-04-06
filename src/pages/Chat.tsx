@@ -204,6 +204,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const { isPremium } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallContext, setPaywallContext] = useState<{ destination?: string; tripStats?: any }>({});
+  const [planGenerated, setPlanGenerated] = useState(false);
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<FlightData | null>(null);
