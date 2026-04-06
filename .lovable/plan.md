@@ -1,78 +1,55 @@
 
 
-# Full AI Overhaul: Personal Memory, Real Photos Everywhere, Better Personality
+# AI Review & Enhancement Plan
 
-## Current State
+## Issues Found
 
-1. **Preferences are shallow** — Only stores liked/disliked categories and visited places. No user profile context (name, home city, travel style, budget preference, dietary restrictions, etc.) is sent to the AI.
-2. **Photos only apply to activities** — Google Places photos enrich activity cards, but the enrichment uses a single `searchNearby` call for the whole destination. Individual activities (e.g., "Pierchic Restaurant") never get their own specific Google photo lookup.
-3. **Memory is localStorage-only for guests** — The `user_preferences` table exists but is barely used. Preferences sync once on login and are never read back from the DB.
-4. **AI still feels generic** — The prompt has personality rules but no user-specific context beyond basic category likes/dislikes.
+### Bugs
+1. **Error not cleared on new message** — `setError(null)` is missing from `sendMessage` start in the hook; errors from previous messages persist visually even after sending a new one successfully.
+2. **Thinking indicator logic is fragile** — The `isThinking` state uses a timer (800-1400ms) but doesn't account for fast responses. If the AI responds before the timer fires, the thinking dots disappear abruptly, then the timer sets `isThinking = false` redundantly. The condition on line 672 is overly complex and can show thinking dots even when content is already streaming.
+3. **Quick reply suggestions don't show on empty state clicks** — When clicking an empty-state suggestion (line 518), `sendMessage` is called directly without setting `isThinking`, so no thinking animation plays.
+4. **TripDetail hotel images don't use realImage** — `HotelRow` in TripDetail (line 620) uses `getHotelImage(h.image)` which returns Unsplash stock photos, ignoring `h.realImage` from Xotelo enrichment.
+5. **Enrichment cache key includes activity names** — If the AI generates the same destination with slightly different activity names, the cache misses and re-fetches unnecessarily.
+6. **`newChat` function creates a conversation immediately** — `clearChat` calls `newChat` which creates an empty conversation entry, cluttering the sidebar with "New chat" entries that have no messages.
+7. **Preferences not synced to DB on save** — Settings page saves preferences correctly, but `useRzumaChat` loads preferences from localStorage on mount — if Settings was just saved, the chat hook may have stale data until page refresh.
+
+### UX Improvements
+8. **No greeting message** — When opening a new chat, the AI doesn't greet the user. A personalized welcome (using their name if known) would feel much warmer.
+9. **No loading skeleton for enrichment** — After the AI responds, there's a gap while Google Places photos load. Activity cards flash from Unsplash to Google images.
+10. **Quick replies disappear too fast** — Quick replies only show on the last assistant message when not loading. If a user scrolls up, they can't access earlier quick replies.
+11. **No haptic/visual feedback on card interactions** — Clicking activity/hotel cards has no press state animation.
+12. **Desktop action bar in TripDetail uses `position: fixed` with `absolute` class** — Line 528 has conflicting positioning (`className="absolute"` + `style={{ position: 'fixed' }}`).
 
 ## Plan
 
-### 1. Expand user memory with a proper profile context table
+### 1. Fix thinking indicator logic
+- Remove the timer-based approach. Instead, show thinking dots when `isLoading && !hasStreamedContent`. Track whether any assistant content has arrived for the current response.
+- Apply thinking animation on empty-state suggestion clicks too.
 
-**New migration**: Add columns to `user_preferences` for richer personal data:
-- `home_city` (text) — so AI knows where you are for LOCAL mode
-- `travel_style` (text) — e.g., "budget", "mid-range", "luxury"
-- `dietary_restrictions` (jsonb, default `[]`) — vegan, halal, etc.
-- `past_trips` (jsonb, default `[]`) — auto-populated from saved_trips destinations
-- `display_name` (text) — pulled from profiles for personalization
+### 2. Fix hotel images in TripDetail
+- Update `HotelRow` to use `h.realImage || getHotelImage(h.image)` — same pattern as `HotelCard`.
 
-**Why**: This lets the AI say "hey Sarah, since you loved that ramen spot in Tokyo last time..." instead of generic responses.
+### 3. Fix empty conversation clutter
+- Don't create a conversation in `newChat` — just set `activeId` to null. Let `sendMessage` create the conversation on first message (it already does this).
 
-### 2. Load preferences from DB on login, merge with localStorage
+### 4. Add personalized greeting
+- When a new chat starts (no messages), show a greeting in the empty state that uses the user's name from preferences: "Hey Sarah, what are we planning?" instead of generic "What are you up to?"
 
-**File: `src/hooks/useRzumaChat.ts`**
-- On login, fetch `user_preferences` from DB and merge into local state
-- On every preference update, write back to DB (debounced)
-- Send the full profile context (home city, name, travel style, dietary, past trips) to the edge function
+### 5. Add enrichment loading state
+- Show a subtle shimmer/skeleton on activity card images while enrichment is in progress (between AI response and enrichment completion).
 
-### 3. Pass rich user context to the AI
+### 6. Fix TripDetail positioning conflict
+- Change the desktop action bar to use proper `fixed` positioning via className only.
 
-**File: `supabase/functions/rzuma-chat/index.ts`**
-- Accept expanded `preferences` payload including home_city, display_name, travel_style, dietary_restrictions, past_trips
-- Build a detailed system message: "The user's name is Sarah. She lives in Rotterdam. She prefers mid-range budget. She's visited Tokyo (loved it), Paris (okay). She's vegan. She likes nightlife and hates museums."
-- Update the system prompt to reference this context naturally
+### 7. Fix error clearing
+- Clear error state at the start of `sendMessage` (it already does `setError(null)` — verify it's working correctly with the retry flow).
 
-### 4. Fetch Google Places photos per-activity (not just per-destination)
-
-**File: `supabase/functions/enrich-destination/index.ts`**
-- Accept an optional `activities` array in the request body (list of activity names)
-- For each activity name, do a Google Places Text Search scoped to the destination city to find the exact venue and its photo
-- Return a map: `{ "Pierchic Restaurant": { photo: "...", rating: 4.7, ... } }`
-- This replaces the fuzzy-match cycling approach with exact per-activity lookups
-
-**File: `src/pages/Chat.tsx`**
-- After parsing activities from the AI response, pass activity names to the enrichment call
-- Map returned per-activity photos directly onto activity cards
-
-### 5. Add a Settings section for user preferences
-
-**File: `src/pages/Settings.tsx`**
-- Add "Travel Preferences" section below Profile:
-  - Home city input
-  - Travel style selector (Budget / Mid-range / Luxury)
-  - Dietary restrictions multi-select
-- Save to `user_preferences` table on change
-
-### 6. Auto-learn from conversations
-
-**File: `src/hooks/useRzumaChat.ts`**
-- After a trip is saved, auto-extract the destination and add it to `past_trips` in preferences
-- When user rates an activity (thumbs up/down in the detail modal), update liked/disliked categories
+### 8. Sync preferences across Settings and Chat
+- After saving in Settings, dispatch a custom event or use a shared state approach so useRzumaChat picks up the new preferences without requiring a page refresh.
 
 ## Files to Modify
-- **Migration**: Add columns to `user_preferences` (home_city, travel_style, dietary_restrictions, past_trips)
-- `supabase/functions/enrich-destination/index.ts` — per-activity Google Places photo lookup
-- `supabase/functions/rzuma-chat/index.ts` — accept and use rich user profile context
-- `src/hooks/useRzumaChat.ts` — load/save preferences from DB, send rich context
-- `src/pages/Chat.tsx` — pass activity names to enrichment, map per-activity photos
-- `src/pages/Settings.tsx` — add travel preferences UI
-
-## Technical Notes
-- Per-activity photo lookup will use Google Places Text Search API with query like `"Pierchic Restaurant Dubai"` — this is highly accurate for specific venue names
-- Rate limiting: batch activity lookups into a single edge function call to avoid N separate requests
-- Google API cost: ~$5 per 1000 Text Search calls, reasonable for 3-5 activities per plan
+- `src/hooks/useRzumaChat.ts` — Fix newChat empty conversation, improve error handling, add preferences sync listener
+- `src/pages/Chat.tsx` — Fix thinking indicator, add personalized greeting, add enrichment loading state, fix suggestion click animation
+- `src/pages/TripDetail.tsx` — Fix hotel realImage usage, fix desktop action bar positioning
+- `src/index.css` — Add shimmer animation for enrichment loading
 
