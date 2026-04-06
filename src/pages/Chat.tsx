@@ -608,6 +608,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                               </div>
                             )}
 
+                            {/* Inline place image showcases during discovery */}
+                            {parsed.placeImages.length > 0 && parsed.placeImages.map((pi, pidx) => (
+                              <PlaceShowcase key={pidx} place={pi.place} vibes={pi.vibes} />
+                            ))}
+
                             {/* Full plan → show summary card; otherwise show inline cards */}
                             {isFullPlan && destination ? (
                               isPremium ? (
