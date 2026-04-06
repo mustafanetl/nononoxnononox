@@ -1,43 +1,64 @@
 
 
-# Fix: Crafting Animation Duration + Annual Price Display
+# Fix: Crafting Animation Timing + Local Queries + Currency Localization
 
-## Problem 1: Animation jumps to end instantly
+## 3 Problems
 
-The crafting animation is tied to `isLoading`. When the AI finishes streaming (3-5 seconds), `isLoading` → false → `isCraftingPlan` → false → progress immediately jumps to 100% and disappears. The 12-second timer never gets a chance to run.
+### 1. Crafting animation jumps to end
+**Root cause**: `planBlocksDetected` on line 230 requires `isLoading === true`. When the AI streams fast, React can batch the final state update where `isLoading` becomes false and content updates simultaneously — so `planBlocksDetected` is never true long enough to trigger the effect, or it fires and `isLoading` immediately goes false causing `streamingDone` to be set in the same render cycle.
 
-**Fix**: Decouple the animation from streaming. When plan blocks are first detected, start a **minimum 12-second animation** that runs independently. Only reveal the plan after BOTH conditions are met: (1) streaming is finished AND (2) the 12-second animation has completed.
+**Fix**: Remove the `isLoading` dependency from `planBlocksDetected`. Instead, detect plan blocks in any assistant message that hasn't been processed yet, using a ref to track the last processed message index. This way even if streaming ends instantly, the crafting animation still runs its full 12 seconds.
 
-### Changes in `src/pages/Chat.tsx`
+### 2. Local queries show "Searching flights and routes..."
+When user asks about local things to do, there are no flights or hotels — but the crafting animation still shows those steps.
 
-- Add a `craftingActive` ref that stays true for a minimum duration
-- When `isCraftingPlan` first becomes true, set `craftingActive = true` and start a 12-second timer
-- The crafting UI shows as long as `craftingActive` is true (not tied to `isLoading`)
-- When streaming ends AND 12 seconds have passed, set progress to 100%, wait 500ms, then reveal
-- Progress increments: `Math.random() * 2 + 1` every 800ms (slower, steadier climb to ~90% over 12s)
-- Each status message stays visible for ~2 seconds as progress moves through stages
+**Fix**: Detect which block types are present in the streamed content and show relevant status messages only. For local queries (activities + itinerary only): "Finding the best spots...", "Curating must-see experiences...", "Building your day-by-day plan...", "Adding insider tips...". For full trips (with flights/hotels): keep current messages.
 
-## Problem 2: Annual plan shows $49.99/yr — feels expensive
+### 3. Pricing changes
+- Remove "billed $49.99/yr" subtext everywhere
+- Change monthly from $12.99 to $9.99
+- Auto-detect currency using `navigator.language` / `Intl` API — show EUR for European locales, GBP for UK, USD for everyone else
 
-Show the monthly equivalent instead: **$4.17/mo** as the headline price, with "billed annually" as subtext.
+## Changes
 
-### Changes in 3 files
+### `src/pages/Chat.tsx`
+- **Fix `planBlocksDetected`**: Remove `!isLoading` gate. Use a ref (`lastCraftedMsgIndex`) to track which message already triggered crafting, so it only fires once per plan message
+- **Detect plan type**: Check if streamed content has `flights`/`hotels` blocks. Pass a `planType` to `craftingPlan` state (`"local"` vs `"full"`)
+- **Adapt status messages**: Show local-appropriate messages when no flights/hotels detected
 
-**`src/components/PlanPreviewGate.tsx`**:
-- Annual button: change `$49.99/yr` → `$4.17/mo` with subtext "billed $49.99/yr"
+### `src/components/PlanPreviewGate.tsx`
+- Remove "billed $49.99/yr" subtext from annual option
+- Change monthly price from $12.99 to $9.99
+- Add currency detection helper: detect locale, map to currency symbol + prices
+- Conditionally hide flights/hotels stats in hero when they're 0
 
-**`src/components/PricingSection.tsx`**:
-- Annual card: change price from `$49.99 /year` → `$4.17 /month` with description "Billed $49.99/year"
+### `src/components/PaywallModal.tsx`
+- Remove "billed $49.99/yr" from annual plan
+- Change monthly to $9.99
+- Add same currency detection logic
 
-**`src/components/PaywallModal.tsx`**:
-- Annual option: change price display to `$4.17/mo` with "billed annually" note
+### `src/components/PricingSection.tsx`
+- Remove yearly total from description
+- Change monthly to $9.99
+- Add currency detection
+
+### New: `src/utils/currencyLocale.ts` (shared helper)
+```
+- Detect user locale via navigator.language
+- Map to currency: EUR for de/fr/es/it/nl/pt/etc, GBP for en-GB, USD default
+- Export function: getCurrencyPrices() => { symbol, monthly, annualMonthly }
+  - USD: $9.99 / $4.17
+  - EUR: €9.99 / €4.17
+  - GBP: £8.99 / £3.49
+```
 
 ## Files
 
 | File | Change |
 |------|--------|
-| `src/pages/Chat.tsx` | Decouple crafting animation from `isLoading`, enforce minimum 12-second duration |
-| `src/components/PlanPreviewGate.tsx` | Show annual as $4.17/mo |
-| `src/components/PricingSection.tsx` | Show annual as $4.17/mo |
-| `src/components/PaywallModal.tsx` | Show annual as $4.17/mo |
+| `src/utils/currencyLocale.ts` | New — locale detection + price mapping |
+| `src/pages/Chat.tsx` | Fix planBlocksDetected timing, adapt crafting messages for local vs full trips |
+| `src/components/PlanPreviewGate.tsx` | Remove yearly total, $9.99 monthly, localized currency, hide empty flight/hotel stats |
+| `src/components/PaywallModal.tsx` | Remove yearly total, $9.99 monthly, localized currency |
+| `src/components/PricingSection.tsx` | Remove yearly total, $9.99 monthly, localized currency |
 
