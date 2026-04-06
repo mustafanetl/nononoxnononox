@@ -22,6 +22,9 @@ import VoiceInput from "@/components/VoiceInput";
 import CurrencyConverter from "@/components/CurrencyConverter";
 import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
+import PlanPreviewGate from "@/components/PlanPreviewGate";
+import PaywallModal from "@/components/PaywallModal";
+import { useSubscription } from "@/hooks/useSubscription";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
 import { shareTripSummary } from "@/utils/tripSummary";
 import { exportTripPDF } from "@/utils/pdfExport";
@@ -191,6 +194,9 @@ const Chat = () => {
 };
 
 const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise<void> }) => {
+  const { isPremium } = useSubscription();
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallContext, setPaywallContext] = useState<{ destination?: string; tripStats?: any }>({});
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<FlightData | null>(null);
