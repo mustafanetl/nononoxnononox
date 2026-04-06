@@ -353,9 +353,12 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       setPlanGenerated(false);
       setCraftingActive(false);
       setCraftingPlan(null);
-      craftingStarted.current = false;
-      craftingTimerDone.current = false;
-      streamingDone.current = false;
+      if (craftingIntervalRef.current) {
+        clearInterval(craftingIntervalRef.current);
+        craftingIntervalRef.current = null;
+      }
+      craftingProgressRef.current = 0;
+      streamingDoneRef.current = false;
       lastCraftedMsgIndex.current = -1;
     }
   }, [activeId]);
