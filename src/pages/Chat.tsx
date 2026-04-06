@@ -644,7 +644,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
 
                   // Determine if this is a "full trip plan" (has multiple card types)
-                  const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0].filter(Boolean).length;
+                  const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
                   const isFullPlan = cardTypeCount >= 2;
                   const destination = parsed.travelInfo?.destination
                     || parsed.flights[0]?.cityImage
