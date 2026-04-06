@@ -1,64 +1,45 @@
 
 
-# Fix: Crafting Animation Timing + Local Queries + Currency Localization
+# Fix: Bulletproof 0→100% Crafting Animation
 
-## 3 Problems
+## Root Cause
 
-### 1. Crafting animation jumps to end
-**Root cause**: `planBlocksDetected` on line 230 requires `isLoading === true`. When the AI streams fast, React can batch the final state update where `isLoading` becomes false and content updates simultaneously — so `planBlocksDetected` is never true long enough to trigger the effect, or it fires and `isLoading` immediately goes false causing `streamingDone` to be set in the same render cycle.
+The progress animation effect (line 309) uses a local `progress` variable starting at 0, but `craftingActive` can flicker due to React state batching — when streaming ends fast, the cleanup effect at line 288 may fire in the same render cycle as the detection effect at line 249, causing `craftingActive` to go true→false almost instantly. The 12s `setTimeout` at line 274 also runs inside the detection effect, but if the component re-renders and the effect re-fires, the timer reference is lost.
 
-**Fix**: Remove the `isLoading` dependency from `planBlocksDetected`. Instead, detect plan blocks in any assistant message that hasn't been processed yet, using a ref to track the last processed message index. This way even if streaming ends instantly, the crafting animation still runs its full 12 seconds.
+## Fix Strategy
 
-### 2. Local queries show "Searching flights and routes..."
-When user asks about local things to do, there are no flights or hotels — but the crafting animation still shows those steps.
-
-**Fix**: Detect which block types are present in the streamed content and show relevant status messages only. For local queries (activities + itinerary only): "Finding the best spots...", "Curating must-see experiences...", "Building your day-by-day plan...", "Adding insider tips...". For full trips (with flights/hotels): keep current messages.
-
-### 3. Pricing changes
-- Remove "billed $49.99/yr" subtext everywhere
-- Change monthly from $12.99 to $9.99
-- Auto-detect currency using `navigator.language` / `Intl` API — show EUR for European locales, GBP for UK, USD for everyone else
-
-## Changes
+Replace the current fragile multi-effect approach with a single, self-contained animation controller:
 
 ### `src/pages/Chat.tsx`
-- **Fix `planBlocksDetected`**: Remove `!isLoading` gate. Use a ref (`lastCraftedMsgIndex`) to track which message already triggered crafting, so it only fires once per plan message
-- **Detect plan type**: Check if streamed content has `flights`/`hotels` blocks. Pass a `planType` to `craftingPlan` state (`"local"` vs `"full"`)
-- **Adapt status messages**: Show local-appropriate messages when no flights/hotels detected
 
-### `src/components/PlanPreviewGate.tsx`
-- Remove "billed $49.99/yr" subtext from annual option
-- Change monthly price from $12.99 to $9.99
-- Add currency detection helper: detect locale, map to currency symbol + prices
-- Conditionally hide flights/hotels stats in hero when they're 0
+**1. Replace the 3 separate effects (lines 249-318) with one unified crafting controller:**
 
-### `src/components/PaywallModal.tsx`
-- Remove "billed $49.99/yr" from annual plan
-- Change monthly to $9.99
-- Add same currency detection logic
+- When plan blocks are first detected in a new assistant message:
+  - Set `craftingActive = true`
+  - Start a single `setInterval` that increments progress using a deterministic curve (not random): `progress = Math.min(90, progress + (90 - progress) * 0.04)` every 300ms — this gives a smooth ease-out from 0→90 over ~12s
+  - Store the interval ID in a ref so it's never lost
 
-### `src/components/PricingSection.tsx`
-- Remove yearly total from description
-- Change monthly to $9.99
-- Add currency detection
+- When streaming ends (`isLoading` goes false while crafting is active):
+  - Set a `streamingDone` ref to true
+  - Do NOT stop crafting yet — wait for progress to reach 90+
 
-### New: `src/utils/currencyLocale.ts` (shared helper)
-```
-- Detect user locale via navigator.language
-- Map to currency: EUR for de/fr/es/it/nl/pt/etc, GBP for en-GB, USD default
-- Export function: getCurrencyPrices() => { symbol, monthly, annualMonthly }
-  - USD: $9.99 / $4.17
-  - EUR: €9.99 / €4.17
-  - GBP: £8.99 / £3.49
-```
+- A separate check inside the same interval: when `streamingDone` is true AND progress >= 88:
+  - Quickly ramp to 100 (set progress = 100)
+  - After 600ms delay, set `craftingActive = false` and clean up
+
+- If 12 seconds pass and streaming hasn't ended yet, cap at 90 and hold there until streaming completes
+
+**2. Ensure `craftingPlanType` updates on final content:**
+- When `streamingDone` fires, re-check for flights/hotels blocks in the final message content to set the correct plan type
+
+**Key invariants:**
+- Progress ALWAYS goes 0 → ~90 over 12 seconds minimum (no jumping)
+- Progress only hits 100 after both: timer ≥ 12s AND streaming done
+- Single interval, single timer, stored in refs — no races
 
 ## Files
 
 | File | Change |
 |------|--------|
-| `src/utils/currencyLocale.ts` | New — locale detection + price mapping |
-| `src/pages/Chat.tsx` | Fix planBlocksDetected timing, adapt crafting messages for local vs full trips |
-| `src/components/PlanPreviewGate.tsx` | Remove yearly total, $9.99 monthly, localized currency, hide empty flight/hotel stats |
-| `src/components/PaywallModal.tsx` | Remove yearly total, $9.99 monthly, localized currency |
-| `src/components/PricingSection.tsx` | Remove yearly total, $9.99 monthly, localized currency |
+| `src/pages/Chat.tsx` | Replace 3 crafting effects with 1 unified controller using refs for interval/timer |
 
