@@ -1,10 +1,16 @@
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { getCurrencyPrices } from "@/utils/currencyLocale";
+import { useAuth } from "@/hooks/useAuth";
+import { startCheckout } from "@/lib/stripeCheckout";
+import { useState } from "react";
 
 const PricingSection = () => {
   const prices = getCurrencyPrices();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const plans = [
     {
@@ -76,14 +82,24 @@ const PricingSection = () => {
               ))}
             </ul>
 
-            <Link to={plan.href}>
-              <Button
-                className="w-full"
-                variant={plan.highlighted ? "default" : "outline"}
-              >
-                {plan.cta}
-              </Button>
-            </Link>
+            <Button
+              className="w-full"
+              variant={plan.highlighted ? "default" : "outline"}
+              disabled={loadingPlan !== null}
+              onClick={async () => {
+                if (!user) {
+                  navigate("/auth");
+                  return;
+                }
+                const planKey = plan.name.toLowerCase() as "monthly" | "annual";
+                setLoadingPlan(planKey);
+                await startCheckout(planKey);
+                setLoadingPlan(null);
+              }}
+            >
+              {loadingPlan === plan.name.toLowerCase() ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {plan.cta}
+            </Button>
             <p className="text-[11px] text-muted-foreground text-center mt-2">
               {plan.subtextCta}
             </p>
