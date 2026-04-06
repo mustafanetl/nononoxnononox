@@ -380,6 +380,12 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     if (!input.trim() || isLoading) return;
     const msg = input.trim();
     setLastFailedMessage(msg);
+    // Start thinking state with random delay before showing streamed content
+    setIsThinking(true);
+    if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
+    thinkingTimerRef.current = setTimeout(() => {
+      setIsThinking(false);
+    }, 800 + Math.random() * 600); // 800-1400ms thinking delay
     sendMessage(msg);
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
