@@ -35,7 +35,7 @@ import { toast } from "sonner";
 const enrichmentCache: Record<string, any> = {};
 
 const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[]) => {
-  const cacheKey = `${destination}-${travelMonth || ""}-${(activityNames || []).join(",")}`;
+  const cacheKey = `${destination}-${travelMonth || ""}`;
   if (enrichmentCache[cacheKey]) return enrichmentCache[cacheKey];
 
   try {
@@ -202,17 +202,14 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [compareOpen, setCompareOpen] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData } = useRzumaChat();
-  const [isThinking, setIsThinking] = useState(true);
-  const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { compareItems } = useTripContext();
 
-  // Reset thinking when loading ends
-  useEffect(() => {
-    if (!isLoading) {
-      if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
-      setIsThinking(false);
-    }
-  }, [isLoading]);
+  // Track whether assistant has started streaming content for current response
+  const hasStreamedContent = useMemo(() => {
+    if (!isLoading) return false;
+    const lastMsg = messages[messages.length - 1];
+    return lastMsg?.role === "assistant" && lastMsg.content.length > 0;
+  }, [isLoading, messages]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -369,12 +366,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     if (!input.trim() || isLoading) return;
     const msg = input.trim();
     setLastFailedMessage(msg);
-    // Start thinking state with random delay before showing streamed content
-    setIsThinking(true);
-    if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
-    thinkingTimerRef.current = setTimeout(() => {
-      setIsThinking(false);
-    }, 800 + Math.random() * 600); // 800-1400ms thinking delay
     sendMessage(msg);
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
@@ -509,13 +500,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     <Compass className="h-6 w-6 text-background" />
                   </div>
                 </div>
-                <h1 className="text-2xl font-semibold mb-2">What are you up to?</h1>
+                <h1 className="text-2xl font-semibold mb-2">
+                  {preferences.displayName
+                    ? `Hey ${preferences.displayName}, what are we planning?`
+                    : "What are you up to?"}
+                </h1>
                 <p className="text-muted-foreground text-center mb-8">
                   Plan a trip, find a date spot, or discover what's happening near you.
                 </p>
                 <div className="grid grid-cols-2 gap-2 w-full max-w-md">
                   {suggestions.map((s) => (
-                    <button key={s} onClick={() => sendMessage(s)} className="p-3 text-left text-sm border border-border rounded-xl hover:bg-muted transition-colors">
+                    <button key={s} onClick={() => sendMessage(s)} className="p-3 text-left text-sm border border-border rounded-xl hover:bg-muted active:scale-95 transition-all">
                       {s}
                     </button>
                   ))}
@@ -656,9 +651,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
                             {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && (
                               <QuickReplies replies={parsed.quickReplies} onSelect={(reply) => {
-                                setIsThinking(true);
-                                if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
-                                thinkingTimerRef.current = setTimeout(() => setIsThinking(false), 800 + Math.random() * 600);
                                 sendMessage(reply);
                               }} />
                             )}
@@ -669,8 +661,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {isLoading && (isThinking || !messages.length || messages[messages.length - 1]?.role === "user" || !parsedMessages[parsedMessages.length - 1]?.parsed?.text) && (
-                  <div className={`flex gap-3 ${isThinking ? 'animate-fade-in' : 'typing-indicator-fade-out'}`}>
+                {isLoading && !hasStreamedContent && (
+                  <div className="flex gap-3 animate-fade-in">
                     <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0 animate-pulse">
                       <Compass className="h-4 w-4 text-background" />
                     </div>
