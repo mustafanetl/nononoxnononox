@@ -168,6 +168,22 @@ const Index = () => {
                 <li><Link to="/my-trips" className="text-sm text-muted-foreground hover:text-foreground transition-colors">My Trips</Link></li>
               </ul>
             </div>
+
+            <div>
+              <h4 className="font-semibold text-sm mb-3">Support</h4>
+              <ul className="space-y-2">
+                <li><Link to="/faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</Link></li>
+                <li><Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact Us</Link></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-sm mb-3">Legal</h4>
+              <ul className="space-y-2">
+                <li><Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Use</Link></li>
+                <li><Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link></li>
+              </ul>
+            </div>
           </div>
 
           <div className="border-t border-border pt-6 text-center">
