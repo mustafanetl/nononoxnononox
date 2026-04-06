@@ -181,7 +181,7 @@ async function getGoogleNearbyPlaces(lat: number, lng: number, limit = 8): Promi
           "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.priceLevel,places.photos,places.location,places.primaryType,places.editorialSummary",
         },
         body: JSON.stringify({
-          includedTypes: ["tourist_attraction", "museum", "restaurant", "park", "point_of_interest"],
+          includedTypes: ["tourist_attraction", "museum", "restaurant", "park", "cafe"],
           maxResultCount: limit,
           locationRestriction: {
             circle: { center: { latitude: lat, longitude: lng }, radius: 10000.0 },
