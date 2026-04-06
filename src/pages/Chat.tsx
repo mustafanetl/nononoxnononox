@@ -767,24 +767,30 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {/* Plan crafting animation for free users */}
+                {/* Plan crafting animation */}
                 {isCraftingPlan && craftingPlan && (
                   <div className="flex gap-3 animate-fade-in">
                     <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0">
                       <Compass className="h-4 w-4 text-background" />
                     </div>
                     <div className="flex-1 max-w-sm">
-                      <div className="rounded-2xl border border-border bg-card p-5 text-center">
+                      <div className="rounded-2xl border border-border bg-card p-5">
                         <div className="animate-pulse mb-3">
                           <Compass className="h-8 w-8 text-primary mx-auto" />
                         </div>
-                        <p className="text-sm font-semibold text-foreground">
+                        <p className="text-sm font-semibold text-foreground text-center">
                           {craftingPlan.destination
-                            ? `Putting together your ${craftingPlan.destination} plan...`
+                            ? `Crafting your ${craftingPlan.destination} plan...`
                             : "Crafting your perfect plan..."}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1 mb-3">
-                          Finding the best spots just for you
+                        <p className="text-xs text-muted-foreground text-center mt-1 mb-3">
+                          {craftingPlan.progress < 25
+                            ? "Searching flights & deals..."
+                            : craftingPlan.progress < 50
+                            ? "Finding the best hotels..."
+                            : craftingPlan.progress < 75
+                            ? "Building your itinerary..."
+                            : "Almost done — adding final touches ✨"}
                         </p>
                         <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
@@ -832,8 +838,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           <div className="max-w-3xl mx-auto">
             {planGenerated && !isPremium ? (
               <div className="chat-input-container p-4 text-center">
-                <p className="text-sm font-medium text-foreground mb-2">
-                  ✨ Want to refine your plan? Upgrade to continue chatting
+                <p className="text-sm font-medium text-foreground mb-1">
+                  ✨ Your plan is ready — don't miss out
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Start your 3-day free trial to unlock everything and keep chatting
                 </p>
                 <Button
                   onClick={() => setShowPaywall(true)}
@@ -841,7 +850,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   variant="default"
                 >
                   <Crown className="h-4 w-4" />
-                  Upgrade Now
+                  Start Free Trial — 3 Days Free
                 </Button>
               </div>
             ) : (

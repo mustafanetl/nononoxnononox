@@ -47,18 +47,18 @@ const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalPro
             <Crown className="h-6 w-6 text-primary" />
           </div>
           <h3 className="text-xl font-bold text-foreground">
-            {hasContext ? `Unlock your ${destination} plan` : "Upgrade to Premium"}
+            {hasContext ? `Your ${destination} plan is ready 🔥` : "Unlock Premium"}
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
             {hasContext && tripStats ? (
               <>
                 {tripStats.days && `${tripStats.days} days · `}
-                {tripStats.activities && `${tripStats.activities} activities · `}
+                {tripStats.activities && `${tripStats.activities} experiences · `}
                 {tripStats.hotels && `${tripStats.hotels} hotels`}
-                {" ready for you"}
+                {" — all waiting for you"}
               </>
             ) : (
-              "Unlock full trip plans, PDF exports, and unlimited planning"
+              "Start your 3-day free trial to unlock everything"
             )}
           </p>
         </div>
@@ -124,7 +124,7 @@ const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalPro
             Join 2,000+ travelers planning smarter trips
           </p>
           <p className="text-[10px] text-muted-foreground/70">
-            Cancel anytime · No charge for 3 days
+            Cancel anytime · No charge for 3 days · Seriously, try it risk-free
           </p>
         </div>
       </div>
