@@ -18,12 +18,15 @@ const cityImageIds: Record<string, string> = {
   default: "photo-1488646953014-85cb44e25828",
 };
 
-// Cache for real Wikimedia images fetched dynamically
-const wikimediaCache: Record<string, string> = {};
+// Cache for Google Places photos or other real images
+const placeImageCache: Record<string, string> = {};
 
-export const setWikimediaImage = (city: string, url: string) => {
-  wikimediaCache[city.toLowerCase().replace(/[^a-z]/g, "")] = url;
+export const setPlaceImage = (city: string, url: string) => {
+  placeImageCache[city.toLowerCase().replace(/[^a-z]/g, "")] = url;
 };
+
+// Keep backward-compatible alias
+export const setWikimediaImage = setPlaceImage;
 
 export const getCityImage = (
   city: string,
@@ -32,9 +35,9 @@ export const getCityImage = (
 ): string => {
   const key = city.toLowerCase().replace(/[^a-z]/g, "");
 
-  // Prefer real Wikimedia image if available
-  if (wikimediaCache[key]) {
-    return wikimediaCache[key];
+  // Prefer real Google Places image if available
+  if (placeImageCache[key]) {
+    return placeImageCache[key];
   }
 
   const id = cityImageIds[key] || cityImageIds.default;
