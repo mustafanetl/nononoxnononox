@@ -36,7 +36,7 @@ const ActivityDetailModal = ({
   if (!activity) return null;
 
   const imgUrl = activity.realPhoto || imageMap[activity.image] || imageMap.beach;
-  const searchQuery = encodeURIComponent(activity.name);
+  
   const inTrip = isInTrip("activity", activity.id);
 
   const toggleTrip = () => {
