@@ -264,12 +264,14 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
   // Auto-enrich destinations only when streaming is done
   useEffect(() => {
-    if (isLoading) return; // Don't enrich during streaming
+    if (isLoading) return;
     parsedMessages.forEach((msg) => {
       if (msg.role !== "assistant") return;
       if (msg.parsed.destinationEnrich && !enrichedData[msg.parsed.destinationEnrich.destination]) {
         const { destination, travelMonth } = msg.parsed.destinationEnrich;
-        fetchEnrichment(destination, travelMonth).then((data) => {
+        // Extract activity names from this message to do per-activity photo lookup
+        const activityNames = msg.parsed.activities.map((a: any) => a.name).filter(Boolean);
+        fetchEnrichment(destination, travelMonth, activityNames).then((data) => {
           if (data) {
             setEnrichedData((prev) => ({ ...prev, [destination]: data }));
             if (data.images && data.images.length > 0) {
@@ -566,35 +568,22 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     if (enrichData.hotels && enrichData.hotels.length > 0) {
                       parsed.hotels = enrichData.hotels;
                     }
-                    // Assign Google Places photos to activities
-                    const places = enrichData.places || [];
+                    // Assign Google Places photos to activities using per-activity lookup
+                    const activityPhotos = enrichData.activityPhotos || {};
                     const images = enrichData.images || [];
-                    if (places.length > 0 || images.length > 0) {
-                      parsed.activities = parsed.activities.map((act: ActivityData, idx: number) => {
-                        // Priority 1: fuzzy name match with nearby places
-                        if (places.length > 0) {
-                          const match = places.find((p: any) =>
-                            p.title && act.name &&
-                            (p.title.toLowerCase().includes(act.name.toLowerCase()) ||
-                             act.name.toLowerCase().includes(p.title.toLowerCase()))
-                          );
-                          if (match?.thumbnail) {
-                            return { ...act, realPhoto: match.thumbnail, isReal: true };
-                          }
-                          // Priority 2: cycle through place photos
-                          const fallbackPlace = places[idx % places.length];
-                          if (fallbackPlace?.thumbnail) {
-                            return { ...act, realPhoto: fallbackPlace.thumbnail, isReal: true };
-                          }
-                        }
-                        // Priority 3: cycle through Google destination images
-                        if (images.length > 0) {
-                          const img = images[idx % images.length];
-                          return { ...act, realPhoto: img.thumbUrl || img.url, isReal: true };
-                        }
-                        return act;
-                      });
-                    }
+                    parsed.activities = parsed.activities.map((act: ActivityData, idx: number) => {
+                      // Priority 1: exact per-activity Google Places photo
+                      const exactMatch = activityPhotos[act.name];
+                      if (exactMatch?.thumbPhoto || exactMatch?.photo) {
+                        return { ...act, realPhoto: exactMatch.thumbPhoto || exactMatch.photo, isReal: true };
+                      }
+                      // Priority 2: cycle through Google destination images
+                      if (images.length > 0) {
+                        const img = images[idx % images.length];
+                        return { ...act, realPhoto: img.thumbUrl || img.url, isReal: true };
+                      }
+                      return act;
+                    });
                   }
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
