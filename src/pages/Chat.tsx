@@ -202,6 +202,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [compareOpen, setCompareOpen] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData } = useRzumaChat();
+  const [isThinking, setIsThinking] = useState(true);
+  const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { compareItems } = useTripContext();
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
