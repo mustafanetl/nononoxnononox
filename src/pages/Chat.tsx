@@ -205,6 +205,14 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [isThinking, setIsThinking] = useState(true);
   const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { compareItems } = useTripContext();
+
+  // Reset thinking when loading ends
+  useEffect(() => {
+    if (!isLoading) {
+      if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
+      setIsThinking(false);
+    }
+  }, [isLoading]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
