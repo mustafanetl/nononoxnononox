@@ -240,82 +240,88 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   // Crafting active state — fully decoupled from isLoading
   const [craftingActive, setCraftingActive] = useState(false);
   const [craftingPlanType, setCraftingPlanType] = useState<"full" | "local">("full");
-  const craftingStarted = useRef(false);
-  const craftingTimerDone = useRef(false);
-  const streamingDone = useRef(false);
   const lastCraftedMsgIndex = useRef(-1);
+  const craftingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const craftingProgressRef = useRef(0);
+  const streamingDoneRef = useRef(false);
+  const craftingStartTimeRef = useRef(0);
 
-  // Detect plan blocks in latest assistant message (no isLoading dependency)
+  // Unified crafting controller: detect plan blocks → start animation → finish when ready
   useEffect(() => {
     if (isPremium) return;
     const lastIdx = messages.length - 1;
-    if (lastIdx < 0 || lastIdx === lastCraftedMsgIndex.current) return;
+    if (lastIdx < 0) return;
     const lastMsg = messages[lastIdx];
     if (!lastMsg || lastMsg.role !== "assistant") return;
     const c = lastMsg.content;
     const hasPlanBlocks = /```(activities|itinerary)/s.test(c);
-    if (!hasPlanBlocks || craftingStarted.current) return;
 
-    // Detected plan blocks — start crafting
-    lastCraftedMsgIndex.current = lastIdx;
-    craftingStarted.current = true;
-    craftingTimerDone.current = false;
-    streamingDone.current = false;
+    // Start crafting if plan blocks detected and not already started for this message
+    if (hasPlanBlocks && lastIdx !== lastCraftedMsgIndex.current && !craftingIntervalRef.current) {
+      lastCraftedMsgIndex.current = lastIdx;
+      craftingProgressRef.current = 0;
+      streamingDoneRef.current = false;
+      craftingStartTimeRef.current = Date.now();
 
-    const hasFlightsOrHotels = /```(flights|hotels)/s.test(c);
-    setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
+      const hasFlightsOrHotels = /```(flights|hotels)/s.test(c);
+      setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
 
-    const destMatch = c.match(/```travelinfo\s*\{[^}]*"destination"\s*:\s*"([^"]+)"/);
-    const dest = destMatch?.[1] || "";
-    setCraftingPlan({ destination: dest, progress: 0 });
-    setCraftingActive(true);
+      const destMatch = c.match(/```travelinfo\s*\{[^}]*"destination"\s*:\s*"([^"]+)"/);
+      const dest = destMatch?.[1] || "";
+      setCraftingPlan({ destination: dest, progress: 0 });
+      setCraftingActive(true);
 
-    // Minimum 12-second timer
-    setTimeout(() => {
-      craftingTimerDone.current = true;
-      if (streamingDone.current) {
-        setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
-        setTimeout(() => {
-          setCraftingActive(false);
-          setCraftingPlan(null);
-          craftingStarted.current = false;
-        }, 600);
-      }
-    }, 12000);
+      // Single interval drives everything
+      craftingIntervalRef.current = setInterval(() => {
+        const elapsed = Date.now() - craftingStartTimeRef.current;
+        const minDuration = 12000;
+
+        // Smooth ease-out curve: 0 → ~90 over 12 seconds
+        if (craftingProgressRef.current < 90) {
+          craftingProgressRef.current = Math.min(90, craftingProgressRef.current + (90 - craftingProgressRef.current) * 0.04);
+          setCraftingPlan(prev => prev ? { ...prev, progress: craftingProgressRef.current } : null);
+        }
+
+        // Finish: streaming done AND minimum time passed AND progress >= 88
+        if (streamingDoneRef.current && elapsed >= minDuration && craftingProgressRef.current >= 88) {
+          craftingProgressRef.current = 100;
+          setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
+
+          if (craftingIntervalRef.current) {
+            clearInterval(craftingIntervalRef.current);
+            craftingIntervalRef.current = null;
+          }
+
+          setTimeout(() => {
+            setCraftingActive(false);
+            setCraftingPlan(null);
+          }, 600);
+        }
+      }, 300);
+    }
   }, [messages, isPremium]);
 
-  // When streaming ends while crafting is active
+  // When streaming ends, mark it and update plan type from final content
   useEffect(() => {
-    if (!isLoading && craftingStarted.current && !streamingDone.current) {
-      streamingDone.current = true;
-      // Also update plan type based on final content
+    if (!isLoading && craftingIntervalRef.current && !streamingDoneRef.current) {
+      streamingDoneRef.current = true;
       const lastMsg = messages[messages.length - 1];
       if (lastMsg?.role === "assistant") {
         const hasFlightsOrHotels = /```(flights|hotels)/s.test(lastMsg.content);
         setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
       }
-      if (craftingTimerDone.current) {
-        setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
-        setTimeout(() => {
-          setCraftingActive(false);
-          setCraftingPlan(null);
-          craftingStarted.current = false;
-        }, 600);
-      }
     }
   }, [isLoading, messages]);
 
-  // Steady progress animation — climbs to ~90 over 12s
+  // Cleanup on unmount
   useEffect(() => {
-    if (!craftingActive) return;
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 1.5 + 0.8;
-      if (progress > 90) progress = 90;
-      setCraftingPlan(prev => prev ? { ...prev, progress } : null);
-    }, 900);
-    return () => clearInterval(interval);
-  }, [craftingActive]);
+    return () => {
+      if (craftingIntervalRef.current) {
+        clearInterval(craftingIntervalRef.current);
+        craftingIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   const isCraftingPlan = craftingActive;
   
