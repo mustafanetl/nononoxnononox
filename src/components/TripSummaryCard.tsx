@@ -49,7 +49,7 @@ const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlan
       >
         <div className="relative h-32">
           <img
-            src={getCityImage(destination)}
+            src={enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl || getCityImage(destination)}
             alt={destination}
             className="w-full h-full object-cover"
           />

@@ -1,6 +1,6 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Clock, DollarSign, ExternalLink, Lightbulb, MapPin, PlusCircle, CheckCircle } from "lucide-react";
+import { Clock, DollarSign, Lightbulb, PlusCircle, CheckCircle } from "lucide-react";
 import { ActivityData } from "./ActivityCard";
 import { useTripContext } from "@/contexts/TripContext";
 
@@ -36,7 +36,7 @@ const ActivityDetailModal = ({
   if (!activity) return null;
 
   const imgUrl = activity.realPhoto || imageMap[activity.image] || imageMap.beach;
-  const searchQuery = encodeURIComponent(activity.name);
+  
   const inTrip = isInTrip("activity", activity.id);
 
   const toggleTrip = () => {
@@ -82,19 +82,11 @@ const ActivityDetailModal = ({
           <div className="flex gap-2">
             <Button
               variant={inTrip ? "secondary" : "outline"}
-              className="gap-2"
+              className="gap-2 flex-1"
               onClick={toggleTrip}
             >
               {inTrip ? <CheckCircle className="h-4 w-4" /> : <PlusCircle className="h-4 w-4" />}
               {inTrip ? "Added" : "Add to Trip"}
-            </Button>
-            <Button
-              className="flex-1 gap-2"
-              onClick={() => window.open(`https://www.getyourguide.com/s/?q=${searchQuery}`, "_blank")}
-            >
-              <MapPin className="h-4 w-4" />
-              Book on GetYourGuide
-              <ExternalLink className="h-3 w-3" />
             </Button>
           </div>
         </div>

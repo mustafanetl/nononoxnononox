@@ -19,7 +19,7 @@ import { TripPlanData } from "@/components/TripSummaryCard";
 import { shareTripSummary } from "@/utils/tripSummary";
 import { getCityImage, setWikimediaImage } from "@/utils/cityImages";
 import { exportTripPlanPDF } from "@/utils/pdfExport";
-import { getSkyscannerUrl, getBookingDotComUrl, getGetYourGuideUrl } from "@/utils/bookingLinks";
+import { getSkyscannerUrl, getBookingDotComUrl } from "@/utils/bookingLinks";
 import { getHotelImage } from "@/components/HotelCard";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -669,11 +669,9 @@ const ActivityRow = React.forwardRef<HTMLDivElement, {
           <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {a.duration}</span>
           <span className="font-bold text-foreground">{a.currency}{a.price}</span>
         </div>
-        <a href={getGetYourGuideUrl(a.name, destination)} target="_blank" rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline shrink-0">
-          Book <ExternalLink className="h-3 w-3" />
-        </a>
+        <span className="flex items-center gap-1 text-[10px] font-semibold text-primary shrink-0 capitalize">
+          {a.category || "experience"}
+        </span>
       </div>
     </div>
   </div>
