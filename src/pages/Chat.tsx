@@ -299,6 +299,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   };
 
   const handleExportPDF = () => {
+    if (!isPremium) {
+      setPaywallContext({});
+      setShowPaywall(true);
+      return;
+    }
     const title = conversations.find(c => c.id === activeId)?.title || "My Trip Plan";
     exportTripPDF({ title, messages });
     toast.success("PDF downloaded!");
@@ -750,6 +755,12 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       <FlightDetailModal flight={selectedFlight} open={flightModalOpen} onOpenChange={setFlightModalOpen} />
       <ActivityDetailModal activity={selectedActivity} open={activityModalOpen} onOpenChange={setActivityModalOpen} />
       <HotelDetailModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={setHotelModalOpen} />
+      <PaywallModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        destination={paywallContext.destination}
+        tripStats={paywallContext.tripStats}
+      />
     </div>
   );
 };
