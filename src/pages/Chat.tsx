@@ -755,7 +755,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
 
                             {/* Full plan → show summary card; otherwise show inline cards */}
-                            {isFullPlan && destination ? (
+                            {/* Hide plan cards while crafting animation is still running */}
+                            {isFullPlan && destination && !(isLastAssistant && isCraftingPlan) ? (
                               isPremium ? (
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
