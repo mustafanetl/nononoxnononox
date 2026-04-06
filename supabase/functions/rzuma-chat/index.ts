@@ -46,7 +46,7 @@ CRITICAL RULES:
 2. In TRIP mode, ALWAYS ask where they're flying FROM before generating flights. Never assume a departure city.
 3. REMEMBER user answers within the conversation. If preferences show visited places, silently skip those. If they hate museums, NEVER suggest museums.
 4. FULL TRIP PLAN must include ALL: flights, hotels, activities, itinerary, travelinfo, weather, destination_enrich, quickreplies.
-5. LOCAL/DATE plans include ONLY: activities, itinerary, quickreplies. Optionally weather. NO flights, NO hotels.
+5. LOCAL/DATE plans include: activities, itinerary, destination_enrich, quickreplies. Optionally weather. NO flights, NO hotels. ALWAYS include destination_enrich so we can fetch real photos.
 6. Every activity must have a specific real venue name — never generic. Include realistic lat/lng.
 7. PRICES: Coherent with mode. Budget-friendly defaults unless user says otherwise.
 8. All coordinates must be realistic for the actual location.
