@@ -1,45 +1,42 @@
 
 
-# Integrate Google Places API for Real Photos & Places
+# Fix Google Photos + Remove GetYourGuide
 
-## Why
-Currently the app uses Wikimedia Commons for images (often generic/low quality) and Wikipedia geosearch for nearby places (limited data, no ratings, no photos). Google Places API provides high-quality place photos, ratings, reviews, opening hours, and curated place data.
-
-## What's Needed
-
-**Google Places API key** — This is a paid API. Google offers $200/month free credit (~$17/1000 photo requests). You'll need to:
-1. Create a Google Cloud project
-2. Enable "Places API (New)" 
-3. Generate an API key
-4. I'll store it securely as a backend secret
+## Problems
+1. **Google Place photos fetched but barely used** — The edge function returns images and nearby places with photos, but the client only uses the first image as a city hero. Activity cards still show generic Unsplash fallbacks because `realPhoto` comes from AI output (which doesn't have real URLs).
+2. **GetYourGuide booking links** need to be removed from activity cards and detail modals.
 
 ## Changes
 
-### 1. Add Google Places API secret
-- Use the `add_secret` tool to request your `GOOGLE_PLACES_API_KEY`
+### 1. Use Google Places photos for activities
+**File: `src/pages/Chat.tsx`** (lines 549-553 area)
 
-### 2. Replace Wikimedia + Wikipedia with Google Places in enrichment
-**File: `supabase/functions/enrich-destination/index.ts`**
+After merging hotels from enrichment, also match enriched `places` to activities by name similarity:
+- For each activity in `parsed.activities`, find the closest match in `enrichData.places` (fuzzy name match)
+- If matched, set `activity.realPhoto = place.thumbnail` and `activity.isReal = true`
+- Also set Google Place photos as fallback images for activities that don't match — cycle through available place photos
 
-- **Replace `getWikimediaImages()`** with `getGooglePlacePhotos()` — uses Places Text Search to find the destination, then fetches up to 6 place photos via the Place Photos API. Returns photo URLs served through Google's CDN.
-- **Replace `getWikipediaPlaces()`** with `getGoogleNearbyPlaces()` — uses Nearby Search to find top-rated attractions, restaurants, and points of interest. Returns name, rating, user ratings count, opening hours, photo, price level, and lat/lng.
-- Keep all other data sources (weather, country info, exchange rates, Xotelo hotels) unchanged.
+### 2. Use Google photos in TripSummaryCard
+**File: `src/components/TripSummaryCard.tsx`**
 
-### 3. Update city images utility
-**File: `src/utils/cityImages.ts`**
-- Update `setWikimediaImage` → `setPlaceImage` to cache Google-served photo URLs
-- Keep Unsplash fallbacks for when API quota is exhausted
+The `enrichedImages` prop is already passed but never used for the card image. Use the first enriched image instead of Unsplash fallback:
+- Line 52: Change `getCityImage(destination)` to use `enrichedImages?.[0]?.url || getCityImage(destination)`
 
-### 4. Update components consuming place data
-- Components already display `thumbnail`, `title`, `description`, `rating` — Google Places returns richer versions of all these fields, so the shape stays compatible with minimal mapping adjustments.
+### 3. Remove GetYourGuide references
+**Files:**
+- `src/components/ActivityDetailModal.tsx` — Remove the "Book on GetYourGuide" button entirely, keep only the "Add to Trip" button
+- `src/pages/TripDetail.tsx` — Remove the GetYourGuide "Book" link from activity rows (lines 672-675), remove the import of `getGetYourGuideUrl`
+- `src/utils/bookingLinks.ts` — Remove the `getGetYourGuideUrl` function
 
-## API Calls Used (per destination enrichment)
-- 1x Text Search (find place) — ~$0.032
-- 1x Nearby Search (attractions) — ~$0.032  
-- ~6x Place Photos — ~$0.042
-- **Total: ~$0.10 per destination** → ~2000 free enrichments/month
+### 4. Pass Google Place photos to activity cards in non-summary view
+**File: `src/pages/Chat.tsx`** (lines 611-617)
+
+When rendering activity cards outside TripSummaryCard (the `else` branch), also apply enriched place photos to activities the same way as step 1.
 
 ## Files to Modify
-- `supabase/functions/enrich-destination/index.ts` — replace Wikimedia/Wikipedia functions with Google Places
-- `src/utils/cityImages.ts` — update cache to work with Google photo URLs
+- `src/pages/Chat.tsx` — merge Google place photos into activities
+- `src/components/TripSummaryCard.tsx` — use enriched images for hero
+- `src/components/ActivityDetailModal.tsx` — remove GetYourGuide button
+- `src/pages/TripDetail.tsx` — remove GetYourGuide links from activity rows
+- `src/utils/bookingLinks.ts` — remove `getGetYourGuideUrl`
 
