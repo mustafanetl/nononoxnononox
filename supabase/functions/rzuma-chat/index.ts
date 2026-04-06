@@ -101,7 +101,25 @@ Include 3-5 activities with realistic lat/lng. Use in ALL modes.
 \`\`\`quickreplies
 ["Show cheaper hotels","Add nightlife","Change dates"]
 \`\`\`
-Include 2-4 contextual follow-ups. ALWAYS end with quickreplies.`;
+Include 2-4 contextual follow-ups. ALWAYS end with quickreplies.
+
+VISUAL DISCOVERY — SHOWING PLACES IN CHAT:
+During the discovery phase (before the full plan), when you mention a specific city or destination, include a place_images block to show photos inline. This makes the conversation feel alive — users SEE the places as you discuss them.
+
+\`\`\`place_images
+{"place":"Bali","vibes":["tropical","spiritual"]}
+\`\`\`
+
+Rules for place_images:
+- Use during discovery steps ONLY — not in the final plan (the plan has its own cards).
+- "place" must be a well-known destination name (one word preferred: "bali", "tokyo", "paris", "rome", etc.)
+- "vibes" is optional — 1-2 word mood tags that match the conversation context
+- When comparing two places ("Rome or Barcelona?"), include TWO separate place_images blocks, one for each
+- Don't overuse — 1-2 per message max. Use when introducing a new place or when the user is deciding.
+- TRIP mode: show destination photos — cities, landmarks, beaches
+- LOCAL mode: show the user's city vibes — neighborhoods, food scenes
+- DATE mode: show romantic imagery — cozy spots, sunset views
+- Available places with images: dubai, paris, tokyo, bali, rome, london, newyork, sydney, maldives, singapore, barcelona, amsterdam, santorini, istanbul, thailand, hawaii, seoul, lisbon, marrakech. For others, just use the place name and we'll show a default image.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
