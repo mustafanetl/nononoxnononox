@@ -1,41 +1,39 @@
 
 
-# Fix: AI Discovery Flow + Plan Gating for Free Users
+# Fix: Remove Place Images, Streamline Discovery, Better Plan Loading
 
-## Problems Found
+## 3 Issues to Fix
 
-1. **AI shows place images too early** — The prompt tells it to show `place_images` for every place mentioned. User wants natural chat first with quick reply suggestion buttons, no images until deeper in the conversation.
+### 1. Remove `place_images` entirely from discovery
+The AI keeps showing place images during chat which feels spammy. Remove it completely — no `place_images` blocks at all. The AI should just chat naturally with quickreplies, keep it short (2-3 exchanges max), then go straight to "let me cook" and generate the plan.
 
-2. **Full plan leaks to free users** — The `isFullPlan` detection on line 647 only counts flights, hotels, and activities. It **misses itinerary**, so LOCAL/DATE plans (activities + itinerary, no flights/hotels) slip through as `cardTypeCount = 1` and render all cards directly.
+### 2. Don't over-ask questions
+The current prompt forces 4+ exchanges which drags. Reduce to 2-3 exchanges max — get the vibe, ask ONE follow-up, then cook.
 
-3. **AI rushes to plan** — Despite "3-4 exchanges" rule, the AI often generates the plan too fast. Need stronger enforcement.
+### 3. Better plan crafting animation
+When the AI is generating the plan, show a proper full-screen-ish loading card with percentage that goes from 0→100%, hiding the streaming content underneath. Only reveal the plan (behind paywall) once done.
 
 ## Changes
 
-### 1. `supabase/functions/rzuma-chat/index.ts` — Fix AI behavior
+### `supabase/functions/rzuma-chat/index.ts`
 
-- **Remove `place_images` from early discovery.** The AI should NOT show place images in the first 2-3 messages. It should chat naturally, ask questions, and use quickreplies for suggestions. Only show `place_images` after the user has shared enough info (who, when, vibe) and you want to confirm a specific spot.
-- **Strengthen the "don't rush" rule.** Add explicit counting: "Count the exchanges. If fewer than 4 user messages, do NOT generate a plan. Keep asking."
-- **Make quickreplies more prominent in early messages.** Every discovery message should end with 2-3 contextual quickreplies that help the user share preferences.
-- **Add FOMO/personal touch in the "let me cook" message.** After discovery, the teaser message should mention specific things: "I found this insane rooftop bar you're gonna love..."
+- Remove ALL `place_images` references from the prompt — no `place_images` block format, no visual discovery section
+- Simplify discovery to 2-3 phases:
+  - **Message 1**: React naturally, ask ONE question about vibe/who, end with quickreplies
+  - **Message 2-3**: Based on answers, say "okay let me cook 🧑‍🍳" with a teaser
+  - **Message 3-4**: Generate the full plan with all blocks
+- Keep the FOMO/personal tone but don't drag discovery
 
-### 2. `src/pages/Chat.tsx` — Fix plan detection
+### `src/pages/Chat.tsx`
 
-- **Add itinerary to `isFullPlan` count** (line 647): Include `parsed.itinerary.length > 0` in the array so LOCAL/DATE plans also get gated.
-- This single fix ensures ALL plan types show `PlanPreviewGate` for free users instead of leaking the full cards.
-
-### 3. No changes needed to `PlanPreviewGate.tsx`
-
-The component already looks good — hero image, blurred activities, inline paywall with 3-day trial. The issue was just that it wasn't being triggered for all plan types.
+- **Remove `PlaceShowcase` rendering** — remove the `placeImages` rendering block entirely (lines 674-677)
+- **Improve crafting animation**: When `isCraftingPlan` is true, DON'T show streamed content — only show the crafting progress card. The plan content stays hidden until streaming completes, then renders as `PlanPreviewGate` for free users.
+- Make the crafting card more prominent: larger, centered, with a proper percentage number (e.g., "67%")
 
 ## Files
 
 | File | Change |
 |------|--------|
-| `supabase/functions/rzuma-chat/index.ts` | Remove early `place_images`, enforce 4+ exchanges, better quickreplies |
-| `src/pages/Chat.tsx` | Add itinerary to `isFullPlan` detection (line 647) |
-
-## Summary
-
-Two targeted fixes: (1) rewrite the AI prompt so it chats naturally first without images, uses quickreplies, and only shows `place_images` later in discovery; (2) fix the plan detection to include itinerary so all plan types get properly gated behind the paywall for free users.
+| `supabase/functions/rzuma-chat/index.ts` | Remove `place_images`, reduce discovery to 2-3 exchanges, keep personal tone |
+| `src/pages/Chat.tsx` | Remove PlaceShowcase rendering, hide streamed content during crafting, show percentage in loading card |
 
