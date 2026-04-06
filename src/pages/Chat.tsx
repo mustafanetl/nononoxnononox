@@ -600,6 +600,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             ) : (
               <div className="space-y-6">
                 {parsedMessages.map((msg, i) => {
+                  // Hide the streaming assistant message while crafting plan
+                  const isLastMsg = i === parsedMessages.length - 1;
+                  if (isCraftingPlan && isLastMsg && msg.role === "assistant") return null;
+
                   const parsed = { ...msg.parsed };
 
                   // Merge enriched live data if available
