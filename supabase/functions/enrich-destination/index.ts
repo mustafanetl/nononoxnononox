@@ -224,11 +224,20 @@ serve(async (req) => {
   }
 
   try {
-    const { destination, travelMonth, activities } = await req.json();
+    const { destination, travelMonth, activities, imageOnly } = await req.json();
 
     if (!destination || typeof destination !== "string") {
       return new Response(JSON.stringify({ error: "destination is required" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // imageOnly mode: just fetch 1 Google Places photo, skip everything else
+    if (imageOnly) {
+      console.log(`Image-only enrichment for: ${destination}`);
+      const images = await getGooglePlacePhotos(destination, 1);
+      return new Response(JSON.stringify({ destination, images }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

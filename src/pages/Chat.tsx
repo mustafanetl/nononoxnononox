@@ -38,8 +38,8 @@ import { toast } from "sonner";
 // Enrichment cache to avoid re-fetching
 const enrichmentCache: Record<string, any> = {};
 
-const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[]) => {
-  const cacheKey = `${destination}-${travelMonth || ""}`;
+const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[], imageOnly?: boolean) => {
+  const cacheKey = imageOnly ? `${destination}-imageOnly` : `${destination}-${travelMonth || ""}`;
   if (enrichmentCache[cacheKey]) return enrichmentCache[cacheKey];
 
   try {
@@ -51,7 +51,7 @@ const fetchEnrichment = async (destination: string, travelMonth?: string, activi
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ destination, travelMonth, activities: activityNames }),
+        body: JSON.stringify({ destination, travelMonth, activities: activityNames, imageOnly }),
       }
     );
     if (!res.ok) return null;
@@ -223,12 +223,44 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     const lastMsg = messages[messages.length - 1];
     return lastMsg?.role === "assistant" && lastMsg.content.length > 0;
   }, [isLoading, messages]);
+
+  // Detect when AI is building a full plan for free users → show crafting animation
+  const isCraftingPlan = useMemo(() => {
+    if (!isLoading || isPremium) return false;
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg || lastMsg.role !== "assistant") return false;
+    const c = lastMsg.content;
+    const hasPlanBlocks = /```(flights|hotels|activities|itinerary)/s.test(c);
+    return hasPlanBlocks;
+  }, [isLoading, messages, isPremium]);
+
+  // Track crafting progress animation
+  useEffect(() => {
+    if (isCraftingPlan) {
+      const lastMsg = messages[messages.length - 1];
+      const destMatch = lastMsg?.content.match(/```travelinfo\s*\{[^}]*"destination"\s*:\s*"([^"]+)"/);
+      const dest = destMatch?.[1] || "";
+      setCraftingPlan({ destination: dest, progress: 0 });
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 15 + 5;
+        if (progress > 90) progress = 90;
+        setCraftingPlan(prev => prev ? { ...prev, progress } : null);
+      }, 600);
+      return () => clearInterval(interval);
+    } else if (craftingPlan) {
+      setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
+      const timer = setTimeout(() => setCraftingPlan(null), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isCraftingPlan]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [searchParams] = useSearchParams();
   const initialQuerySent = useRef(false);
   const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
+  const [craftingPlan, setCraftingPlan] = useState<{ destination: string; progress: number } | null>(null);
   const prevActiveId = useRef(activeId);
   const prefsSynced = useRef(false);
 
@@ -251,23 +283,32 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     }
   }, [activeId]);
 
-  // Auto-enrich destinations only when streaming is done AND user is premium
+  // Auto-enrich destinations when streaming is done
+  // Premium: full enrichment. Free: imageOnly (1 Google photo for the paywall card)
   useEffect(() => {
     if (isLoading) return;
-    if (!isPremium) return; // Skip API calls for free users
     parsedMessages.forEach((msg) => {
       if (msg.role !== "assistant") return;
       if (msg.parsed.destinationEnrich && !enrichedData[msg.parsed.destinationEnrich.destination]) {
         const { destination, travelMonth } = msg.parsed.destinationEnrich;
-        const activityNames = msg.parsed.activities.map((a: any) => a.name).filter(Boolean);
-        fetchEnrichment(destination, travelMonth, activityNames).then((data) => {
-          if (data) {
-            setEnrichedData((prev) => ({ ...prev, [destination]: data }));
-            if (data.images && data.images.length > 0) {
-              setWikimediaImage(destination, data.images[0].thumbUrl || data.images[0].url);
+        if (isPremium) {
+          const activityNames = msg.parsed.activities.map((a: any) => a.name).filter(Boolean);
+          fetchEnrichment(destination, travelMonth, activityNames).then((data) => {
+            if (data) {
+              setEnrichedData((prev) => ({ ...prev, [destination]: data }));
+              if (data.images && data.images.length > 0) {
+                setWikimediaImage(destination, data.images[0].thumbUrl || data.images[0].url);
+              }
             }
-          }
-        });
+          });
+        } else {
+          // Free users: just fetch 1 real Google image for the paywall card
+          fetchEnrichment(destination, undefined, undefined, true).then((data) => {
+            if (data) {
+              setEnrichedData((prev) => ({ ...prev, [destination]: data }));
+            }
+          });
+        }
       }
     });
   }, [parsedMessages, isLoading, isPremium]);
@@ -625,6 +666,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                 <PlanPreviewGate
                                   data={parsed as TripPlanData}
                                   destination={destination}
+                                  enrichedImages={enrichData?.images}
                                   onUpgrade={() => {
                                     setPaywallContext({
                                       destination,
@@ -702,7 +744,37 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {isLoading && !hasStreamedContent && (
+                {/* Plan crafting animation for free users */}
+                {isCraftingPlan && craftingPlan && (
+                  <div className="flex gap-3 animate-fade-in">
+                    <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0">
+                      <Compass className="h-4 w-4 text-background" />
+                    </div>
+                    <div className="flex-1 max-w-sm">
+                      <div className="rounded-2xl border border-border bg-card p-5 text-center">
+                        <div className="animate-pulse mb-3">
+                          <Compass className="h-8 w-8 text-primary mx-auto" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {craftingPlan.destination
+                            ? `Putting together your ${craftingPlan.destination} plan...`
+                            : "Crafting your perfect plan..."}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 mb-3">
+                          Finding the best spots just for you
+                        </p>
+                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${craftingPlan.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {isLoading && !hasStreamedContent && !isCraftingPlan && (
                   <div className="flex gap-3 animate-fade-in">
                     <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0 animate-pulse">
                       <Compass className="h-4 w-4 text-background" />
