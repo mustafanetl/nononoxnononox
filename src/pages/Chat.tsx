@@ -225,56 +225,43 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     return lastMsg?.role === "assistant" && lastMsg.content.length > 0;
   }, [isLoading, messages]);
 
-  // Detect when AI is building a full plan for free users → show crafting animation
-  const planBlocksDetected = useMemo(() => {
-    if (!isLoading || isPremium) return false;
-    const lastMsg = messages[messages.length - 1];
-    if (!lastMsg || lastMsg.role !== "assistant") return false;
-    const c = lastMsg.content;
-    return /```(flights|hotels|activities|itinerary)/s.test(c);
-  }, [isLoading, messages, isPremium]);
-
-  // Crafting active state — decoupled from isLoading, enforces minimum 12s duration
+  // Crafting active state — fully decoupled from isLoading
   const [craftingActive, setCraftingActive] = useState(false);
+  const [craftingPlanType, setCraftingPlanType] = useState<"full" | "local">("full");
   const craftingStarted = useRef(false);
   const craftingTimerDone = useRef(false);
   const streamingDone = useRef(false);
+  const lastCraftedMsgIndex = useRef(-1);
 
-  // When plan blocks first detected, start crafting mode
+  // Detect plan blocks in latest assistant message (no isLoading dependency)
   useEffect(() => {
-    if (planBlocksDetected && !craftingStarted.current) {
-      craftingStarted.current = true;
-      craftingTimerDone.current = false;
-      streamingDone.current = false;
-      setCraftingActive(true);
+    if (isPremium) return;
+    const lastIdx = messages.length - 1;
+    if (lastIdx < 0 || lastIdx === lastCraftedMsgIndex.current) return;
+    const lastMsg = messages[lastIdx];
+    if (!lastMsg || lastMsg.role !== "assistant") return;
+    const c = lastMsg.content;
+    const hasPlanBlocks = /```(activities|itinerary)/s.test(c);
+    if (!hasPlanBlocks || craftingStarted.current) return;
 
-      const lastMsg = messages[messages.length - 1];
-      const destMatch = lastMsg?.content.match(/```travelinfo\s*\{[^}]*"destination"\s*:\s*"([^"]+)"/);
-      const dest = destMatch?.[1] || "";
-      setCraftingPlan({ destination: dest, progress: 0 });
+    // Detected plan blocks — start crafting
+    lastCraftedMsgIndex.current = lastIdx;
+    craftingStarted.current = true;
+    craftingTimerDone.current = false;
+    streamingDone.current = false;
 
-      // Minimum 12-second timer
-      setTimeout(() => {
-        craftingTimerDone.current = true;
-        // If streaming already done, finish up
-        if (streamingDone.current) {
-          setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
-          setTimeout(() => {
-            setCraftingActive(false);
-            setCraftingPlan(null);
-            craftingStarted.current = false;
-          }, 600);
-        }
-      }, 12000);
-    }
-  }, [planBlocksDetected]);
+    const hasFlightsOrHotels = /```(flights|hotels)/s.test(c);
+    setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
 
-  // When streaming ends while crafting is active
-  useEffect(() => {
-    if (!isLoading && craftingStarted.current && !streamingDone.current) {
-      streamingDone.current = true;
-      if (craftingTimerDone.current) {
-        // Timer already done, finish now
+    const destMatch = c.match(/```travelinfo\s*\{[^}]*"destination"\s*:\s*"([^"]+)"/);
+    const dest = destMatch?.[1] || "";
+    setCraftingPlan({ destination: dest, progress: 0 });
+    setCraftingActive(true);
+
+    // Minimum 12-second timer
+    setTimeout(() => {
+      craftingTimerDone.current = true;
+      if (streamingDone.current) {
         setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
         setTimeout(() => {
           setCraftingActive(false);
@@ -282,23 +269,42 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           craftingStarted.current = false;
         }, 600);
       }
-      // else: timer still running, it will handle the finish
-    }
-  }, [isLoading]);
+    }, 12000);
+  }, [messages, isPremium]);
 
-  // Steady progress animation while crafting is active
+  // When streaming ends while crafting is active
+  useEffect(() => {
+    if (!isLoading && craftingStarted.current && !streamingDone.current) {
+      streamingDone.current = true;
+      // Also update plan type based on final content
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg?.role === "assistant") {
+        const hasFlightsOrHotels = /```(flights|hotels)/s.test(lastMsg.content);
+        setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
+      }
+      if (craftingTimerDone.current) {
+        setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
+        setTimeout(() => {
+          setCraftingActive(false);
+          setCraftingPlan(null);
+          craftingStarted.current = false;
+        }, 600);
+      }
+    }
+  }, [isLoading, messages]);
+
+  // Steady progress animation — climbs to ~90 over 12s
   useEffect(() => {
     if (!craftingActive) return;
     let progress = 0;
     const interval = setInterval(() => {
-      progress += Math.random() * 2 + 1;
+      progress += Math.random() * 1.5 + 0.8;
       if (progress > 90) progress = 90;
       setCraftingPlan(prev => prev ? { ...prev, progress } : null);
-    }, 800);
+    }, 900);
     return () => clearInterval(interval);
   }, [craftingActive]);
 
-  // Use craftingActive instead of isCraftingPlan for UI
   const isCraftingPlan = craftingActive;
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -332,6 +338,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       craftingStarted.current = false;
       craftingTimerDone.current = false;
       streamingDone.current = false;
+      lastCraftedMsgIndex.current = -1;
     }
   }, [activeId]);
 
@@ -847,17 +854,29 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                           : "Crafting your perfect plan..."}
                       </p>
                       <p className="text-sm text-muted-foreground mb-6">
-                        {craftingPlan.progress < 15
-                          ? "Searching flights and routes..."
-                          : craftingPlan.progress < 30
-                          ? "Scouting the best hotels..."
-                          : craftingPlan.progress < 50
-                          ? "Curating must-see experiences..."
-                          : craftingPlan.progress < 65
-                          ? "Building your day-by-day itinerary..."
-                          : craftingPlan.progress < 80
-                          ? "Adding insider recommendations..."
-                          : "Polishing final details ✨"}
+                        {craftingPlanType === "local" ? (
+                          craftingPlan.progress < 20
+                            ? "Finding the best spots nearby..."
+                            : craftingPlan.progress < 40
+                            ? "Curating must-see experiences..."
+                            : craftingPlan.progress < 60
+                            ? "Building your day-by-day plan..."
+                            : craftingPlan.progress < 80
+                            ? "Adding insider tips & hidden gems..."
+                            : "Polishing final details ✨"
+                        ) : (
+                          craftingPlan.progress < 15
+                            ? "Searching flights and routes..."
+                            : craftingPlan.progress < 30
+                            ? "Scouting the best hotels..."
+                            : craftingPlan.progress < 50
+                            ? "Curating must-see experiences..."
+                            : craftingPlan.progress < 65
+                            ? "Building your day-by-day itinerary..."
+                            : craftingPlan.progress < 80
+                            ? "Adding insider recommendations..."
+                            : "Polishing final details ✨"
+                        )}
                       </p>
                       <div className="flex items-center gap-3 max-w-xs mx-auto">
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">

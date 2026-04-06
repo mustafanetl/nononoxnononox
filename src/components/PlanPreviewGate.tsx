@@ -2,6 +2,7 @@ import { Plane, Hotel, Sparkles, MapPin, Calendar, ArrowRight, Check, Lock, Star
 import { useState } from "react";
 import { getCityImage } from "@/utils/cityImages";
 import { TripPlanData } from "@/components/TripSummaryCard";
+import { getCurrencyPrices } from "@/utils/currencyLocale";
 
 interface PlanPreviewGateProps {
   data: TripPlanData;
@@ -21,6 +22,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
   const [selectedPlan, setSelectedPlan] = useState<"annual" | "monthly">("annual");
   const days = data.itinerary.length;
   const heroImg = enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl || getCityImage(destination, 800, 500);
+  const prices = getCurrencyPrices();
 
   // Show 2-3 activity names as teaser
   const teaserActivities = data.activities.slice(0, 3);
@@ -97,10 +99,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
               <span className="font-semibold text-xs">Annual</span>
               <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">Save 67%</span>
             </div>
-            <div className="text-right">
-              <span className="font-bold text-xs">$4.17<span className="text-muted-foreground font-normal">/mo</span></span>
-              <p className="text-[9px] text-muted-foreground">billed $49.99/yr</p>
-            </div>
+            <span className="font-bold text-xs">{prices.symbol}{prices.annualMonthly}<span className="text-muted-foreground font-normal">/mo</span></span>
           </button>
           <button
             onClick={() => setSelectedPlan("monthly")}
@@ -118,7 +117,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
               </div>
               <span className="font-semibold text-xs">Monthly</span>
             </div>
-            <span className="font-bold text-xs">$12.99<span className="text-muted-foreground font-normal">/mo</span></span>
+            <span className="font-bold text-xs">{prices.symbol}{prices.monthly}<span className="text-muted-foreground font-normal">/mo</span></span>
           </button>
         </div>
 
