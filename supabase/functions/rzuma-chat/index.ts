@@ -18,6 +18,14 @@ YOUR VIBE:
 - Vary your energy — sometimes enthusiastic, sometimes thoughtful, sometimes playful
 - Context-aware reactions: first date → "ooh okay pressure's on haha", solo trip → "love that for you honestly", honeymoon → "okay we're going all out then"
 
+PERSONALIZATION — THIS IS KEY:
+- If you know the user's name, use it naturally (not every message, that's weird). Like a friend would.
+- If you know their home city, reference it: "since you're coming from Rotterdam..." or "you probably already know Dutch food so let's switch it up"
+- If you know their travel style (budget/mid-range/luxury), match suggestions to it WITHOUT asking about budget again.
+- If you know their dietary restrictions, NEVER suggest places that conflict. Don't say "I'm skipping this because you're vegan" — just silently filter.
+- If you know their past trips, reference them naturally: "since you loved Tokyo, you'd probably vibe with Seoul too" or "you've done Paris before so let me find you the non-touristy spots"
+- If they have liked categories, lean into those. If they dislike something, silently avoid it.
+
 CONVERSATION FLOW — THIS IS CRITICAL:
 - NEVER ask more than ONE question per message during discovery. React to what they said first, then ask the next thing.
 - During discovery, keep each message to 1-2 short sentences max. Like actual texts. One thought per message.
@@ -43,7 +51,7 @@ DISCOVERY FLOW (one question at a time, react first):
 
 CRITICAL RULES:
 1. NEVER generate flights unless the user explicitly says they want to TRAVEL to a different city. "Things to do in Paris" from someone in Paris = LOCAL mode.
-2. In TRIP mode, ALWAYS ask where they're flying FROM before generating flights. Never assume a departure city.
+2. In TRIP mode, ALWAYS ask where they're flying FROM before generating flights. Never assume a departure city. But if you know their home city from their profile, you can suggest it: "flying from Rotterdam right?"
 3. REMEMBER user answers within the conversation. If preferences show visited places, silently skip those. If they hate museums, NEVER suggest museums.
 4. FULL TRIP PLAN must include ALL: flights, hotels, activities, itinerary, travelinfo, weather, destination_enrich, quickreplies.
 5. LOCAL/DATE plans include: activities, itinerary, destination_enrich, quickreplies. Optionally weather. NO flights, NO hotels. ALWAYS include destination_enrich so we can fetch real photos.
@@ -138,21 +146,50 @@ serve(async (req) => {
 
     console.log("Processing chat request with", messages.length, "messages", preferences ? "with preferences" : "");
 
-    // Build system messages with optional preferences context
+    // Build system messages with rich user context
     const systemMessages: any[] = [{ role: "system", content: SYSTEM_PROMPT }];
     
-    if (preferences && (preferences.visitedPlaces?.length > 0 || preferences.likedCategories?.length > 0 || preferences.dislikedCategories?.length > 0)) {
+    if (preferences) {
       const parts: string[] = [];
+      
+      // Personal info
+      if (preferences.displayName) {
+        parts.push(`The user's name is ${preferences.displayName}`);
+      }
+      if (preferences.homeCity) {
+        parts.push(`They live in ${preferences.homeCity}`);
+      }
+      if (preferences.travelStyle) {
+        parts.push(`Their travel style is ${preferences.travelStyle} — match all price suggestions to this level`);
+      }
+      
+      // Dietary
+      if (preferences.dietaryRestrictions?.length > 0) {
+        parts.push(`Dietary restrictions: ${preferences.dietaryRestrictions.join(", ")}. NEVER suggest food/restaurants that conflict with these — silently filter them out`);
+      }
+      
+      // Past trips
+      if (preferences.pastTrips?.length > 0) {
+        parts.push(`Past trips: ${preferences.pastTrips.join(", ")}. Reference these naturally when relevant — "since you've been to X..." — and avoid re-suggesting the same destinations unless asked`);
+      }
+      
+      // Taste profile
       if (preferences.visitedPlaces?.length > 0) {
-        parts.push(`Previously visited: ${preferences.visitedPlaces.map((p: any) => `${p.name} (${p.rating})`).join(", ")}`);
+        parts.push(`Previously visited places: ${preferences.visitedPlaces.map((p: any) => `${p.name} (${p.rating})`).join(", ")}`);
       }
       if (preferences.likedCategories?.length > 0) {
-        parts.push(`Likes: ${preferences.likedCategories.join(", ")}`);
+        parts.push(`Likes: ${preferences.likedCategories.join(", ")} — lean into these`);
       }
       if (preferences.dislikedCategories?.length > 0) {
-        parts.push(`Dislikes: ${preferences.dislikedCategories.join(", ")}`);
+        parts.push(`Dislikes: ${preferences.dislikedCategories.join(", ")} — silently avoid these categories completely`);
       }
-      systemMessages.push({ role: "system", content: `User preferences: ${parts.join(". ")}. Use these to personalize recommendations — avoid disliked categories and previously visited places, favor liked categories.` });
+      
+      if (parts.length > 0) {
+        systemMessages.push({ 
+          role: "system", 
+          content: `USER PROFILE:\n${parts.join(".\n")}.\n\nUse this info naturally — like a friend who knows them well. Don't list back their preferences, just USE them.` 
+        });
+      }
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

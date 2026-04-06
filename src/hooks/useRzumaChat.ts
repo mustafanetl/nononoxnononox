@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 type Message = {
   role: "user" | "assistant";
@@ -16,6 +17,11 @@ export type UserPreferences = {
   visitedPlaces: { name: string; rating: string; category: string }[];
   likedCategories: string[];
   dislikedCategories: string[];
+  homeCity: string;
+  travelStyle: string;
+  dietaryRestrictions: string[];
+  pastTrips: string[];
+  displayName: string;
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rzuma-chat`;
@@ -23,6 +29,17 @@ const STORAGE_KEY = "jolliday-conversations";
 const PREFS_KEY = "jolliday-preferences";
 
 const generateId = () => crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+
+const defaultPrefs = (): UserPreferences => ({
+  visitedPlaces: [],
+  likedCategories: [],
+  dislikedCategories: [],
+  homeCity: "",
+  travelStyle: "",
+  dietaryRestrictions: [],
+  pastTrips: [],
+  displayName: "",
+});
 
 const loadConversations = (): Conversation[] => {
   try {
@@ -38,8 +55,9 @@ const saveConversations = (convos: Conversation[]) => {
 const loadPreferences = (): UserPreferences => {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    return raw ? JSON.parse(raw) : { visitedPlaces: [], likedCategories: [], dislikedCategories: [] };
-  } catch { return { visitedPlaces: [], likedCategories: [], dislikedCategories: [] }; }
+    const parsed = raw ? JSON.parse(raw) : {};
+    return { ...defaultPrefs(), ...parsed };
+  } catch { return defaultPrefs(); }
 };
 
 const savePreferences = (prefs: UserPreferences) => {
@@ -59,18 +77,93 @@ export const useRzumaChat = () => {
   const [preferences, setPreferences] = useState<UserPreferences>(loadPreferences);
   const convosRef = useRef(conversations);
   convosRef.current = conversations;
+  const dbSyncedRef = useRef(false);
 
   useEffect(() => { saveConversations(conversations); }, [conversations]);
   useEffect(() => { savePreferences(preferences); }, [preferences]);
+
+  // Load preferences from DB on mount (if user is logged in)
+  useEffect(() => {
+    if (dbSyncedRef.current) return;
+    const loadFromDb = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      dbSyncedRef.current = true;
+
+      // Load profile display name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      // Load user preferences from DB
+      const { data: dbPrefs } = await supabase
+        .from("user_preferences")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (dbPrefs || profile) {
+        setPreferences((prev) => {
+          const merged: UserPreferences = { ...prev };
+          if (profile?.display_name) merged.displayName = profile.display_name;
+          if (dbPrefs) {
+            merged.homeCity = (dbPrefs as any).home_city || prev.homeCity || "";
+            merged.travelStyle = (dbPrefs as any).travel_style || prev.travelStyle || "";
+            merged.dietaryRestrictions = (dbPrefs as any).dietary_restrictions || prev.dietaryRestrictions || [];
+            merged.pastTrips = (dbPrefs as any).past_trips || prev.pastTrips || [];
+            // Merge visited/liked/disliked — DB takes priority if non-empty
+            const dbVisited = (dbPrefs.visited_places as any[]) || [];
+            const dbLiked = (dbPrefs.liked_categories as string[]) || [];
+            const dbDisliked = (dbPrefs.disliked_categories as string[]) || [];
+            if (dbVisited.length > 0) merged.visitedPlaces = dbVisited;
+            if (dbLiked.length > 0) merged.likedCategories = dbLiked;
+            if (dbDisliked.length > 0) merged.dislikedCategories = dbDisliked;
+          }
+          return merged;
+        });
+      }
+    };
+    loadFromDb();
+  }, []);
 
   const activeConvo = conversations.find(c => c.id === activeId);
   const messages = activeConvo?.messages || [];
 
   const updatePreferences = useCallback((updater: (prev: UserPreferences) => UserPreferences) => {
-    setPreferences(prev => {
-      const next = updater(prev);
-      return next;
-    });
+    setPreferences(prev => updater(prev));
+  }, []);
+
+  // Save preferences to DB (debounced via caller)
+  const syncPrefsToDb = useCallback(async (prefs: UserPreferences) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+
+    const { data: existing } = await supabase
+      .from("user_preferences")
+      .select("id")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+
+    const payload = {
+      user_id: session.user.id,
+      home_city: prefs.homeCity || null,
+      travel_style: prefs.travelStyle || null,
+      dietary_restrictions: prefs.dietaryRestrictions,
+      past_trips: prefs.pastTrips,
+      display_name: prefs.displayName || null,
+      visited_places: prefs.visitedPlaces,
+      liked_categories: prefs.likedCategories,
+      disliked_categories: prefs.dislikedCategories,
+      updated_at: new Date().toISOString(),
+    } as any;
+
+    if (existing) {
+      await supabase.from("user_preferences").update(payload).eq("user_id", session.user.id);
+    } else {
+      await supabase.from("user_preferences").insert(payload);
+    }
   }, []);
 
   const newChat = useCallback(() => {
@@ -143,9 +236,20 @@ export const useRzumaChat = () => {
       const currentMessages = [...(convosRef.current.find(c => c.id === currentId)?.messages || []), userMsg]
         .filter(m => m.role === "user" || m.role === "assistant");
 
-      // Build preferences context
-      const prefsContext = preferences.visitedPlaces.length > 0 || preferences.likedCategories.length > 0 || preferences.dislikedCategories.length > 0
-        ? preferences : undefined;
+      // Build full preferences context for the AI
+      const prefsContext = {
+        displayName: preferences.displayName || undefined,
+        homeCity: preferences.homeCity || undefined,
+        travelStyle: preferences.travelStyle || undefined,
+        dietaryRestrictions: preferences.dietaryRestrictions?.length > 0 ? preferences.dietaryRestrictions : undefined,
+        pastTrips: preferences.pastTrips?.length > 0 ? preferences.pastTrips : undefined,
+        visitedPlaces: preferences.visitedPlaces?.length > 0 ? preferences.visitedPlaces : undefined,
+        likedCategories: preferences.likedCategories?.length > 0 ? preferences.likedCategories : undefined,
+        dislikedCategories: preferences.dislikedCategories?.length > 0 ? preferences.dislikedCategories : undefined,
+      };
+
+      // Only send if there's at least some data
+      const hasPrefs = Object.values(prefsContext).some(v => v !== undefined);
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -153,7 +257,7 @@ export const useRzumaChat = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: currentMessages, preferences: prefsContext }),
+        body: JSON.stringify({ messages: currentMessages, preferences: hasPrefs ? prefsContext : undefined }),
       });
 
       if (!resp.ok) {
@@ -249,6 +353,7 @@ export const useRzumaChat = () => {
     openSavedTrip,
     preferences,
     updatePreferences,
+    syncPrefsToDb,
     exportLocalData,
   };
 };
