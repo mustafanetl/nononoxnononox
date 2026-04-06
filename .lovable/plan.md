@@ -1,45 +1,89 @@
 
 
-# Fix: Bulletproof 0→100% Crafting Animation
+# Stripe Payments Integration — Full Subscription Flow
 
-## Root Cause
+## Overview
 
-The progress animation effect (line 309) uses a local `progress` variable starting at 0, but `craftingActive` can flicker due to React state batching — when streaming ends fast, the cleanup effect at line 288 may fire in the same render cycle as the detection effect at line 249, causing `craftingActive` to go true→false almost instantly. The 12s `setTimeout` at line 274 also runs inside the detection effect, but if the component re-renders and the effect re-fires, the timer reference is lost.
+Connect Stripe to handle real payments: subscribe, upgrade, cancel with retention discount ($2/mo first month), and sync subscription status.
 
-## Fix Strategy
+## Architecture
 
-Replace the current fragile multi-effect approach with a single, self-contained animation controller:
+```text
+User clicks "Start Trial" → Edge Function creates Stripe Checkout → User pays
+Stripe webhook → Edge Function updates `subscriptions` table → App reads status
+User cancels → Cancellation modal (why?) → Offer $2/mo discount → If declined, cancel via Edge Function
+```
 
-### `src/pages/Chat.tsx`
+## Step-by-step
 
-**1. Replace the 3 separate effects (lines 249-318) with one unified crafting controller:**
+### 1. Enable Stripe
+Use the `stripe--enable_stripe` tool to set up Stripe and collect the secret key.
 
-- When plan blocks are first detected in a new assistant message:
-  - Set `craftingActive = true`
-  - Start a single `setInterval` that increments progress using a deterministic curve (not random): `progress = Math.min(90, progress + (90 - progress) * 0.04)` every 300ms — this gives a smooth ease-out from 0→90 over ~12s
-  - Store the interval ID in a ref so it's never lost
+### 2. Create Stripe Products & Prices
+Via edge function or Stripe tool:
+- **Monthly**: $9.99/mo with 3-day free trial
+- **Annual**: $49.99/yr (~$4.17/mo) with 3-day free trial
+- **Discount Monthly**: $2.00 first month, then $9.99/mo (retention coupon)
 
-- When streaming ends (`isLoading` goes false while crafting is active):
-  - Set a `streamingDone` ref to true
-  - Do NOT stop crafting yet — wait for progress to reach 90+
+### 3. Edge Function: `create-checkout`
+- Accepts `plan` (monthly/annual) and `user_id`
+- Creates or retrieves Stripe customer (store `stripe_customer_id` in subscriptions table)
+- Creates Checkout Session with trial_period_days=3, success/cancel URLs
+- Returns checkout URL
 
-- A separate check inside the same interval: when `streamingDone` is true AND progress >= 88:
-  - Quickly ramp to 100 (set progress = 100)
-  - After 600ms delay, set `craftingActive = false` and clean up
+### 4. Edge Function: `stripe-webhook`
+- Listens for `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+- On checkout complete: upsert `subscriptions` table with plan, status=active, stripe_subscription_id
+- On subscription canceled/deleted: update status to canceled
+- On subscription updated: sync plan/status
 
-- If 12 seconds pass and streaming hasn't ended yet, cap at 90 and hold there until streaming completes
+### 5. Edge Function: `cancel-subscription`
+- Accepts `user_id` and optional `discount` flag
+- If `discount=true`: apply $2/mo coupon to current subscription instead of canceling
+- If no discount: cancel subscription at period end via Stripe API
 
-**2. Ensure `craftingPlanType` updates on final content:**
-- When `streamingDone` fires, re-check for flights/hotels blocks in the final message content to set the correct plan type
+### 6. Database Migration
+Add columns to `subscriptions` table:
+- `stripe_customer_id` (text, nullable)
+- `stripe_subscription_id` (text, nullable)
+- `cancel_reason` (text, nullable)
+- Add UPDATE RLS policy for authenticated users on own row
 
-**Key invariants:**
-- Progress ALWAYS goes 0 → ~90 over 12 seconds minimum (no jumping)
-- Progress only hits 100 after both: timer ≥ 12s AND streaming done
-- Single interval, single timer, stored in refs — no races
+### 7. Frontend Changes
+
+**`src/components/PaywallModal.tsx`** & **`src/components/PlanPreviewGate.tsx`**:
+- CTA button calls `create-checkout` edge function with selected plan
+- Redirects to Stripe Checkout URL
+
+**`src/hooks/useSubscription.ts`**:
+- Also return `stripe_subscription_id` for cancel flow
+
+**`src/pages/Settings.tsx`**:
+- Add "Manage Subscription" button for premium users
+- "Cancel Subscription" opens a cancellation modal
+
+**New: `src/components/CancelSubscriptionModal.tsx`**:
+- Step 1: Ask why they're canceling (too expensive, not using it, found alternative, other)
+- Step 2: Offer retention deal — "$2 for your next month, then $9.99/mo"
+- Accept discount → calls `cancel-subscription` with discount=true
+- Decline → calls `cancel-subscription` to cancel at period end
+- Stores cancel_reason in DB
+
+**`src/components/PricingSection.tsx`**:
+- CTA buttons call checkout flow instead of just linking to /auth
 
 ## Files
 
 | File | Change |
 |------|--------|
-| `src/pages/Chat.tsx` | Replace 3 crafting effects with 1 unified controller using refs for interval/timer |
+| `supabase/functions/create-checkout/index.ts` | New — creates Stripe Checkout session |
+| `supabase/functions/stripe-webhook/index.ts` | New — handles Stripe webhook events |
+| `supabase/functions/cancel-subscription/index.ts` | New — cancel or apply retention discount |
+| `src/components/CancelSubscriptionModal.tsx` | New — cancellation flow with retention offer |
+| `src/components/PaywallModal.tsx` | Wire CTA to Stripe checkout |
+| `src/components/PlanPreviewGate.tsx` | Wire CTA to Stripe checkout |
+| `src/components/PricingSection.tsx` | Wire CTAs to Stripe checkout |
+| `src/pages/Settings.tsx` | Add manage/cancel subscription UI |
+| `src/hooks/useSubscription.ts` | Return stripe_subscription_id |
+| Migration | Add stripe columns to subscriptions table |
 
