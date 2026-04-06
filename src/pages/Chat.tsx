@@ -598,11 +598,29 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
                             {/* Full plan → show summary card; otherwise show inline cards */}
                             {isFullPlan && destination ? (
-                              <TripSummaryCard
-                                data={parsed as TripPlanData}
-                                destination={destination}
-                                enrichedImages={enrichData?.images}
-                              />
+                              isPremium ? (
+                                <TripSummaryCard
+                                  data={parsed as TripPlanData}
+                                  destination={destination}
+                                  enrichedImages={enrichData?.images}
+                                />
+                              ) : (
+                                <PlanPreviewGate
+                                  data={parsed as TripPlanData}
+                                  destination={destination}
+                                  onUpgrade={() => {
+                                    setPaywallContext({
+                                      destination,
+                                      tripStats: {
+                                        activities: parsed.activities.length,
+                                        hotels: parsed.hotels.length,
+                                        days: parsed.itinerary.length,
+                                      },
+                                    });
+                                    setShowPaywall(true);
+                                  }}
+                                />
+                              )
                             ) : (
                               <>
                                 {parsed.timeline.length > 0 && (
