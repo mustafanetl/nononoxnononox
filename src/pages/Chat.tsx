@@ -747,7 +747,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             <Compass className="h-4 w-4 text-background" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            {parsed.text && (
+                            {parsed.text && !(isLastAssistant && isCraftingPlan) && (
                               <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">
                                 <ReactMarkdown>{parsed.text}</ReactMarkdown>
                               </div>
@@ -755,7 +755,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
 
                             {/* Full plan → show summary card; otherwise show inline cards */}
-                            {isFullPlan && destination ? (
+                            {/* Hide plan cards while crafting animation is still running */}
+                            {isFullPlan && destination && !(isLastAssistant && isCraftingPlan) ? (
                               isPremium ? (
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
