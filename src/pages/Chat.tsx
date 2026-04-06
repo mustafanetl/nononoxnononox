@@ -685,8 +685,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {isLoading && (!messages.length || messages[messages.length - 1]?.role === "user" || !parsedMessages[parsedMessages.length - 1]?.parsed?.text) && (
-                  <div className="flex gap-3 animate-fade-in">
+                {isLoading && (isThinking || !messages.length || messages[messages.length - 1]?.role === "user" || !parsedMessages[parsedMessages.length - 1]?.parsed?.text) && (
+                  <div className={`flex gap-3 ${isThinking ? 'animate-fade-in' : 'typing-indicator-fade-out'}`}>
                     <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0 animate-pulse">
                       <Compass className="h-4 w-4 text-background" />
                     </div>

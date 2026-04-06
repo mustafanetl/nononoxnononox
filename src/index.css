@@ -121,10 +121,12 @@
 
   @keyframes typing {
     0%, 60%, 100% {
-      opacity: 0.3;
+      opacity: 0.2;
+      transform: scale(0.85);
     }
     30% {
       opacity: 1;
+      transform: scale(1.1);
     }
   }
 
@@ -133,15 +135,25 @@
   }
 
   .typing-dot {
-    animation: typing 1.4s infinite;
+    animation: typing 1.6s infinite;
+    transition: opacity 0.3s ease;
   }
 
   .typing-dot:nth-child(2) {
-    animation-delay: 0.2s;
+    animation-delay: 0.25s;
   }
 
   .typing-dot:nth-child(3) {
-    animation-delay: 0.4s;
+    animation-delay: 0.5s;
+  }
+
+  @keyframes fade-out-up {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-4px); }
+  }
+
+  .typing-indicator-fade-out {
+    animation: fade-out-up 0.4s ease-out forwards;
   }
 
   @keyframes glow-pulse {
