@@ -38,8 +38,8 @@ import { toast } from "sonner";
 // Enrichment cache to avoid re-fetching
 const enrichmentCache: Record<string, any> = {};
 
-const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[]) => {
-  const cacheKey = `${destination}-${travelMonth || ""}`;
+const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[], imageOnly?: boolean) => {
+  const cacheKey = imageOnly ? `${destination}-imageOnly` : `${destination}-${travelMonth || ""}`;
   if (enrichmentCache[cacheKey]) return enrichmentCache[cacheKey];
 
   try {
@@ -51,7 +51,7 @@ const fetchEnrichment = async (destination: string, travelMonth?: string, activi
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ destination, travelMonth, activities: activityNames }),
+        body: JSON.stringify({ destination, travelMonth, activities: activityNames, imageOnly }),
       }
     );
     if (!res.ok) return null;
@@ -229,6 +229,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [searchParams] = useSearchParams();
   const initialQuerySent = useRef(false);
   const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
+  const [craftingPlan, setCraftingPlan] = useState<{ destination: string; progress: number } | null>(null);
   const prevActiveId = useRef(activeId);
   const prefsSynced = useRef(false);
 
@@ -251,23 +252,32 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     }
   }, [activeId]);
 
-  // Auto-enrich destinations only when streaming is done AND user is premium
+  // Auto-enrich destinations when streaming is done
+  // Premium: full enrichment. Free: imageOnly (1 Google photo for the paywall card)
   useEffect(() => {
     if (isLoading) return;
-    if (!isPremium) return; // Skip API calls for free users
     parsedMessages.forEach((msg) => {
       if (msg.role !== "assistant") return;
       if (msg.parsed.destinationEnrich && !enrichedData[msg.parsed.destinationEnrich.destination]) {
         const { destination, travelMonth } = msg.parsed.destinationEnrich;
-        const activityNames = msg.parsed.activities.map((a: any) => a.name).filter(Boolean);
-        fetchEnrichment(destination, travelMonth, activityNames).then((data) => {
-          if (data) {
-            setEnrichedData((prev) => ({ ...prev, [destination]: data }));
-            if (data.images && data.images.length > 0) {
-              setWikimediaImage(destination, data.images[0].thumbUrl || data.images[0].url);
+        if (isPremium) {
+          const activityNames = msg.parsed.activities.map((a: any) => a.name).filter(Boolean);
+          fetchEnrichment(destination, travelMonth, activityNames).then((data) => {
+            if (data) {
+              setEnrichedData((prev) => ({ ...prev, [destination]: data }));
+              if (data.images && data.images.length > 0) {
+                setWikimediaImage(destination, data.images[0].thumbUrl || data.images[0].url);
+              }
             }
-          }
-        });
+          });
+        } else {
+          // Free users: just fetch 1 real Google image for the paywall card
+          fetchEnrichment(destination, undefined, undefined, true).then((data) => {
+            if (data) {
+              setEnrichedData((prev) => ({ ...prev, [destination]: data }));
+            }
+          });
+        }
       }
     });
   }, [parsedMessages, isLoading, isPremium]);
