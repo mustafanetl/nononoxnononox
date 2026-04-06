@@ -34,8 +34,8 @@ import { toast } from "sonner";
 // Enrichment cache to avoid re-fetching
 const enrichmentCache: Record<string, any> = {};
 
-const fetchEnrichment = async (destination: string, travelMonth?: string) => {
-  const cacheKey = `${destination}-${travelMonth || ""}`;
+const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[]) => {
+  const cacheKey = `${destination}-${travelMonth || ""}-${(activityNames || []).join(",")}`;
   if (enrichmentCache[cacheKey]) return enrichmentCache[cacheKey];
 
   try {
@@ -47,7 +47,7 @@ const fetchEnrichment = async (destination: string, travelMonth?: string) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ destination, travelMonth }),
+        body: JSON.stringify({ destination, travelMonth, activities: activityNames }),
       }
     );
     if (!res.ok) return null;
