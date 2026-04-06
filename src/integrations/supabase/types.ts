@@ -106,25 +106,40 @@ export type Database = {
       }
       user_preferences: {
         Row: {
+          dietary_restrictions: Json | null
           disliked_categories: Json | null
+          display_name: string | null
+          home_city: string | null
           id: string
           liked_categories: Json | null
+          past_trips: Json | null
+          travel_style: string | null
           updated_at: string | null
           user_id: string
           visited_places: Json | null
         }
         Insert: {
+          dietary_restrictions?: Json | null
           disliked_categories?: Json | null
+          display_name?: string | null
+          home_city?: string | null
           id?: string
           liked_categories?: Json | null
+          past_trips?: Json | null
+          travel_style?: string | null
           updated_at?: string | null
           user_id: string
           visited_places?: Json | null
         }
         Update: {
+          dietary_restrictions?: Json | null
           disliked_categories?: Json | null
+          display_name?: string | null
+          home_city?: string | null
           id?: string
           liked_categories?: Json | null
+          past_trips?: Json | null
+          travel_style?: string | null
           updated_at?: string | null
           user_id?: string
           visited_places?: Json | null
