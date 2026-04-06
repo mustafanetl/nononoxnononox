@@ -550,6 +550,32 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     if (enrichData.hotels && enrichData.hotels.length > 0) {
                       parsed.hotels = enrichData.hotels;
                     }
+                    // Assign Google Places photos to activities
+                    if (enrichData.places && enrichData.places.length > 0) {
+                      const places = enrichData.places;
+                      parsed.activities = parsed.activities.map((act: ActivityData, idx: number) => {
+                        // Try fuzzy name match first
+                        const match = places.find((p: any) =>
+                          p.title && act.name &&
+                          (p.title.toLowerCase().includes(act.name.toLowerCase()) ||
+                           act.name.toLowerCase().includes(p.title.toLowerCase()))
+                        );
+                        if (match?.thumbnail) {
+                          return { ...act, realPhoto: match.thumbnail, isReal: true };
+                        }
+                        // Fallback: cycle through available place photos
+                        const fallbackPlace = places[idx % places.length];
+                        if (fallbackPlace?.thumbnail) {
+                          return { ...act, realPhoto: fallbackPlace.thumbnail, isReal: true };
+                        }
+                        // Cycle through destination images
+                        if (enrichData.images && enrichData.images.length > 0) {
+                          const img = enrichData.images[idx % enrichData.images.length];
+                          return { ...act, realPhoto: img.url || img.thumbUrl, isReal: true };
+                        }
+                        return act;
+                      });
+                    }
                   }
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
