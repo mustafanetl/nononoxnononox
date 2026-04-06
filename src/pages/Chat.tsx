@@ -244,14 +244,14 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     }
   }, [activeId]);
 
-  // Auto-enrich destinations only when streaming is done
+  // Auto-enrich destinations only when streaming is done AND user is premium
   useEffect(() => {
     if (isLoading) return;
+    if (!isPremium) return; // Skip API calls for free users
     parsedMessages.forEach((msg) => {
       if (msg.role !== "assistant") return;
       if (msg.parsed.destinationEnrich && !enrichedData[msg.parsed.destinationEnrich.destination]) {
         const { destination, travelMonth } = msg.parsed.destinationEnrich;
-        // Extract activity names from this message to do per-activity photo lookup
         const activityNames = msg.parsed.activities.map((a: any) => a.name).filter(Boolean);
         fetchEnrichment(destination, travelMonth, activityNames).then((data) => {
           if (data) {
@@ -263,7 +263,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         });
       }
     });
-  }, [parsedMessages, isLoading]);
+  }, [parsedMessages, isLoading, isPremium]);
 
   // Auto-send query from URL params
   useEffect(() => {
