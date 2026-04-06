@@ -9,7 +9,7 @@ interface PaywallModalProps {
 }
 
 const plans = [
-  { name: "annual", price: "$49.99", period: "/yr", monthly: "$4.17/mo", label: "Annual", badge: "Save 67%" },
+  { name: "annual", price: "$4.17", period: "/mo", monthly: "billed $49.99/yr", label: "Annual", badge: "Save 67%" },
   { name: "monthly", price: "$12.99", period: "/mo", monthly: null, label: "Monthly", badge: null },
 ];
 

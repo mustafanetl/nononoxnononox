@@ -98,8 +98,8 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
               <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">Save 67%</span>
             </div>
             <div className="text-right">
-              <span className="font-bold text-xs">$49.99<span className="text-muted-foreground font-normal">/yr</span></span>
-              <p className="text-[9px] text-muted-foreground">$4.17/mo</p>
+              <span className="font-bold text-xs">$4.17<span className="text-muted-foreground font-normal">/mo</span></span>
+              <p className="text-[9px] text-muted-foreground">billed $49.99/yr</p>
             </div>
           </button>
           <button
