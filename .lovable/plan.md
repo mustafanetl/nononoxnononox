@@ -1,25 +1,37 @@
 
 
-# Fix: Currency Display and Checkout Navigation
+# Fix: Plan Content and Free Trial CTA Showing Before 100% Crafting Completes
 
-## Problems Identified
+## Problem
 
-1. **Prices showing in £ (pounds)**: The `getCurrencyPrices()` function in `src/utils/currencyLocale.ts` detects your browser locale as `en-gb` and shows GBP prices (£8.99/£3.49). However, the actual Stripe prices are in USD. This is misleading.
+Two things appear prematurely for free users while the crafting animation (0-100%) is still running:
 
-2. **Checkout button does nothing**: The `startCheckout()` function uses `window.open(url, "_blank")` inside an async callback. Modern browsers block popups that aren't triggered by a direct user click. Since there's an `await` (network call) between the click and `window.open`, the browser silently blocks it.
+1. **Plan cards (PlanPreviewGate)** can flash before the animation reaches 100% — the `isCraftingPlan` guard on line 759 hides cards for the *last* message, but `planGenerated` gets set to `true` as soon as streaming ends (line 367-380), which can happen before the animation finishes. This causes the bottom CTA to appear early too.
 
-## Changes
+2. **"3 days free trial" CTA banner** (line 951) replaces the chat input as soon as `planGenerated` is `true`, which happens when streaming ends — not when the crafting animation completes.
 
-### 1. Fix checkout navigation (`src/lib/stripeCheckout.ts`)
-- Change `window.open(data.url, "_blank")` to `window.location.href = data.url` so it navigates in the same tab instead of trying to open a popup (which gets blocked).
+## Root Cause
 
-### 2. Fix currency display (`src/utils/currencyLocale.ts`)
-- Since the Stripe products are priced in USD only, remove the locale-based currency detection and always show USD prices. This prevents showing £8.99 when Stripe will actually charge $9.99.
-- Alternatively, if multi-currency is desired later, this can be revisited with Stripe multi-currency pricing.
+`planGenerated` is set based on `!isLoading` (streaming done), but the crafting animation runs independently for up to 12 seconds after streaming ends. The two states are not synchronized.
+
+## Fix
+
+### 1. Gate `planGenerated` behind crafting completion (`src/pages/Chat.tsx`)
+
+Change the `planGenerated` detection effect (lines 367-380) to also require `!isCraftingPlan`:
+
+```typescript
+if (isPremium || isLoading || isCraftingPlan) return;
+```
+
+This ensures `planGenerated` only becomes `true` after both streaming AND the crafting animation are fully done.
+
+### 2. Ensure the plan cards remain hidden during crafting
+
+The existing guard on line 759 (`!(isLastAssistant && isCraftingPlan)`) already handles hiding the last message's cards. Combined with the fix above, `planGenerated` won't flip early, so the inline lock cards and the bottom CTA banner will also stay hidden until 100%.
 
 ### Files Modified
 | File | Change |
 |---|---|
-| `src/lib/stripeCheckout.ts` | `window.location.href` instead of `window.open` |
-| `src/utils/currencyLocale.ts` | Always return USD prices |
+| `src/pages/Chat.tsx` | Add `isCraftingPlan` check to the `planGenerated` effect (line 368) |
 
