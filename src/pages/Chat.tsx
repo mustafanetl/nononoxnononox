@@ -365,7 +365,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
   // Detect when a full plan has been generated for free users
   useEffect(() => {
-    if (isPremium || isLoading) return;
+    if (isPremium || isLoading || isCraftingPlan) return;
     const hasFullPlan = parsedMessages.some((msg) => {
       if (msg.role !== "assistant") return false;
       const p = msg.parsed;
@@ -377,7 +377,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       return blockTypes >= 2;
     });
     if (hasFullPlan) setPlanGenerated(true);
-  }, [parsedMessages, isLoading, isPremium]);
+  }, [parsedMessages, isLoading, isPremium, isCraftingPlan]);
 
   // Auto-enrich destinations when streaming is done
   // Premium: full enrichment. Free: imageOnly (1 Google photo for the paywall card)
