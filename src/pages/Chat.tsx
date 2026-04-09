@@ -781,7 +781,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                   }}
                                 />
                               )
-                            ) : (
+                            ) : !(isLastAssistant && isCraftingPlan) && (
                               <>
                                 {/* If plan already generated and user is free, gate ALL card blocks */}
                                 {planGenerated && !isPremium ? (
