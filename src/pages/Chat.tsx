@@ -724,6 +724,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   }
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
+                  // Hide the latest assistant response entirely while streaming or crafting (free users only)
+                  const hideLatestResponse = isLastAssistant && !isPremium && (isLoading || isCraftingPlan);
 
                   // Determine if this is a "full trip plan" (has multiple card types)
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
