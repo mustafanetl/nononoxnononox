@@ -1,37 +1,31 @@
 
 
-# Fix: Plan Content and Free Trial CTA Showing Before 100% Crafting Completes
+# Fix: Hide All Content During Crafting Animation
 
 ## Problem
-
-Two things appear prematurely for free users while the crafting animation (0-100%) is still running:
-
-1. **Plan cards (PlanPreviewGate)** can flash before the animation reaches 100% — the `isCraftingPlan` guard on line 759 hides cards for the *last* message, but `planGenerated` gets set to `true` as soon as streaming ends (line 367-380), which can happen before the animation finishes. This causes the bottom CTA to appear early too.
-
-2. **"3 days free trial" CTA banner** (line 951) replaces the chat input as soon as `planGenerated` is `true`, which happens when streaming ends — not when the crafting animation completes.
+When streaming begins, individual cards (flights, hotels, activities, travel info, weather, etc.) render progressively in real-time. The crafting animation only starts once plan blocks are detected in the stream, but by then some content has already flashed on screen. The user sees raw data briefly before the crafting overlay appears.
 
 ## Root Cause
+The `isCraftingPlan` guard only hides:
+- The text content (line 750)
+- The full-plan summary card (line 759)
 
-`planGenerated` is set based on `!isLoading` (streaming done), but the crafting animation runs independently for up to 12 seconds after streaming ends. The two states are not synchronized.
+But the **else branch** (lines 797-847) renders individual inline cards (timeline, flights, hotels, activities, itinerary, travel info, weather) without any crafting guard. These render during streaming before the crafting animation triggers.
 
 ## Fix
 
-### 1. Gate `planGenerated` behind crafting completion (`src/pages/Chat.tsx`)
+### `src/pages/Chat.tsx` — One change
 
-Change the `planGenerated` detection effect (lines 367-380) to also require `!isCraftingPlan`:
+Wrap the entire else branch (lines 784-849) with an additional `isCraftingPlan` check for the last assistant message. Specifically, add `!(isLastAssistant && isCraftingPlan)` to the condition on line 784 so the individual cards are also hidden while crafting is active:
 
-```typescript
-if (isPremium || isLoading || isCraftingPlan) return;
+```tsx
+) : !(isLastAssistant && isCraftingPlan) && (
 ```
 
-This ensures `planGenerated` only becomes `true` after both streaming AND the crafting animation are fully done.
-
-### 2. Ensure the plan cards remain hidden during crafting
-
-The existing guard on line 759 (`!(isLastAssistant && isCraftingPlan)`) already handles hiding the last message's cards. Combined with the fix above, `planGenerated` won't flip early, so the inline lock cards and the bottom CTA banner will also stay hidden until 100%.
+This ensures that when the crafting animation is running, the last assistant message shows **nothing** — no text, no cards, no travel info — until the animation completes at 100%.
 
 ### Files Modified
 | File | Change |
 |---|---|
-| `src/pages/Chat.tsx` | Add `isCraftingPlan` check to the `planGenerated` effect (line 368) |
+| `src/pages/Chat.tsx` | Add crafting guard to the inline cards branch (~line 784) |
 
