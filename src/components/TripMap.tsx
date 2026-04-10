@@ -29,7 +29,7 @@ const TripMap = ({ points, activeDay, onMarkerClick }: Props) => {
       await import("leaflet/dist/leaflet.css");
 
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
+        try { mapInstanceRef.current.remove(); } catch {}
       }
 
       const map = L.map(mapRef.current!, { zoomControl: false }).setView(
@@ -50,7 +50,7 @@ const TripMap = ({ points, activeDay, onMarkerClick }: Props) => {
     loadMap();
 
     return () => {
-      mapInstanceRef.current?.remove();
+      try { mapInstanceRef.current?.remove(); } catch {}
       mapInstanceRef.current = null;
       markersRef.current = [];
     };
@@ -61,6 +61,7 @@ const TripMap = ({ points, activeDay, onMarkerClick }: Props) => {
     if (!mapInstanceRef.current) return;
 
     const updateAsync = async () => {
+      if (!mapInstanceRef.current) return;
       const L = await import("leaflet");
       updateMarkers(L, mapInstanceRef.current);
     };
