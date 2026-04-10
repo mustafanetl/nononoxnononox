@@ -1,35 +1,30 @@
 
-Goal: make the latest AI reply stay completely hidden until the crafting flow is ready, so users never see raw text, JSON, cards, or the free-trial UI before 100%.
 
-Why this still happens:
-- In `src/pages/Chat.tsx`, the last assistant message is only hidden once `isCraftingPlan` becomes true.
-- But the response starts streaming before that, so intro text and partial fenced-block data can render first.
-- Also, `hasStreamedContent` turns off the typing state as soon as the first chunk arrives, which creates the “flash” window you showed in the screenshot.
+# Fix: Crafting Animation Should Only Play Once Per Plan
 
-Implementation plan:
-1. Add one shared guard in `src/pages/Chat.tsx` for the latest assistant reply, e.g. a `hideLatestAssistantResponse` condition.
-   - It should be true while the newest assistant message is still streaming.
-   - It should also stay true while the crafting animation is active.
-   - This will block all early rendering from the current response.
+## Problem
+When you reopen a chat or refresh the page, the 12-second "Crafting your perfect plan..." animation plays again for messages that were already fully loaded. It should only play once — during the initial streaming of a new plan.
 
-2. Apply that guard to the full assistant message render path.
-   - Prevent the latest assistant text from rendering.
-   - Prevent inline cards, summary cards, quick replies, preview/paywall cards, and any parsed block output from rendering.
-   - Keep the existing free-plan gating as a secondary safety layer.
+## Root Cause
+The `lastCraftedMsgIndex` ref starts at `-1` on every mount. When the component loads with existing messages containing plan blocks (`activities`, `itinerary`), the effect on line 250 detects them and triggers the full crafting animation again.
 
-3. Fix the placeholder logic so the UI shows a loading/crafting state instead of a blank gap.
-   - Update the typing/loading condition so it remains visible while the latest assistant response is intentionally hidden.
-   - Then transition into the crafting animation once crafting starts.
-   - Result: user sees loader/crafting only, never partial content.
+## Fix
 
-4. Verify the specific failure case from your screenshot.
-   - No intro paragraph before crafting.
-   - No raw `[{ "id": ... }]` JSON before crafting.
-   - No flight/hotel/activity cards before crafting.
-   - No free-trial CTA before the 100% reveal.
+### `src/pages/Chat.tsx` — Two changes
 
-Files to update:
-- `src/pages/Chat.tsx`
+1. **Skip crafting for messages that are already complete on mount**: Add a ref that tracks whether the initial render has been processed. On first render, set `lastCraftedMsgIndex` to the current last message index so the effect doesn't trigger for pre-existing messages.
 
-Technical note:
-This is primarily a rendering-state issue, not a backend issue. The parser is designed to tolerate incomplete streamed blocks, so the safest fix is to stop rendering the newest assistant response until it is fully allowed to appear.
+2. **Only trigger crafting while actively streaming**: Add `isLoading` as a condition for starting the crafting animation. If `isLoading` is false (page load, chat switch), the plan blocks are already complete and don't need the animation.
+
+The key change in the effect (line 260):
+```typescript
+if (hasPlanBlocks && isLoading && lastIdx !== lastCraftedMsgIndex.current && !craftingIntervalRef.current) {
+```
+
+Adding `isLoading` ensures crafting only starts during active streaming — never on page load or chat switch with existing data.
+
+### Files Modified
+| File | Change |
+|---|---|
+| `src/pages/Chat.tsx` | Add `isLoading` guard to crafting trigger condition (~line 260) |
+
