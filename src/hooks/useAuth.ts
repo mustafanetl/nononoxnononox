@@ -7,9 +7,27 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // Send welcome email on first signup
+      if (event === 'SIGNED_IN' && session?.user) {
+        const isNewUser = new Date(session.user.created_at).getTime() > Date.now() - 60000;
+        if (isNewUser) {
+          const name = session.user.user_metadata?.display_name || 
+                       session.user.user_metadata?.full_name ||
+                       session.user.email?.split('@')[0];
+          supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'welcome',
+              recipientEmail: session.user.email,
+              idempotencyKey: `welcome-${session.user.id}`,
+              templateData: { name },
+            },
+          }).catch(console.error);
+        }
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
