@@ -154,6 +154,16 @@ const parseMessageContent = (content: string) => {
     placeImages = piArr.map((p: any) => ({ place: p.place || "", vibes: p.vibes }));
   }
 
+  // Strip incomplete/unterminated code blocks during streaming to prevent raw JSON leaking
+  const blockTypes = ["flights", "activities", "hotels", "itinerary", "timeline", "destination_enrich", "travelinfo", "weather", "quickreplies", "place_images"];
+  for (const bt of blockTypes) {
+    // Match an opening ```blocktype that has NO closing ```
+    const openPattern = new RegExp("```" + bt + "\\s[\\s\\S]*$");
+    if (openPattern.test(text) && !(new RegExp("```" + bt + "\\s[\\s\\S]*?```")).test(text)) {
+      text = text.replace(openPattern, "");
+    }
+  }
+
   return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich, placeImages };
 };
 
@@ -248,7 +258,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
   // Unified crafting controller: detect plan blocks → start animation → finish when ready
   useEffect(() => {
-    if (isPremium) return;
+    // Premium users also see the crafting animation
     const lastIdx = messages.length - 1;
     if (lastIdx < 0) return;
     const lastMsg = messages[lastIdx];

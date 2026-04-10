@@ -259,13 +259,32 @@ export const useRzumaChat = () => {
       // Only send if there's at least some data
       const hasPrefs = Object.values(prefsContext).some(v => v !== undefined);
 
+      // Check subscription status to inform AI about premium users
+      let isPremiumUser = false;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: sub } = await supabase
+            .from("subscriptions")
+            .select("plan, status, expires_at")
+            .eq("user_id", session.user.id)
+            .eq("status", "active")
+            .maybeSingle();
+          if (sub && (!sub.expires_at || new Date(sub.expires_at) > new Date())) {
+            isPremiumUser = true;
+          }
+        }
+      } catch { /* ignore */ }
+
+      const fullPrefs = hasPrefs ? { ...prefsContext, isPremium: isPremiumUser } : (isPremiumUser ? { isPremium: true } : undefined);
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: currentMessages, preferences: hasPrefs ? prefsContext : undefined }),
+        body: JSON.stringify({ messages: currentMessages, preferences: fullPrefs }),
       });
 
       if (!resp.ok) {

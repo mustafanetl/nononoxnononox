@@ -196,6 +196,13 @@ serve(async (req) => {
           content: `USER PROFILE:\n${parts.join(".\n")}.\n\nUse this info naturally — like a friend who knows them well. Don't list back their preferences, just USE them.` 
         });
       }
+
+      if (preferences.isPremium) {
+        systemMessages.push({
+          role: "system",
+          content: "The user is a PREMIUM subscriber with full access. Do NOT suggest starting a free trial, do NOT mention upgrading, and do NOT include \"Start 3-day free trial\" in quickreplies. They already have everything unlocked."
+        });
+      }
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
