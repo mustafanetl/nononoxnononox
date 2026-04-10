@@ -705,9 +705,23 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     if (enrichData.hotels && enrichData.hotels.length > 0) {
                       parsed.hotels = enrichData.hotels;
                     }
+                    // Apply Google destination images to hotels without realImage
+                    const images = enrichData.images || [];
+                    if (images.length > 0) {
+                      parsed.hotels = parsed.hotels.map((h: HotelData, idx: number) => {
+                        if (h.realImage) return h;
+                        const img = images[idx % images.length];
+                        return { ...h, realImage: img.thumbUrl || img.url };
+                      });
+                      // Apply destination images to flights
+                      parsed.flights = parsed.flights.map((f: FlightData, idx: number) => {
+                        if (f.realPhoto) return f;
+                        const img = images[idx % images.length];
+                        return { ...f, realPhoto: img.thumbUrl || img.url };
+                      });
+                    }
                     // Assign Google Places photos to activities using per-activity lookup
                     const activityPhotos = enrichData.activityPhotos || {};
-                    const images = enrichData.images || [];
                     parsed.activities = parsed.activities.map((act: ActivityData, idx: number) => {
                       // Priority 1: exact per-activity Google Places photo
                       const exactMatch = activityPhotos[act.name];
