@@ -57,6 +57,21 @@ const CancelSubscriptionModal = ({ open, onClose, onCanceled }: CancelSubscripti
         body: { action: "cancel", cancel_reason: selectedReason },
       });
       if (error) throw error;
+
+      // Send cancellation email
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        const name = user.user_metadata?.display_name || user.user_metadata?.full_name || user.email.split('@')[0];
+        supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "cancellation",
+            recipientEmail: user.email,
+            idempotencyKey: `cancellation-${user.id}-${Date.now()}`,
+            templateData: { name, reason: selectedReason },
+          },
+        }).catch(console.error);
+      }
+
       toast.success("Subscription will cancel at end of billing period");
       onCanceled();
       onClose();
