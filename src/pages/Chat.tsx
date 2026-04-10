@@ -389,7 +389,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         const { destination, travelMonth } = msg.parsed.destinationEnrich;
         if (isPremium) {
           const activityNames = msg.parsed.activities.map((a: any) => a.name).filter(Boolean);
-          fetchEnrichment(destination, travelMonth, activityNames).then((data) => {
+          const hotelNamesList = msg.parsed.hotels.map((h: any) => h.name).filter(Boolean);
+          fetchEnrichment(destination, travelMonth, activityNames, false, hotelNamesList).then((data) => {
             if (data) {
               setEnrichedData((prev) => ({ ...prev, [destination]: data }));
               if (data.images && data.images.length > 0) {
