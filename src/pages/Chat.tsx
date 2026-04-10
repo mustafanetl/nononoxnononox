@@ -38,7 +38,7 @@ import { toast } from "sonner";
 // Enrichment cache to avoid re-fetching
 const enrichmentCache: Record<string, any> = {};
 
-const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[], imageOnly?: boolean) => {
+const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[], imageOnly?: boolean, hotelNames?: string[]) => {
   const cacheKey = imageOnly ? `${destination}-imageOnly` : `${destination}-${travelMonth || ""}`;
   if (enrichmentCache[cacheKey]) return enrichmentCache[cacheKey];
 
@@ -51,7 +51,7 @@ const fetchEnrichment = async (destination: string, travelMonth?: string, activi
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ destination, travelMonth, activities: activityNames, imageOnly }),
+        body: JSON.stringify({ destination, travelMonth, activities: activityNames, hotelNames, imageOnly }),
       }
     );
     if (!res.ok) return null;
@@ -389,7 +389,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         const { destination, travelMonth } = msg.parsed.destinationEnrich;
         if (isPremium) {
           const activityNames = msg.parsed.activities.map((a: any) => a.name).filter(Boolean);
-          fetchEnrichment(destination, travelMonth, activityNames).then((data) => {
+          const hotelNamesList = msg.parsed.hotels.map((h: any) => h.name).filter(Boolean);
+          fetchEnrichment(destination, travelMonth, activityNames, false, hotelNamesList).then((data) => {
             if (data) {
               setEnrichedData((prev) => ({ ...prev, [destination]: data }));
               if (data.images && data.images.length > 0) {
@@ -705,15 +706,27 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     if (enrichData.hotels && enrichData.hotels.length > 0) {
                       parsed.hotels = enrichData.hotels;
                     }
-                    // Apply Google destination images to hotels without realImage
-                    const images = enrichData.images || [];
-                    if (images.length > 0) {
-                      parsed.hotels = parsed.hotels.map((h: HotelData, idx: number) => {
-                        if (h.realImage) return h;
+                    // Apply per-hotel Google Places photos first
+                    const hotelPhotos = enrichData.hotelPhotos || {};
+                    parsed.hotels = parsed.hotels.map((h: HotelData, idx: number) => {
+                      // Priority 1: per-hotel Google Places photo
+                      const match = hotelPhotos[h.name];
+                      if (match?.thumbPhoto || match?.photo) {
+                        return { ...h, realImage: match.thumbPhoto || match.photo };
+                      }
+                      // Priority 2: Xotelo photo already on the hotel
+                      if (h.realImage) return h;
+                      // Priority 3: cycle through destination Google images
+                      const images = enrichData.images || [];
+                      if (images.length > 0) {
                         const img = images[idx % images.length];
                         return { ...h, realImage: img.thumbUrl || img.url };
-                      });
-                      // Apply destination images to flights
+                      }
+                      return h;
+                    });
+                    // Apply destination images to flights
+                    const images = enrichData.images || [];
+                    if (images.length > 0) {
                       parsed.flights = parsed.flights.map((f: FlightData, idx: number) => {
                         if (f.realPhoto) return f;
                         const img = images[idx % images.length];
