@@ -17,56 +17,13 @@ import { FlightData } from "@/components/FlightCard";
 import { ActivityData } from "@/components/ActivityCard";
 import { TripPlanData } from "@/components/TripSummaryCard";
 import { shareTripSummary } from "@/utils/tripSummary";
-import { getCityImage, setWikimediaImage } from "@/utils/cityImages";
+import { setWikimediaImage } from "@/utils/cityImages";
 import { exportTripPlanPDF } from "@/utils/pdfExport";
 import { getSkyscannerUrl, getBookingDotComUrl } from "@/utils/bookingLinks";
-import { getHotelImage } from "@/components/HotelCard";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const getHeroImage = (destination: string) => getCityImage(destination, 1200, 600);
-
-
-const activityImageMap: Record<string, string[]> = {
-  cruise: ["https://images.unsplash.com/photo-1548574505-5e239809ee19?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1599640842225-85d111c60e6b?w=400&h=250&fit=crop"],
-  spa: ["https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1540555700478-4be289fbec6d?w=400&h=250&fit=crop"],
-  temple: ["https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=400&h=250&fit=crop"],
-  beach: ["https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1476673160081-cf065607f449?w=400&h=250&fit=crop"],
-  hiking: ["https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1501555088652-021faa106b9b?w=400&h=250&fit=crop"],
-  market: ["https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400&h=250&fit=crop"],
-  museum: ["https://images.unsplash.com/photo-1554907984-15263bfd63bd?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=400&h=250&fit=crop"],
-  diving: ["https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=400&h=250&fit=crop"],
-  safari: ["https://images.unsplash.com/photo-1516426122078-c23e76319801?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=400&h=250&fit=crop"],
-  food: ["https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&h=250&fit=crop"],
-  waterfall: ["https://images.unsplash.com/photo-1432405972618-c6b0cfba8673?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1494472155656-f34e81b17ddc?w=400&h=250&fit=crop"],
-  yoga: ["https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&h=250&fit=crop"],
-  sunset: ["https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=400&h=250&fit=crop"],
-  wine: ["https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=250&fit=crop"],
-  cooking: ["https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=400&h=250&fit=crop"],
-  gardens: ["https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400&h=250&fit=crop"],
-  nightlife: ["https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=250&fit=crop"],
-  ruins: ["https://images.unsplash.com/photo-1555921015-5532091f6026?w=400&h=250&fit=crop"],
-  shopping: ["https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=250&fit=crop"],
-};
-
-const hashName = (name: string): number => {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
-  return Math.abs(h);
-};
-
-const activityFallback = [
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=250&fit=crop",
-  "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=400&h=250&fit=crop",
-  "https://images.unsplash.com/photo-1476673160081-cf065607f449?w=400&h=250&fit=crop",
-];
-
-const getActivityImage = (imageKey: string, name: string): string => {
-  const pool = activityImageMap[imageKey];
-  if (pool) return pool[hashName(name) % pool.length];
-  return activityFallback[hashName(name) % activityFallback.length];
-};
 
 /* ───── Budget Donut ───── */
 const BudgetDonut = ({
