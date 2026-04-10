@@ -17,56 +17,13 @@ import { FlightData } from "@/components/FlightCard";
 import { ActivityData } from "@/components/ActivityCard";
 import { TripPlanData } from "@/components/TripSummaryCard";
 import { shareTripSummary } from "@/utils/tripSummary";
-import { getCityImage, setWikimediaImage } from "@/utils/cityImages";
+import { setWikimediaImage } from "@/utils/cityImages";
 import { exportTripPlanPDF } from "@/utils/pdfExport";
 import { getSkyscannerUrl, getBookingDotComUrl } from "@/utils/bookingLinks";
-import { getHotelImage } from "@/components/HotelCard";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const getHeroImage = (destination: string) => getCityImage(destination, 1200, 600);
-
-
-const activityImageMap: Record<string, string[]> = {
-  cruise: ["https://images.unsplash.com/photo-1548574505-5e239809ee19?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1599640842225-85d111c60e6b?w=400&h=250&fit=crop"],
-  spa: ["https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1540555700478-4be289fbec6d?w=400&h=250&fit=crop"],
-  temple: ["https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=400&h=250&fit=crop"],
-  beach: ["https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1476673160081-cf065607f449?w=400&h=250&fit=crop"],
-  hiking: ["https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1501555088652-021faa106b9b?w=400&h=250&fit=crop"],
-  market: ["https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400&h=250&fit=crop"],
-  museum: ["https://images.unsplash.com/photo-1554907984-15263bfd63bd?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=400&h=250&fit=crop"],
-  diving: ["https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=400&h=250&fit=crop"],
-  safari: ["https://images.unsplash.com/photo-1516426122078-c23e76319801?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=400&h=250&fit=crop"],
-  food: ["https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&h=250&fit=crop"],
-  waterfall: ["https://images.unsplash.com/photo-1432405972618-c6b0cfba8673?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1494472155656-f34e81b17ddc?w=400&h=250&fit=crop"],
-  yoga: ["https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&h=250&fit=crop"],
-  sunset: ["https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=400&h=250&fit=crop"],
-  wine: ["https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=250&fit=crop"],
-  cooking: ["https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=400&h=250&fit=crop"],
-  gardens: ["https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400&h=250&fit=crop"],
-  nightlife: ["https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=250&fit=crop"],
-  ruins: ["https://images.unsplash.com/photo-1555921015-5532091f6026?w=400&h=250&fit=crop"],
-  shopping: ["https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=250&fit=crop", "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=250&fit=crop"],
-};
-
-const hashName = (name: string): number => {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
-  return Math.abs(h);
-};
-
-const activityFallback = [
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=250&fit=crop",
-  "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=400&h=250&fit=crop",
-  "https://images.unsplash.com/photo-1476673160081-cf065607f449?w=400&h=250&fit=crop",
-];
-
-const getActivityImage = (imageKey: string, name: string): string => {
-  const pool = activityImageMap[imageKey];
-  if (pool) return pool[hashName(name) % pool.length];
-  return activityFallback[hashName(name) % activityFallback.length];
-};
 
 /* ───── Budget Donut ───── */
 const BudgetDonut = ({
@@ -247,7 +204,13 @@ const TripDetail = () => {
     <div className="min-h-screen bg-background pb-24 sm:pb-8">
       {/* ── Compact Hero ── */}
       <div className="relative h-[200px] sm:h-[260px]">
-        <img src={getHeroImage(destination)} alt={destination} className="w-full h-full object-cover" />
+        {tripData.enrichedImages?.[0]?.url || tripData.enrichedImages?.[0]?.thumbUrl ? (
+          <img src={tripData.enrichedImages[0].thumbUrl || tripData.enrichedImages[0].url} alt={destination} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30 flex items-center justify-center">
+            <MapPin className="h-16 w-16 text-muted-foreground/30" />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
 
         <div className="absolute top-4 left-4">
@@ -640,8 +603,14 @@ const HotelRow = React.forwardRef<HTMLDivElement, {
   >
     <div className="flex flex-col sm:flex-row">
       <div className="relative h-36 sm:h-auto sm:w-40 overflow-hidden shrink-0">
-        <img src={h.realImage || getHotelImage(h.image, h.name)} alt={h.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+        {h.realImage ? (
+          <img src={h.realImage} alt={h.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center min-h-[144px]">
+            <Hotel className="h-10 w-10 text-muted-foreground/40" />
+          </div>
+        )}
         <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-bold">
           {h.currency}{h.pricePerNight}/night
         </div>
@@ -678,8 +647,14 @@ const ActivityRow = React.forwardRef<HTMLDivElement, {
     onClick={onClick}
   >
     <div className="relative w-28 sm:w-36 shrink-0 overflow-hidden">
-      <img src={a.realPhoto || getActivityImage(a.image, a.name)} alt={a.name}
-        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+      {a.realPhoto ? (
+        <img src={a.realPhoto} alt={a.name}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center min-h-[100px]">
+          <Sparkles className="h-8 w-8 text-muted-foreground/40" />
+        </div>
+      )}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/20" />
     </div>
     <div className="p-3 flex-1 flex flex-col justify-between min-w-0">

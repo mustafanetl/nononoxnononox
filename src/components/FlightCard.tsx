@@ -14,15 +14,8 @@ export interface FlightData {
   stops: number;
   date: string;
   cityImage?: string;
+  realPhoto?: string;
 }
-
-// FlightCardProps moved below after formatCityName
-
-import { getCityImage } from "@/utils/cityImages";
-
-const getImageUrl = (city?: string): string => {
-  return getCityImage(city || "default", 400, 200);
-};
 
 interface FlightCardProps {
   flight: FlightData;
@@ -37,6 +30,7 @@ const formatCityName = (city?: string): string => {
 const FlightCard = ({ flight, onClick }: FlightCardProps) => {
   const { addToCompare, removeFromCompare, isInCompare } = useTripContext();
   const comparing = isInCompare("flight", flight.id);
+  const hasImage = !!flight.realPhoto;
 
   const toggleCompare = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -51,11 +45,17 @@ const FlightCard = ({ flight, onClick }: FlightCardProps) => {
     >
       {/* City Image */}
       <div className="relative h-24 w-full">
-        <img
-          src={getImageUrl(flight.cityImage)}
-          alt={flight.to}
-          className="w-full h-full object-cover"
-        />
+        {hasImage ? (
+          <img
+            src={flight.realPhoto}
+            alt={flight.to}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
+            <Plane className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute bottom-2 left-2 right-2">
           <p className="text-base font-bold text-white">
