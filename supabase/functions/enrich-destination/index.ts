@@ -301,7 +301,7 @@ serve(async (req) => {
   }
 
   try {
-    const { destination, travelMonth, activities, imageOnly } = await req.json();
+    const { destination, travelMonth, activities, hotelNames, imageOnly } = await req.json();
 
     if (!destination || typeof destination !== "string") {
       return new Response(JSON.stringify({ error: "destination is required" }), {
@@ -329,14 +329,16 @@ serve(async (req) => {
       });
     }
 
-    // All APIs in parallel — including per-activity photo lookup
+    // All APIs in parallel — including per-activity and per-hotel photo lookup
     const activityNames: string[] = Array.isArray(activities) ? activities : [];
-    const [weatherData, countryData, googleImages, xoteloHotels, activityPhotos] = await Promise.all([
+    const hotelNamesList: string[] = Array.isArray(hotelNames) ? hotelNames : [];
+    const [weatherData, countryData, googleImages, xoteloHotels, activityPhotos, hotelPhotos] = await Promise.all([
       getWeather(geo.lat, geo.lng),
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
       getGooglePlacePhotos(destination),
       searchXoteloHotels(destination),
       activityNames.length > 0 ? searchActivitiesPhotos(activityNames, destination) : Promise.resolve({}),
+      hotelNamesList.length > 0 ? searchHotelPhotos(hotelNamesList, destination) : Promise.resolve({}),
     ]);
 
     let currencyCode = "";
@@ -406,12 +408,13 @@ serve(async (req) => {
       country: countryInfo,
       exchange: exchangeData,
       images: googleImages,
-      places: [], // Replaced by activityPhotos
+      places: [],
       hotels: xoteloHotels,
-      activityPhotos, // Map of activity name → { photo, thumbPhoto, rating, address }
+      activityPhotos,
+      hotelPhotos, // Map of hotel name → { photo, thumbPhoto, rating }
     };
 
-    console.log(`Enrichment complete for ${destination}: ${googleImages.length} images, ${Object.keys(activityPhotos).length} activity photos, ${xoteloHotels.length} hotels`);
+    console.log(`Enrichment complete for ${destination}: ${googleImages.length} images, ${Object.keys(activityPhotos).length} activity photos, ${Object.keys(hotelPhotos).length} hotel photos, ${xoteloHotels.length} hotels`);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
