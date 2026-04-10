@@ -1,8 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Star, MapPin, ExternalLink, Lightbulb, PlusCircle, CheckCircle } from "lucide-react";
+import { Star, MapPin, ExternalLink, Lightbulb, PlusCircle, CheckCircle, Hotel } from "lucide-react";
 import { HotelData } from "@/contexts/TripContext";
-import { getHotelImage } from "./HotelCard";
 import { useTripContext } from "@/contexts/TripContext";
 
 const HotelDetailModal = ({
@@ -18,7 +17,7 @@ const HotelDetailModal = ({
 
   if (!hotel) return null;
 
-  const imgUrl = hotel.realImage || getHotelImage(hotel.image);
+  const hasImage = !!hotel.realImage;
   const searchQuery = encodeURIComponent(hotel.name + " " + hotel.location);
   const inTrip = isInTrip("hotel", hotel.id);
 
@@ -31,7 +30,13 @@ const HotelDetailModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 overflow-hidden">
         <div className="relative h-48">
-          <img src={imgUrl} alt={hotel.name} className="w-full h-full object-cover" />
+          {hasImage ? (
+            <img src={hotel.realImage} alt={hotel.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
+              <Hotel className="h-12 w-12 text-muted-foreground/40" />
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4 text-white">
             <h2 className="text-xl font-bold">{hotel.name}</h2>
