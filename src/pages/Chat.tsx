@@ -257,7 +257,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     const hasPlanBlocks = /```(activities|itinerary)/s.test(c);
 
     // Start crafting if plan blocks detected and not already started for this message
-    if (hasPlanBlocks && lastIdx !== lastCraftedMsgIndex.current && !craftingIntervalRef.current) {
+    if (hasPlanBlocks && isLoading && lastIdx !== lastCraftedMsgIndex.current && !craftingIntervalRef.current) {
       lastCraftedMsgIndex.current = lastIdx;
       craftingProgressRef.current = 0;
       streamingDoneRef.current = false;
