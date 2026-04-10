@@ -204,7 +204,13 @@ const TripDetail = () => {
     <div className="min-h-screen bg-background pb-24 sm:pb-8">
       {/* ── Compact Hero ── */}
       <div className="relative h-[200px] sm:h-[260px]">
-        <img src={getHeroImage(destination)} alt={destination} className="w-full h-full object-cover" />
+        {tripData.enrichedImages?.[0]?.url || tripData.enrichedImages?.[0]?.thumbUrl ? (
+          <img src={tripData.enrichedImages[0].thumbUrl || tripData.enrichedImages[0].url} alt={destination} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30 flex items-center justify-center">
+            <MapPin className="h-16 w-16 text-muted-foreground/30" />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
 
         <div className="absolute top-4 left-4">
@@ -597,8 +603,14 @@ const HotelRow = React.forwardRef<HTMLDivElement, {
   >
     <div className="flex flex-col sm:flex-row">
       <div className="relative h-36 sm:h-auto sm:w-40 overflow-hidden shrink-0">
-        <img src={h.realImage || getHotelImage(h.image, h.name)} alt={h.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+        {h.realImage ? (
+          <img src={h.realImage} alt={h.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center min-h-[144px]">
+            <Hotel className="h-10 w-10 text-muted-foreground/40" />
+          </div>
+        )}
         <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-bold">
           {h.currency}{h.pricePerNight}/night
         </div>
@@ -635,8 +647,14 @@ const ActivityRow = React.forwardRef<HTMLDivElement, {
     onClick={onClick}
   >
     <div className="relative w-28 sm:w-36 shrink-0 overflow-hidden">
-      <img src={a.realPhoto || getActivityImage(a.image, a.name)} alt={a.name}
-        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+      {a.realPhoto ? (
+        <img src={a.realPhoto} alt={a.name}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center min-h-[100px]">
+          <Sparkles className="h-8 w-8 text-muted-foreground/40" />
+        </div>
+      )}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/20" />
     </div>
     <div className="p-3 flex-1 flex flex-col justify-between min-w-0">
