@@ -1,53 +1,68 @@
 
 
-# Plan: Fix Image Repetition, Bugs & UX Improvements on Plan Page
+# Plan: Replace All Stock Images with Google Places API Photos
 
-## Problems Identified
+## Problem
+Activities, hotels, flights, and the hero image all fall back to hardcoded Unsplash stock photos when enrichment data hasn't loaded or doesn't have a match. The user wants zero stock images — everything should come from Google Places API.
 
-### 1. Repetitive Images (Main Issue)
-- **Activity cards** use a small static `imageMap` (~15 entries) in `ActivityCard.tsx` and `activityImageMap` in `TripDetail.tsx`. Activities with similar categories all get the same fallback image (e.g., all "beach" activities get the same beach photo).
-- **Hotel cards** use a small static `hotelImages` map (~7 entries) in `HotelCard.tsx`. Multiple hotels with the same type (e.g., "luxury") show identical images.
-- **Flight cards** use `cityImages.ts` which has ~16 entries — flights to unknown cities all get the same default image.
-- **The enrichment system** already fetches real Google Places photos per-activity and per-hotel (via Xotelo), but these real images only apply when enrichment completes. The static fallbacks are too limited and repetitive.
+## Current Flow
+1. **Enrichment edge function** already fetches per-activity Google Places photos and destination-level Google photos
+2. **Chat.tsx** applies `realPhoto` to activities using enrichment data, and replaces hotels with Xotelo data (which may or may not have `realImage`)
+3. **Fallback**: When `realPhoto`/`realImage` is missing, components use Unsplash stock image maps
+4. **Hero image** on TripDetail uses `cityImages.ts` which is all Unsplash
+5. **Flight cards** use `cityImages.ts` Unsplash fallbacks
 
-### 2. Leaflet Runtime Error
-- `Cannot read properties of undefined (reading '_leaflet_pos')` — occurs when the map container is removed/unmounted while Leaflet is mid-animation (zoom transition). The cleanup in `TripMap.tsx` doesn't guard against this race condition.
+## Solution
 
-### 3. UX/UI Improvements for Trip Detail Page
-- **Activity images on TripDetail** fall back to the same small `activityImageMap` — even when `realPhoto` is available from enrichment, it's not always passed through `sessionStorage`.
-- **No visual distinction between days** in the overview itinerary — all days look the same.
-- **Weather and travel info not shown** on the TripDetail page despite being available in the data.
-- **Day view shows the same hotel** regardless of which day is selected — feels redundant.
+### 1. `src/components/ActivityCard.tsx`
+- Remove the entire `imageMap` and `fallbackImages` arrays (all Unsplash URLs)
+- Use `realPhoto` directly; if missing, show a simple gradient/placeholder with the category icon instead of stock photos
 
-## Implementation Plan
+### 2. `src/components/HotelCard.tsx`
+- Remove the entire `hotelImages` and `defaultPool` arrays
+- Use `realImage` directly; if missing, show a styled placeholder with hotel name/stars
 
-### File: `src/utils/cityImages.ts`
-- Expand `cityImageIds` with ~15 more popular destinations (istanbul, seoul, lisbon, marrakech, cairo, prague, vienna, etc.) to reduce default fallback usage.
+### 3. `src/components/ActivityDetailModal.tsx`
+- Remove the `imageMap` object (Unsplash URLs)
+- Use `activity.realPhoto` only; placeholder if missing
 
-### File: `src/components/ActivityCard.tsx`
-- Expand `imageMap` with ~10 more category images (wine, cooking, gardens, nightlife, ruins, etc.) to reduce repetition.
-- Add a hash-based selector so activities with the same `image` key but different names get visually distinct fallback photos from the expanded set.
+### 4. `src/pages/TripDetail.tsx`
+- Remove `activityImageMap` and `activityFallback` arrays
+- Remove `getActivityImage` function
+- For hero image: use the first enriched Google image from `tripData.enrichedImages` instead of `getCityImage()` (Unsplash)
+- For activity/hotel images in the detail view: use `realPhoto`/`realImage` directly with gradient placeholder fallback
 
-### File: `src/components/HotelCard.tsx`
-- Expand `hotelImages` with more hotel type variants (modern, historic, eco, apartment, etc.).
-- Add hash-based fallback selection so same-type hotels show different images.
+### 5. `src/components/FlightCard.tsx`
+- Stop using `getCityImage()` for the flight card background
+- Use the enriched destination image if available via prop; otherwise show a gradient placeholder
 
-### File: `src/pages/TripDetail.tsx`
-- Expand `activityImageMap` to match `ActivityCard.tsx` expansions.
-- Add hash-based image selection for activities and hotels to avoid identical images in the plan view.
-- Add weather forecast section to the overview (data already exists in `data.weather`).
-- Add travel info strip with live exchange rates to the overview (data already exists in `data.travelInfo`).
-- Stop showing hotel in every day view if it's the same hotel — only show once in overview.
+### 6. `src/utils/cityImages.ts`
+- Remove all Unsplash image IDs and sets
+- `getCityImage()` returns only from `placeImageCache` (Google Places); returns empty string if no cached image
+- `getPlaceImages()` same — only returns real cached images
 
-### File: `src/components/TripMap.tsx`
-- Fix leaflet `_leaflet_pos` crash by wrapping cleanup in a try-catch and checking if the map container still exists before calling `.remove()`.
-- Guard `updateMarkers` against stale map instance after unmount.
+### 7. `src/pages/Chat.tsx`
+- After enrichment, also apply Google destination images to hotels that lack `realImage` from Xotelo
+- Pass enriched Google images through to `FlightCard` via a new prop or by setting the city image cache
 
-### File: `src/pages/Chat.tsx`
-- Ensure enriched `realPhoto` and `realImage` data is properly passed through to `sessionStorage` when navigating to TripDetail, so real Google Photos persist across page loads.
+### 8. `src/components/TripSummaryCard.tsx`
+- Already prefers `enrichedImages[0]` — just ensure the Unsplash fallback from `getCityImage` is replaced with a gradient placeholder
 
-## Summary
-- ~6 files modified
-- Fixes: repetitive images, leaflet crash, missing enriched photos on plan page
-- UX: weather + travel info on plan page, smarter image variety, cleaner day views
+## Placeholder Design
+When no Google image is available (enrichment pending or failed), show:
+- A gradient background using the app's primary colors
+- The relevant icon (plane, hotel, activity category) centered
+- This ensures no broken images and a clean look while enrichment loads
+
+## Files Modified
+| File | Change |
+|---|---|
+| `src/components/ActivityCard.tsx` | Remove Unsplash maps, use realPhoto or placeholder |
+| `src/components/HotelCard.tsx` | Remove Unsplash maps, use realImage or placeholder |
+| `src/components/ActivityDetailModal.tsx` | Remove Unsplash map, use realPhoto or placeholder |
+| `src/components/FlightCard.tsx` | Remove getCityImage usage, use placeholder |
+| `src/pages/TripDetail.tsx` | Remove Unsplash maps, use enriched images or placeholder |
+| `src/pages/Chat.tsx` | Apply Google images to hotels without realImage |
+| `src/utils/cityImages.ts` | Remove all Unsplash IDs, return only cached Google images |
+| `src/components/TripSummaryCard.tsx` | Replace Unsplash fallback with placeholder |
 
