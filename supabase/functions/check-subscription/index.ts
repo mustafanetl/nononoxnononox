@@ -64,8 +64,17 @@ serve(async (req) => {
 
     const productId = subscription.items.data[0].price.product as string;
     const plan = PRODUCT_TO_PLAN[productId] || "monthly";
-    const subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
     const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+
+    // Handle current_period_end safely - it may be a number (unix ts) or string
+    let subscriptionEnd: string | null = null;
+    const periodEnd = subscription.current_period_end;
+    if (typeof periodEnd === "number" && periodEnd > 0) {
+      subscriptionEnd = new Date(periodEnd * 1000).toISOString();
+    } else if (typeof periodEnd === "string") {
+      const parsed = new Date(periodEnd);
+      subscriptionEnd = isNaN(parsed.getTime()) ? null : parsed.toISOString();
+    }
 
     return new Response(JSON.stringify({
       subscribed: true,
