@@ -203,6 +203,83 @@ async function searchActivitiesPhotos(
   await Promise.all(promises);
   return results;
 }
+// Per-hotel Google Places Text Search — returns a map of hotel name → photo URLs
+async function searchHotelPhotos(
+  hotelNames: string[],
+  destination: string
+): Promise<Record<string, { photo: string; thumbPhoto: string; rating: number | null }>> {
+  const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
+  if (!apiKey || hotelNames.length === 0) return {};
+
+  const results: Record<string, any> = {};
+  const batch = hotelNames.slice(0, 8);
+  const promises = batch.map(async (name) => {
+    try {
+      const res = await fetchWithTimeout(
+        "https://places.googleapis.com/v1/places:searchText",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "places.photos,places.rating",
+          },
+          body: JSON.stringify({
+            textQuery: `${name} hotel in ${destination}`,
+            maxResultCount: 1,
+          }),
+        }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      const place = data.places?.[0];
+      if (!place?.photos?.[0]?.name) return;
+      const photoRef = place.photos[0].name;
+      results[name] = {
+        photo: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}`,
+        thumbPhoto: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}`,
+        rating: place.rating || null,
+      };
+    } catch (e) {
+      console.error(`Hotel photo search error for "${name}":`, e);
+    }
+  });
+  await Promise.all(promises);
+  return results;
+}
+
+// Search a single city for a Google Places photo (for flights)
+async function searchCityPhoto(
+  city: string
+): Promise<{ photo: string; thumbPhoto: string } | null> {
+  const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
+  if (!apiKey || !city) return null;
+  try {
+    const res = await fetchWithTimeout(
+      "https://places.googleapis.com/v1/places:searchText",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": "places.photos",
+        },
+        body: JSON.stringify({ textQuery: city, maxResultCount: 1 }),
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const photoRef = data.places?.[0]?.photos?.[0]?.name;
+    if (!photoRef) return null;
+    return {
+      photo: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}`,
+      thumbPhoto: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}`,
+    };
+  } catch (e) {
+    console.error(`City photo search error for "${city}":`, e);
+    return null;
+  }
+}
 
 function weatherCodeToCondition(code: number): string {
   if (code === 0) return "Clear sky";
