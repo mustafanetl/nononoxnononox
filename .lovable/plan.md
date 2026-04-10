@@ -1,25 +1,39 @@
 
 
-# Plan: Google Places Photos for Hotels & Flights
+# Plan: Fix Raw JSON Display During Streaming & Pass Premium Status to AI
 
-## Problem
-Hotels get images from Xotelo (`h.photo`), which is often `null`. The fallback is generic city-level Google images — not specific to each hotel. Flights similarly get generic destination photos. The user wants every item to have its own Google Places photo.
+## Problems
+
+### 1. Raw JSON leaking during streaming
+When the AI streams a response, code blocks like ` ```activities [...] ``` ` arrive incrementally. Before the closing ` ``` ` arrives, the regex in `parseMessageContent` doesn't match, so the raw JSON array (e.g. `[{"id":"1","name":"CÉ LA VI Tokyo"...`) is displayed as plain text to the user. Once the closing backticks arrive, it gets parsed correctly — but the user already saw the raw data.
+
+### 2. "Start free trial" suggestion from AI for premium users
+The AI doesn't know whether the user is premium. The system prompt always includes trial-related closing text. Premium users see "Start 3-day free trial" suggestions which is wrong.
+
+### 3. Crafting animation skipped for premium users
+Line 251: `if (isPremium) return;` — premium users never see the "Crafting your plan" animation. They should also get it.
 
 ## Solution
 
-### 1. `supabase/functions/enrich-destination/index.ts`
-- Add a new `searchHotelPhotos()` function (similar to `searchActivitiesPhotos`) that does a per-hotel Google Places Text Search using `"{hotelName} hotel in {destination}"` to get a photo specific to each hotel
-- Call it in the main `Promise.all` alongside activities
-- Return `hotelPhotos` map in the response (hotel name → photo URLs)
-- For flights: add a `searchCityPhoto()` that searches the destination city and the origin city to get distinct photos for each flight card
+### File: `src/pages/Chat.tsx` — parseMessageContent
+- Add logic to detect and **strip incomplete code blocks** during streaming. After all `extractBlock` calls, scan the remaining `text` for any opening ` ```<blocktype> ` that hasn't been closed with ` ``` ` yet. Remove that trailing incomplete block from the displayed text.
+- This ensures users never see raw JSON mid-stream.
 
-### 2. `src/pages/Chat.tsx`
-- After enrichment, apply `hotelPhotos` to hotels: match by name, set `realImage` from Google Places before falling back to Xotelo or destination images
-- For flights: apply city-specific Google images per flight destination city
+### File: `src/pages/Chat.tsx` — crafting animation
+- Remove the `if (isPremium) return;` guard so premium users also see the crafting animation while a full plan streams in.
 
-### Files Modified
+### File: `src/hooks/useRzumaChat.ts` — pass premium status
+- Accept an `isPremium` parameter in the `sendMessage` call (or via a new option in the hook).
+- Include `isPremium: true` in the `preferences` payload sent to the edge function.
+
+### File: `supabase/functions/rzuma-chat/index.ts` — system prompt
+- When `preferences.isPremium` is true, add a system message: `"The user is a premium subscriber. Do NOT suggest starting a free trial or mention upgrading. They already have full access."`
+- This prevents the AI from generating trial CTAs for paying users.
+
+## Files Modified
 | File | Change |
 |---|---|
-| `supabase/functions/enrich-destination/index.ts` | Add `searchHotelPhotos()` for per-hotel Google Places lookup |
-| `src/pages/Chat.tsx` | Apply per-hotel Google photos from enrichment response |
+| `src/pages/Chat.tsx` | Strip incomplete code blocks from displayed text; enable crafting animation for premium users |
+| `src/hooks/useRzumaChat.ts` | Accept and forward `isPremium` flag in preferences |
+| `supabase/functions/rzuma-chat/index.ts` | Add premium-aware system instruction to suppress trial suggestions |
 
