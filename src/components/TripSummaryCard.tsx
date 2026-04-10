@@ -8,7 +8,6 @@ import { ItineraryData } from "@/components/ItineraryCard";
 import { WeatherData } from "@/components/WeatherCard";
 import { TravelInfoData } from "@/components/TravelInfoCard";
 import { TimelineLeg } from "@/components/TripTimeline";
-import { getCityImage } from "@/utils/cityImages";
 import { useSubscription } from "@/hooks/useSubscription";
 import PaywallModal from "@/components/PaywallModal";
 
@@ -48,11 +47,17 @@ const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlan
         className="mt-4 w-full max-w-sm rounded-2xl border border-border bg-card overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
       >
         <div className="relative h-32">
-          <img
-            src={enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl || getCityImage(destination)}
-            alt={destination}
-            className="w-full h-full object-cover"
-          />
+          {(enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl) ? (
+            <img
+              src={enrichedImages[0].thumbUrl || enrichedImages[0].url}
+              alt={destination}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
+              <MapPin className="h-10 w-10 text-muted-foreground/40" />
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="absolute bottom-3 left-3 right-3">
             <div className="flex items-center gap-1.5">
