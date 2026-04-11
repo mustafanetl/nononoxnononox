@@ -1,39 +1,94 @@
 
 
-# Plan: Fix Raw JSON Display During Streaming & Pass Premium Status to AI
+# Plan: Switch to Gemini Flash, Remove Weather, Redesign Plan Output
 
-## Problems
+## Summary
+Switch the AI model back to Gemini Flash, remove the weather block entirely, and overhaul the system prompt + plan structure to generate genuinely useful, actionable travel plans instead of generic filler content.
 
-### 1. Raw JSON leaking during streaming
-When the AI streams a response, code blocks like ` ```activities [...] ``` ` arrive incrementally. Before the closing ` ``` ` arrives, the regex in `parseMessageContent` doesn't match, so the raw JSON array (e.g. `[{"id":"1","name":"CÉ LA VI Tokyo"...`) is displayed as plain text to the user. Once the closing backticks arrive, it gets parsed correctly — but the user already saw the raw data.
+## Changes
 
-### 2. "Start free trial" suggestion from AI for premium users
-The AI doesn't know whether the user is premium. The system prompt always includes trial-related closing text. Premium users see "Start 3-day free trial" suggestions which is wrong.
+### 1. Switch model to Gemini Flash
+**File:** `supabase/functions/rzuma-chat/index.ts`
+- Change `model: "google/gemini-2.5-pro"` to `model: "google/gemini-3-flash-preview"`
 
-### 3. Crafting animation skipped for premium users
-Line 251: `if (isPremium) return;` — premium users never see the "Crafting your plan" animation. They should also get it.
+### 2. Remove weather block entirely
+**File:** `supabase/functions/rzuma-chat/index.ts`
+- Remove the `weather` code block format from the system prompt
+- Remove weather from the "FULL TRIP PLAN must include" list
 
-## Solution
+**File:** `src/pages/Chat.tsx`
+- Remove `WeatherCard` import and all weather parsing/rendering
+- Remove `PackingList` rendering tied to weather
+- Remove weather from `parseMessageContent` return type
+- Remove weather merging from enrichment data
 
-### File: `src/pages/Chat.tsx` — parseMessageContent
-- Add logic to detect and **strip incomplete code blocks** during streaming. After all `extractBlock` calls, scan the remaining `text` for any opening ` ```<blocktype> ` that hasn't been closed with ` ``` ` yet. Remove that trailing incomplete block from the displayed text.
-- This ensures users never see raw JSON mid-stream.
+**File:** `src/components/TripSummaryCard.tsx`
+- Remove `WeatherData` import and `weather` from `TripPlanData`
 
-### File: `src/pages/Chat.tsx` — crafting animation
-- Remove the `if (isPremium) return;` guard so premium users also see the crafting animation while a full plan streams in.
+**File:** `src/pages/TripDetail.tsx`
+- Remove any weather references
 
-### File: `src/hooks/useRzumaChat.ts` — pass premium status
-- Accept an `isPremium` parameter in the `sendMessage` call (or via a new option in the hook).
-- Include `isPremium: true` in the `preferences` payload sent to the edge function.
+### 3. Redesign system prompt for actually useful plans
+**File:** `supabase/functions/rzuma-chat/index.ts`
 
-### File: `supabase/functions/rzuma-chat/index.ts` — system prompt
-- When `preferences.isPremium` is true, add a system message: `"The user is a premium subscriber. Do NOT suggest starting a free trial or mention upgrading. They already have full access."`
-- This prevents the AI from generating trial CTAs for paying users.
+Rewrite the plan output to solve real travel problems:
 
-## Files Modified
+**Itinerary overhaul** — Instead of vague "Explore the neighborhood" entries, require:
+- Specific venue names with addresses for every time slot
+- Walking/transit time between locations
+- Reservation-needed flags (e.g. "Book 2 weeks ahead")
+- Cost per slot so users can see daily spend
+- Logical geographic flow (morning spots near each other, not zig-zagging across the city)
+
+**Activities overhaul** — Require:
+- Opening hours
+- "Book ahead" flag (true/false) for things that sell out
+- A "why" field explaining why this specific place over alternatives
+- Neighborhood/area name for spatial context
+
+**Itinerary data format update:**
+```
+{day, title, slots: [{time: "9:00", activity: "...", venue: "...", neighborhood: "...", duration: "1.5h", cost: 25, bookAhead: false, transitNext: "10 min walk"}]}
+```
+
+**Hotels** — Add:
+- Neighborhood context ("5 min walk to metro, heart of old town")
+- "Best for" tag (e.g. "couples", "budget", "families")
+
+**Travelinfo** — Make actionable:
+- Add `tipping` field
+- Add `simCard` field (how to get data/connectivity)
+- Add `transport` field (how to get around — metro/taxi/bike)
+- Remove `bestSeason` and `safety` (generic filler)
+
+**Quick replies** — Make them action-oriented modifications:
+- "Make it cheaper", "Add a free day", "More food spots", "Swap Day 2 activities"
+- Not generic "Tell me more about the plan"
+
+### 4. Update frontend components for new data shapes
+
+**File:** `src/components/ItineraryCard.tsx`
+- Redesign to show time-slotted activities with venue names, costs, transit info
+- Each slot shows: time, venue name, neighborhood, duration, cost, book-ahead badge
+
+**File:** `src/components/TravelInfoCard.tsx`
+- Add tipping, simCard, transport fields
+- Remove bestSeason, safety
+
+**File:** `src/components/ActivityCard.tsx`
+- Add opening hours display
+- Add "Book ahead" badge
+- Add neighborhood label
+
+## Technical Details
+
 | File | Change |
 |---|---|
-| `src/pages/Chat.tsx` | Strip incomplete code blocks from displayed text; enable crafting animation for premium users |
-| `src/hooks/useRzumaChat.ts` | Accept and forward `isPremium` flag in preferences |
-| `supabase/functions/rzuma-chat/index.ts` | Add premium-aware system instruction to suppress trial suggestions |
+| `supabase/functions/rzuma-chat/index.ts` | Switch to gemini-3-flash-preview, remove weather block, rewrite prompt for actionable plans |
+| `src/pages/Chat.tsx` | Remove WeatherCard/PackingList imports + rendering, remove weather parsing |
+| `src/components/TripSummaryCard.tsx` | Remove weather from TripPlanData type |
+| `src/components/ItineraryCard.tsx` | Redesign for time-slotted format with venues, costs, transit |
+| `src/components/TravelInfoCard.tsx` | Add tipping/simCard/transport, remove bestSeason/safety |
+| `src/components/ActivityCard.tsx` | Add hours, book-ahead badge, neighborhood |
+| `src/pages/TripDetail.tsx` | Remove weather, update for new itinerary/activity shapes |
 
