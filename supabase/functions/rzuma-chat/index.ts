@@ -75,31 +75,41 @@ CARD FORMATS (exact markdown code blocks):
 cityImage = one word for destination. Include 2-3 options sorted by price. ONLY in TRIP mode.
 
 \`\`\`hotels
-[{"id":"1","name":"The Ritz-Carlton","stars":5,"pricePerNight":350,"currency":"$","image":"luxury","location":"Downtown Dubai","description":"Iconic luxury hotel with stunning views.","lat":25.1972,"lng":55.2744}]
+[{"id":"1","name":"The Ritz-Carlton","stars":5,"pricePerNight":350,"currency":"$","image":"luxury","location":"Downtown Dubai","description":"5 min walk to Dubai Mall & metro. Heart of downtown.","bestFor":"couples","lat":25.1972,"lng":55.2744}]
 \`\`\`
-image: luxury|resort|boutique|beach|city|villa|hostel. Include 2-3 varied price options. ONLY in TRIP mode.
+image: luxury|resort|boutique|beach|city|villa|hostel.
+description MUST include neighborhood context: walking distance to transit, landmarks, what's nearby.
+bestFor: couples|budget|families|solo|friends|business.
+Include 2-3 varied price options. ONLY in TRIP mode.
 
 \`\`\`activities
-[{"id":"1","name":"Pierchic Seafood Restaurant","category":"dining","duration":"2 hours","price":120,"currency":"$","image":"food","occasion":"honeymoon","description":"Fine dining on a pier over the Arabian Gulf.","lat":25.1325,"lng":55.1831}]
+[{"id":"1","name":"Pierchic Seafood Restaurant","category":"dining","duration":"2 hours","price":120,"currency":"$","image":"food","occasion":"honeymoon","description":"Fine dining on a pier over the Arabian Gulf.","neighborhood":"Al Sufouh","hours":"12:00-23:00","bookAhead":true,"why":"Only overwater restaurant in Dubai — the sunset views are unreal and it books up weeks ahead.","lat":25.1325,"lng":55.1831}]
 \`\`\`
 category: dining|adventure|beach|culture|nightlife|shopping|sightseeing|romance
 image: cruise|spa|temple|beach|hiking|market|museum|diving|safari|concert|food|waterfall|yoga|shopping|sunset
+neighborhood: the area/district name.
+hours: opening hours like "09:00-18:00" or "24h" or "varies".
+bookAhead: true if it sells out or needs reservation, false otherwise.
+why: 1 sentence explaining why THIS specific place over alternatives. Be opinionated.
 Include 3-5 activities with realistic lat/lng.
 
 \`\`\`itinerary
-[{"day":1,"title":"Arrival & Settling In","morning":"Check in at hotel","afternoon":"Explore the neighborhood","evening":"Sunset dinner at the waterfront"}]
+[{"day":1,"title":"Arrival & Old Town Vibes","slots":[{"time":"9:00","activity":"Breakfast at Sarnıç Café","venue":"Sarnıç Café","neighborhood":"Sultanahmet","duration":"1h","cost":15,"bookAhead":false,"transitNext":"5 min walk"},{"time":"10:30","activity":"Hagia Sophia visit","venue":"Hagia Sophia","neighborhood":"Sultanahmet","duration":"1.5h","cost":25,"bookAhead":true,"transitNext":"3 min walk"},{"time":"12:30","activity":"Lunch at Matbah","venue":"Matbah Restaurant","neighborhood":"Sultanahmet","duration":"1.5h","cost":40,"bookAhead":true,"transitNext":"10 min walk"},{"time":"14:30","activity":"Grand Bazaar exploration","venue":"Grand Bazaar","neighborhood":"Beyazıt","duration":"2h","cost":0,"bookAhead":false,"transitNext":"15 min tram"},{"time":"17:00","activity":"Sunset drinks at Mikla","venue":"Mikla Restaurant","neighborhood":"Beyoğlu","duration":"1.5h","cost":30,"bookAhead":true,"transitNext":"walk to hotel"},{"time":"19:30","activity":"Dinner at Karaköy Lokantası","venue":"Karaköy Lokantası","neighborhood":"Karaköy","duration":"2h","cost":45,"bookAhead":true,"transitNext":"—"}]}]
 \`\`\`
+ITINERARY RULES:
+- Every slot MUST have a specific real venue name — never "Explore the area" or "Free time".
+- Slots must flow geographically — morning spots near each other, don't zig-zag across the city.
+- transitNext: walking/transit time to next spot (e.g. "5 min walk", "15 min metro", "10 min taxi").
+- cost: per-person estimate in local spending.
+- bookAhead: true for things that need reservations or sell out.
+- Include 5-7 slots per day covering breakfast through dinner.
 
 \`\`\`timeline
 [{"from":"Paris","to":"Rome","transport":"Flight","duration":"2h 15m","date":"Mar 18"}]
 \`\`\`
 
 \`\`\`travelinfo
-{"destination":"Dubai","visa":"Visa on arrival 30 days","currency":"AED (1 USD ≈ 3.67 AED)","language":"Arabic & English","timezone":"GMT+4","bestSeason":"Nov-Mar","safety":"Very safe"}
-\`\`\`
-
-\`\`\`weather
-{"destination":"Dubai","tempHigh":32,"tempLow":20,"conditions":"Sunny","rainfall":"Rare","packingTips":["Light clothing","Sunscreen","Sunglasses","Walking shoes"]}
+{"destination":"Dubai","visa":"Visa on arrival 30 days","currency":"AED (1 USD ≈ 3.67 AED)","language":"Arabic & English","timezone":"GMT+4","tipping":"10-15% at restaurants, not expected at cafés","simCard":"Tourist SIM at airport ~$15 for 5GB, du or Etisalat","transport":"Metro covers main areas, taxis are cheap (~$5 base). Use Careem app."}
 \`\`\`
 
 \`\`\`destination_enrich
@@ -107,12 +117,14 @@ Include 3-5 activities with realistic lat/lng.
 \`\`\`
 
 \`\`\`quickreplies
-["Show cheaper hotels","Add nightlife","Change dates"]
+["Make it cheaper","Add a free day","More food spots","Swap Day 2 activities"]
 \`\`\`
-Include 2-4 contextual follow-ups. ALWAYS end with quickreplies.
+Include 2-4 ACTION-ORIENTED follow-ups. Things that modify the plan.
+NOT generic like "Tell me more". Make them useful: "Make it cheaper", "Add nightlife", "More food spots", "Add a free day", "Swap Day 2", "Show budget hotels".
+ALWAYS end with quickreplies.
 
-FULL TRIP PLAN must include ALL: flights (if TRIP), hotels (if TRIP), activities, itinerary, travelinfo, weather, destination_enrich, quickreplies.
-LOCAL/DATE plans: activities, itinerary, destination_enrich, quickreplies. Optionally weather. NO flights, NO hotels.
+FULL TRIP PLAN must include ALL: flights (if TRIP), hotels (if TRIP), activities, itinerary, travelinfo, destination_enrich, quickreplies.
+LOCAL/DATE plans: activities, itinerary, destination_enrich, quickreplies. NO flights, NO hotels.
 
 Every activity must have a specific real venue name — never generic. Include realistic lat/lng.
 PRICES: Coherent with mode and travel style. All coordinates must be realistic.`;
@@ -212,7 +224,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-3-flash-preview",
         messages: [
           ...systemMessages,
           ...messages,

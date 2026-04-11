@@ -14,10 +14,8 @@ import BudgetPanel from "@/components/BudgetPanel";
 import ThemeToggle from "@/components/ThemeToggle";
 import TripTimeline, { TimelineLeg } from "@/components/TripTimeline";
 import TravelInfoCard, { TravelInfoData } from "@/components/TravelInfoCard";
-import WeatherCard, { WeatherData } from "@/components/WeatherCard";
 import QuickReplies from "@/components/QuickReplies";
 import ComparisonModal from "@/components/ComparisonModal";
-import PackingList from "@/components/PackingList";
 import VoiceInput from "@/components/VoiceInput";
 import CurrencyConverter from "@/components/CurrencyConverter";
 import TripMap, { type MapPoint } from "@/components/TripMap";
@@ -71,7 +69,7 @@ const parseMessageContent = (content: string) => {
   let itinerary: ItineraryData[] = [];
   let timeline: TimelineLeg[] = [];
   let travelInfo: TravelInfoData | null = null;
-  let weather: WeatherData | null = null;
+  let weather: any = null;
   let quickReplies: string[] = [];
   let destinationEnrich: { destination: string; travelMonth?: string } | null = null;
   let placeImages: { place: string; vibes?: string[] }[] = [];
@@ -699,9 +697,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const enrichDest = parsed.destinationEnrich?.destination;
                   const enrichData = enrichDest ? enrichedData[enrichDest] : null;
                   if (enrichData) {
-                    if (enrichData.weather && parsed.weather) {
-                      parsed.weather = { ...parsed.weather, ...enrichData.weather, packingTips: parsed.weather.packingTips || [] };
-                    }
                     if (enrichData.country && parsed.travelInfo) {
                       parsed.travelInfo = {
                         ...parsed.travelInfo,
@@ -871,14 +866,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                         <TravelInfoCard info={parsed.travelInfo} />
                                         {parsed.travelInfo.currency && (
                                           <CurrencyConverter destinationCurrency={parsed.travelInfo.currency} />
-                                        )}
-                                      </>
-                                    )}
-                                    {parsed.weather && (
-                                      <>
-                                        <WeatherCard weather={parsed.weather} />
-                                        {parsed.weather.packingTips && parsed.weather.packingTips.length > 0 && (
-                                          <PackingList items={parsed.weather.packingTips} />
                                         )}
                                       </>
                                     )}
