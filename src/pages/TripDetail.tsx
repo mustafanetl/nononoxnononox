@@ -331,7 +331,7 @@ const TripDetail = () => {
               { icon: Globe, label: "Visa", value: data.travelInfo.visa },
               { icon: Banknote, label: "Currency", value: data.travelInfo.currency },
               { icon: Clock, label: "Timezone", value: data.travelInfo.timezone },
-              { icon: Sun, label: "Best Season", value: data.travelInfo.bestSeason },
+              { icon: Banknote, label: "Tipping", value: data.travelInfo.tipping },
             ].map(({ icon: Icon, label, value }) => value && (
               <div key={label} className="flex items-center gap-2 text-xs">
                 <Icon className="h-3.5 w-3.5 text-muted-foreground" />

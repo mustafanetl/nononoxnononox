@@ -697,9 +697,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const enrichDest = parsed.destinationEnrich?.destination;
                   const enrichData = enrichDest ? enrichedData[enrichDest] : null;
                   if (enrichData) {
-                    if (enrichData.weather && parsed.weather) {
-                      parsed.weather = { ...parsed.weather, ...enrichData.weather, packingTips: parsed.weather.packingTips || [] };
-                    }
                     if (enrichData.country && parsed.travelInfo) {
                       parsed.travelInfo = {
                         ...parsed.travelInfo,
