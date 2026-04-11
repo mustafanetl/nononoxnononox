@@ -872,14 +872,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                         )}
                                       </>
                                     )}
-                                    {parsed.weather && (
-                                      <>
-                                        <WeatherCard weather={parsed.weather} />
-                                        {parsed.weather.packingTips && parsed.weather.packingTips.length > 0 && (
-                                          <PackingList items={parsed.weather.packingTips} />
-                                        )}
-                                      </>
-                                    )}
                                   </>
                                 )}
                               </>
