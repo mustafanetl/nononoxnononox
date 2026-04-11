@@ -1,4 +1,4 @@
-import { Globe, Banknote, Languages, Clock, ShieldCheck, Wifi, ArrowLeftRight, Coins, Smartphone, Train } from "lucide-react";
+import { Banknote, Languages, Clock, ShieldCheck, Wifi, ArrowLeftRight, Coins, Smartphone, Train } from "lucide-react";
 
 export interface TravelInfoData {
   destination: string;

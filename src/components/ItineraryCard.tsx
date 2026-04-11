@@ -71,7 +71,7 @@ const ItineraryCard = ({ item }: { item: ItineraryData }) => {
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-medium text-foreground truncate">{slot.venue}</p>
                   {slot.bookAhead && (
-                    <Ticket className="h-3 w-3 text-amber-500 shrink-0" title="Book ahead" />
+                    <Ticket className="h-3 w-3 text-amber-500 shrink-0" />
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
