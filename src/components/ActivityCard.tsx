@@ -1,4 +1,4 @@
-import { Clock, DollarSign, Heart, Utensils, Camera, Mountain, Music, Palette, ShoppingBag, Waves } from "lucide-react";
+import { Clock, DollarSign, Heart, Utensils, Camera, Mountain, Music, Palette, ShoppingBag, Waves, MapPin, Ticket } from "lucide-react";
 
 export type ActivityData = {
   id: string;
@@ -10,6 +10,10 @@ export type ActivityData = {
   image: string;
   occasion: string;
   description: string;
+  neighborhood?: string;
+  hours?: string;
+  bookAhead?: boolean;
+  why?: string;
   lat?: number;
   lng?: number;
   realPhoto?: string;
@@ -58,7 +62,12 @@ const ActivityCard = ({ activity, onClick }: { activity: ActivityData; onClick: 
           <span className="px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-medium">
             {occasionLabel}
           </span>
-          {activity.isReal && (
+          {activity.bookAhead && (
+            <span className="px-1.5 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-sm text-[9px] font-medium text-white flex items-center gap-0.5">
+              <Ticket className="h-2.5 w-2.5" /> Book ahead
+            </span>
+          )}
+          {activity.isReal && !activity.bookAhead && (
             <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/90 backdrop-blur-sm text-[9px] font-medium text-white">
               Real
             </span>
@@ -70,6 +79,12 @@ const ActivityCard = ({ activity, onClick }: { activity: ActivityData; onClick: 
           <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
           <h3 className="font-semibold text-sm leading-tight">{activity.name}</h3>
         </div>
+        {activity.neighborhood && (
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <MapPin className="h-2.5 w-2.5" /> {activity.neighborhood}
+            {activity.hours && <span className="ml-1">· {activity.hours}</span>}
+          </div>
+        )}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />

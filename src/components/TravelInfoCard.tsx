@@ -1,4 +1,4 @@
-import { Globe, Banknote, Languages, Clock, Sun, ShieldCheck, Wifi, ArrowLeftRight } from "lucide-react";
+import { Globe, Banknote, Languages, Clock, ShieldCheck, Wifi, ArrowLeftRight, Coins, Smartphone, Train } from "lucide-react";
 
 export interface TravelInfoData {
   destination: string;
@@ -6,10 +6,14 @@ export interface TravelInfoData {
   currency: string;
   language: string;
   timezone: string;
-  bestSeason: string;
-  safety: string;
+  tipping?: string;
+  simCard?: string;
+  transport?: string;
   exchangeRate?: string;
   isLive?: boolean;
+  // Legacy fields (kept for backward compat but not displayed)
+  bestSeason?: string;
+  safety?: string;
 }
 
 const infoItems = [
@@ -18,8 +22,9 @@ const infoItems = [
   { key: "exchangeRate" as const, icon: ArrowLeftRight, label: "Exchange Rate" },
   { key: "language" as const, icon: Languages, label: "Language" },
   { key: "timezone" as const, icon: Clock, label: "Timezone" },
-  { key: "bestSeason" as const, icon: Sun, label: "Best Season" },
-  { key: "safety" as const, icon: Globe, label: "Safety" },
+  { key: "tipping" as const, icon: Coins, label: "Tipping" },
+  { key: "simCard" as const, icon: Smartphone, label: "SIM / Data" },
+  { key: "transport" as const, icon: Train, label: "Getting Around" },
 ];
 
 const TravelInfoCard = ({ info }: { info: TravelInfoData }) => {
@@ -38,7 +43,7 @@ const TravelInfoCard = ({ info }: { info: TravelInfoData }) => {
           const value = info[key];
           if (!value) return null;
           return (
-            <div key={key} className="flex items-start gap-2">
+            <div key={key} className={`flex items-start gap-2 ${(key === "simCard" || key === "transport") ? "col-span-2" : ""}`}>
               <Icon className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>

@@ -5,7 +5,6 @@ import { FlightData } from "@/components/FlightCard";
 import { HotelData } from "@/contexts/TripContext";
 import { ActivityData } from "@/components/ActivityCard";
 import { ItineraryData } from "@/components/ItineraryCard";
-import { WeatherData } from "@/components/WeatherCard";
 import { TravelInfoData } from "@/components/TravelInfoCard";
 import { TimelineLeg } from "@/components/TripTimeline";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -18,7 +17,6 @@ export type TripPlanData = {
   itinerary: ItineraryData[];
   timeline: TimelineLeg[];
   travelInfo: TravelInfoData | null;
-  weather: WeatherData | null;
   quickReplies: string[];
   text: string;
 };
