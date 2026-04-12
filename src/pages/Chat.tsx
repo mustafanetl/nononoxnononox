@@ -738,18 +738,12 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                         return { ...f, realPhoto: img.thumbUrl || img.url };
                       });
                     }
-                    // Assign Google Places photos to activities using per-activity lookup
+                    // Assign Google Places photos to activities — only use exact matches, no generic fallback
                     const activityPhotos = enrichData.activityPhotos || {};
-                    parsed.activities = parsed.activities.map((act: ActivityData, idx: number) => {
-                      // Priority 1: exact per-activity Google Places photo
+                    parsed.activities = parsed.activities.map((act: ActivityData) => {
                       const exactMatch = activityPhotos[act.name];
                       if (exactMatch?.thumbPhoto || exactMatch?.photo) {
                         return { ...act, realPhoto: exactMatch.thumbPhoto || exactMatch.photo, isReal: true };
-                      }
-                      // Priority 2: cycle through Google destination images
-                      if (images.length > 0) {
-                        const img = images[idx % images.length];
-                        return { ...act, realPhoto: img.thumbUrl || img.url, isReal: true };
                       }
                       return act;
                     });
