@@ -41,18 +41,6 @@ async function geocode(destination: string): Promise<GeoResult | null> {
   }
 }
 
-async function getWeather(lat: number, lng: number): Promise<any> {
-  try {
-    const res = await fetchWithTimeout(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&forecast_days=7`
-    );
-    return await res.json();
-  } catch (e) {
-    console.error("Weather error:", e);
-    return null;
-  }
-}
-
 async function getCountryInfo(countryCode: string): Promise<any> {
   if (!countryCode) return null;
   try {
@@ -79,6 +67,7 @@ async function getExchangeRate(currencyCode: string): Promise<any> {
   }
 }
 
+// Fetch iconic destination photos — searches multiple places for variety
 async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any[]> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey) return [];
@@ -92,22 +81,33 @@ async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any
           "X-Goog-Api-Key": apiKey,
           "X-Goog-FieldMask": "places.id,places.photos,places.displayName",
         },
-        body: JSON.stringify({ textQuery: destination, maxResultCount: 1 }),
+        body: JSON.stringify({
+          textQuery: `famous landmarks and attractions in ${destination}`,
+          maxResultCount: 3,
+          includedType: "tourist_attraction",
+        }),
       }
     );
     if (!searchRes.ok) return [];
     const searchData = await searchRes.json();
-    const place = searchData.places?.[0];
-    if (!place?.photos?.length) return [];
+    const places = searchData.places || [];
+    if (places.length === 0) return [];
 
-    const photos = place.photos.slice(0, limit);
-    return photos.map((photo: any) => ({
-      url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=800&key=${apiKey}`,
-      thumbUrl: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=400&key=${apiKey}`,
-      width: photo.widthPx || 800,
-      height: photo.heightPx || 600,
-      attributions: photo.authorAttributions || [],
-    }));
+    // Gather photos from all returned places for variety
+    const allPhotos: any[] = [];
+    for (const place of places) {
+      if (!place.photos?.length) continue;
+      for (const photo of place.photos.slice(0, Math.ceil(limit / places.length))) {
+        allPhotos.push({
+          url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=800&key=${apiKey}`,
+          thumbUrl: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=400&key=${apiKey}`,
+          width: photo.widthPx || 800,
+          height: photo.heightPx || 600,
+          attributions: photo.authorAttributions || [],
+        });
+      }
+    }
+    return allPhotos.slice(0, limit);
   } catch (e) {
     console.error("Google Places photos error:", e);
     return [];
@@ -154,7 +154,7 @@ async function searchXoteloHotels(destination: string, limit = 6): Promise<any[]
   }
 }
 
-// Per-activity Google Places Text Search — returns a map of activity name → photo/rating
+// Per-activity Google Places Text Search — picks best photo from multiple results
 async function searchActivitiesPhotos(
   activities: string[],
   destination: string
@@ -163,8 +163,6 @@ async function searchActivitiesPhotos(
   if (!apiKey || activities.length === 0) return {};
 
   const results: Record<string, any> = {};
-
-  // Process in parallel but cap at 5 concurrent to avoid rate limits
   const batch = activities.slice(0, 8);
   const promises = batch.map(async (actName) => {
     try {
@@ -179,13 +177,14 @@ async function searchActivitiesPhotos(
           },
           body: JSON.stringify({
             textQuery: `${actName} in ${destination}`,
-            maxResultCount: 1,
+            maxResultCount: 3,
           }),
         }
       );
       if (!res.ok) return;
       const data = await res.json();
-      const place = data.places?.[0];
+      // Pick the first place that has photos
+      const place = data.places?.find((p: any) => p.photos?.length > 0) || data.places?.[0];
       if (!place) return;
 
       const photoRef = place.photos?.[0]?.name;
@@ -203,11 +202,12 @@ async function searchActivitiesPhotos(
   await Promise.all(promises);
   return results;
 }
-// Per-hotel Google Places Text Search — returns a map of hotel name → photo URLs
+
+// Per-hotel Google Places Text Search — constrained to lodging type
 async function searchHotelPhotos(
   hotelNames: string[],
   destination: string
-): Promise<Record<string, { photo: string; thumbPhoto: string; rating: number | null }>> {
+): Promise<Record<string, { photo: string; thumbPhoto: string; photos: string[]; rating: number | null }>> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey || hotelNames.length === 0) return {};
 
@@ -226,18 +226,25 @@ async function searchHotelPhotos(
           },
           body: JSON.stringify({
             textQuery: `${name} hotel in ${destination}`,
-            maxResultCount: 1,
+            maxResultCount: 3,
+            includedType: "lodging",
           }),
         }
       );
       if (!res.ok) return;
       const data = await res.json();
-      const place = data.places?.[0];
+      // Pick first place with photos
+      const place = data.places?.find((p: any) => p.photos?.length > 0) || data.places?.[0];
       if (!place?.photos?.[0]?.name) return;
+
+      const allPhotos = place.photos.slice(0, 3).map((p: any) =>
+        `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=800&key=${apiKey}`
+      );
       const photoRef = place.photos[0].name;
       results[name] = {
         photo: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}`,
         thumbPhoto: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}`,
+        photos: allPhotos,
         rating: place.rating || null,
       };
     } catch (e) {
@@ -281,20 +288,6 @@ async function searchCityPhoto(
   }
 }
 
-function weatherCodeToCondition(code: number): string {
-  if (code === 0) return "Clear sky";
-  if (code <= 3) return "Partly cloudy";
-  if (code <= 48) return "Foggy";
-  if (code <= 57) return "Drizzle";
-  if (code <= 65) return "Rainy";
-  if (code <= 67) return "Freezing rain";
-  if (code <= 77) return "Snowy";
-  if (code <= 82) return "Rain showers";
-  if (code <= 86) return "Snow showers";
-  if (code <= 99) return "Thunderstorm";
-  return "Unknown";
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -310,7 +303,7 @@ serve(async (req) => {
       });
     }
 
-    // imageOnly mode: just fetch 1 Google Places photo, skip everything else
+    // imageOnly mode: just fetch Google Places photos, skip everything else
     if (imageOnly) {
       console.log(`Image-only enrichment for: ${destination}`);
       const images = await getGooglePlacePhotos(destination, 3);
@@ -329,11 +322,10 @@ serve(async (req) => {
       });
     }
 
-    // All APIs in parallel — including per-activity and per-hotel photo lookup
+    // All APIs in parallel
     const activityNames: string[] = Array.isArray(activities) ? activities : [];
     const hotelNamesList: string[] = Array.isArray(hotelNames) ? hotelNames : [];
-    const [weatherData, countryData, googleImages, xoteloHotels, activityPhotos, hotelPhotos] = await Promise.all([
-      getWeather(geo.lat, geo.lng),
+    const [countryData, googleImages, xoteloHotels, activityPhotos, hotelPhotos] = await Promise.all([
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
       getGooglePlacePhotos(destination),
       searchXoteloHotels(destination),
@@ -352,36 +344,6 @@ serve(async (req) => {
     }
 
     const exchangeData = currencyCode ? await getExchangeRate(currencyCode) : null;
-
-    let weatherSummary = null;
-    if (weatherData?.daily) {
-      const daily = weatherData.daily;
-      const temps_max = daily.temperature_2m_max || [];
-      const temps_min = daily.temperature_2m_min || [];
-      const precip = daily.precipitation_sum || [];
-      const codes = daily.weathercode || [];
-
-      const avgHigh = temps_max.length > 0 ? Math.round(temps_max.reduce((a: number, b: number) => a + b, 0) / temps_max.length) : null;
-      const avgLow = temps_min.length > 0 ? Math.round(temps_min.reduce((a: number, b: number) => a + b, 0) / temps_min.length) : null;
-      const totalPrecip = precip.reduce((a: number, b: number) => a + b, 0);
-      const dominantCode = codes.length > 0 ? codes[Math.floor(codes.length / 2)] : 0;
-
-      weatherSummary = {
-        destination,
-        tempHigh: avgHigh,
-        tempLow: avgLow,
-        conditions: weatherCodeToCondition(dominantCode),
-        rainfall: totalPrecip < 1 ? "Minimal" : totalPrecip < 10 ? "Light" : totalPrecip < 30 ? "Moderate" : "Heavy",
-        forecast: daily.time?.map((date: string, i: number) => ({
-          date,
-          high: temps_max[i],
-          low: temps_min[i],
-          precipitation: precip[i],
-          condition: weatherCodeToCondition(codes[i] || 0),
-        })) || [],
-        isLive: true,
-      };
-    }
 
     let countryInfo = null;
     if (countryData) {
@@ -404,14 +366,13 @@ serve(async (req) => {
     const result = {
       destination,
       geo: { lat: geo.lat, lng: geo.lng, countryCode: geo.countryCode },
-      weather: weatherSummary,
       country: countryInfo,
       exchange: exchangeData,
       images: googleImages,
       places: [],
       hotels: xoteloHotels,
       activityPhotos,
-      hotelPhotos, // Map of hotel name → { photo, thumbPhoto, rating }
+      hotelPhotos,
     };
 
     console.log(`Enrichment complete for ${destination}: ${googleImages.length} images, ${Object.keys(activityPhotos).length} activity photos, ${Object.keys(hotelPhotos).length} hotel photos, ${xoteloHotels.length} hotels`);
