@@ -37,7 +37,9 @@ import { toast } from "sonner";
 const enrichmentCache: Record<string, any> = {};
 
 const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[], imageOnly?: boolean, hotelNames?: string[]) => {
-  const cacheKey = imageOnly ? `${destination}-imageOnly` : `${destination}-${travelMonth || ""}`;
+  // Cache key includes activity/hotel names to avoid stale photo reuse
+  const namesHash = [...(activityNames || []), ...(hotelNames || [])].sort().join("|").slice(0, 100);
+  const cacheKey = imageOnly ? `${destination}-imageOnly` : `${destination}-${travelMonth || ""}-${namesHash}`;
   if (enrichmentCache[cacheKey]) return enrichmentCache[cacheKey];
 
   try {
@@ -707,27 +709,22 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                         isLive: true,
                       };
                     }
-                    // Replace AI-estimated hotels with real Xotelo hotels
-                    if (enrichData.hotels && enrichData.hotels.length > 0) {
-                      parsed.hotels = enrichData.hotels;
-                    }
-                    // Apply per-hotel Google Places photos first
+                    // Enrich AI hotels with verified Google Places photos — do NOT replace them
                     const hotelPhotos = enrichData.hotelPhotos || {};
-                    parsed.hotels = parsed.hotels.map((h: HotelData, idx: number) => {
-                      // Priority 1: per-hotel Google Places photo
+                    parsed.hotels = parsed.hotels.map((h: HotelData) => {
                       const match = hotelPhotos[h.name];
-                      if (match?.thumbPhoto || match?.photo) {
-                        return { ...h, realImage: match.thumbPhoto || match.photo };
+                      if (match?.verified && (match?.thumbPhoto || match?.photo)) {
+                        return {
+                          ...h,
+                          realImage: match.thumbPhoto || match.photo,
+                          rating: match.rating || h.rating,
+                          isLive: true,
+                          verified: true,
+                          verifiedAddress: match.address || null,
+                        };
                       }
-                      // Priority 2: Xotelo photo already on the hotel
-                      if (h.realImage) return h;
-                      // Priority 3: cycle through destination Google images
-                      const images = enrichData.images || [];
-                      if (images.length > 0) {
-                        const img = images[idx % images.length];
-                        return { ...h, realImage: img.thumbUrl || img.url };
-                      }
-                      return h;
+                      // Non-verified: keep AI data, no fake photo
+                      return { ...h, verified: false };
                     });
                     // Apply destination images to flights
                     const images = enrichData.images || [];
@@ -738,14 +735,22 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                         return { ...f, realPhoto: img.thumbUrl || img.url };
                       });
                     }
-                    // Assign Google Places photos to activities — only use exact matches, no generic fallback
+                    // Assign verified Google Places photos to activities
                     const activityPhotos = enrichData.activityPhotos || {};
                     parsed.activities = parsed.activities.map((act: ActivityData) => {
-                      const exactMatch = activityPhotos[act.name];
-                      if (exactMatch?.thumbPhoto || exactMatch?.photo) {
-                        return { ...act, realPhoto: exactMatch.thumbPhoto || exactMatch.photo, isReal: true };
+                      const match = activityPhotos[act.name];
+                      if (match?.verified && (match?.thumbPhoto || match?.photo)) {
+                        return {
+                          ...act,
+                          realPhoto: match.thumbPhoto || match.photo,
+                          isReal: true,
+                          verified: true,
+                          verifiedAddress: match.address || null,
+                          verifiedRating: match.rating || null,
+                        };
                       }
-                      return act;
+                      // Not verified: no photo, keep AI data
+                      return { ...act, verified: false };
                     });
                   }
 

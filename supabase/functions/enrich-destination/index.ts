@@ -67,7 +67,7 @@ async function getExchangeRate(currencyCode: string): Promise<any> {
   }
 }
 
-// Fetch iconic destination photos — searches multiple places for variety
+// Fetch iconic destination photos
 async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any[]> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey) return [];
@@ -93,7 +93,6 @@ async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any
     const places = searchData.places || [];
     if (places.length === 0) return [];
 
-    // Gather photos from all returned places for variety
     const allPhotos: any[] = [];
     for (const place of places) {
       if (!place.photos?.length) continue;
@@ -114,51 +113,16 @@ async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any
   }
 }
 
-async function searchXoteloHotels(destination: string, limit = 6): Promise<any[]> {
-  try {
-    const searchRes = await fetchWithTimeout(
-      `https://data.xotelo.com/api/search?query=${encodeURIComponent(destination)}&location_type=geo`
-    );
-    if (!searchRes.ok) return [];
-    const searchData = await searchRes.json();
-    const locationKey = searchData?.result?.location_key;
-    if (!locationKey) return [];
-
-    const listRes = await fetchWithTimeout(
-      `https://data.xotelo.com/api/list?location_key=${locationKey}&limit=${limit}&sort=best_value`
-    );
-    if (!listRes.ok) return [];
-    const listData = await listRes.json();
-    const hotels = listData?.result?.hotels || listData?.result || [];
-
-    return (Array.isArray(hotels) ? hotels : []).slice(0, limit).map((h: any, idx: number) => ({
-      id: `xotelo-${h.hotel_key || idx}`,
-      name: h.name || "Hotel",
-      stars: h.hotel_class || h.stars || 3,
-      pricePerNight: h.price?.avg || h.price?.min || 0,
-      currency: "$",
-      image: "default",
-      location: h.address || destination,
-      description: h.subcategory || h.type || "Hotel accommodation",
-      realImage: h.photo || h.image || null,
-      priceRange: h.price ? { min: h.price.min || 0, max: h.price.max || 0 } : null,
-      rating: h.rating || h.overall_rating || null,
-      isLive: true,
-      hotelKey: h.hotel_key || null,
-      lat: h.latitude || null,
-      lng: h.longitude || null,
-    }));
-  } catch (e) {
-    console.error("Xotelo hotel search error:", e);
-    return [];
-  }
+// Normalize name for fuzzy matching
+function normalizeName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-// Per-activity Google Places Text Search — picks best photo from multiple results
-async function searchActivitiesPhotos(
+// Per-activity Google Places validation + photo
+async function searchAndValidateActivities(
   activities: string[],
   destination: string
-): Promise<Record<string, { photo: string; thumbPhoto: string; rating: number | null; address: string | null }>> {
+): Promise<Record<string, { photo: string | null; thumbPhoto: string | null; rating: number | null; address: string | null; verified: boolean; matchedName: string | null }>> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey || activities.length === 0) return {};
 
@@ -181,21 +145,55 @@ async function searchActivitiesPhotos(
           }),
         }
       );
-      if (!res.ok) return;
+      if (!res.ok) {
+        results[actName] = { photo: null, thumbPhoto: null, rating: null, address: null, verified: false, matchedName: null };
+        return;
+      }
       const data = await res.json();
-      // Pick the first place that has photos
-      const place = data.places?.find((p: any) => p.photos?.length > 0) || data.places?.[0];
-      if (!place) return;
+      const places = data.places || [];
+      
+      // Find best matching place
+      const normalizedQuery = normalizeName(actName);
+      let bestPlace = null;
+      let isVerified = false;
 
-      const photoRef = place.photos?.[0]?.name;
+      for (const place of places) {
+        const placeName = place.displayName?.text || "";
+        const normalizedPlace = normalizeName(placeName);
+        // Check if names have meaningful overlap
+        if (normalizedPlace.includes(normalizedQuery) || normalizedQuery.includes(normalizedPlace) ||
+            // Check for significant word overlap
+            normalizedQuery.split("").filter((c: string) => normalizedPlace.includes(c)).length > normalizedQuery.length * 0.5) {
+          bestPlace = place;
+          isVerified = true;
+          break;
+        }
+      }
+
+      // Fallback: use first result with photos but mark as unverified
+      if (!bestPlace) {
+        bestPlace = places.find((p: any) => p.photos?.length > 0) || places[0];
+        // If the first result exists, it's a weak match
+        isVerified = false;
+      }
+
+      if (!bestPlace) {
+        results[actName] = { photo: null, thumbPhoto: null, rating: null, address: null, verified: false, matchedName: null };
+        return;
+      }
+
+      const photoRef = bestPlace.photos?.[0]?.name;
       results[actName] = {
         photo: photoRef ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}` : null,
         thumbPhoto: photoRef ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}` : null,
-        rating: place.rating || null,
-        address: place.formattedAddress || null,
+        rating: bestPlace.rating || null,
+        address: bestPlace.formattedAddress || null,
+        verified: isVerified && !!photoRef,
+        matchedName: bestPlace.displayName?.text || null,
       };
     } catch (e) {
-      console.error(`Activity photo search error for "${actName}":`, e);
+      console.error(`Activity validation error for "${actName}":`, e);
+      results[actName] = { photo: null, thumbPhoto: null, rating: null, address: null, verified: false, matchedName: null };
     }
   });
 
@@ -203,11 +201,11 @@ async function searchActivitiesPhotos(
   return results;
 }
 
-// Per-hotel Google Places Text Search — constrained to lodging type
-async function searchHotelPhotos(
+// Per-hotel Google Places validation + photo
+async function searchAndValidateHotels(
   hotelNames: string[],
   destination: string
-): Promise<Record<string, { photo: string; thumbPhoto: string; photos: string[]; rating: number | null }>> {
+): Promise<Record<string, { photo: string | null; thumbPhoto: string | null; photos: string[]; rating: number | null; address: string | null; verified: boolean; matchedName: string | null }>> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey || hotelNames.length === 0) return {};
 
@@ -222,7 +220,7 @@ async function searchHotelPhotos(
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": "places.photos,places.rating",
+            "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress",
           },
           body: JSON.stringify({
             textQuery: `${name} hotel in ${destination}`,
@@ -231,24 +229,53 @@ async function searchHotelPhotos(
           }),
         }
       );
-      if (!res.ok) return;
+      if (!res.ok) {
+        results[name] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, matchedName: null };
+        return;
+      }
       const data = await res.json();
-      // Pick first place with photos
-      const place = data.places?.find((p: any) => p.photos?.length > 0) || data.places?.[0];
-      if (!place?.photos?.[0]?.name) return;
+      const places = data.places || [];
 
-      const allPhotos = place.photos.slice(0, 3).map((p: any) =>
+      const normalizedQuery = normalizeName(name);
+      let bestPlace = null;
+      let isVerified = false;
+
+      for (const place of places) {
+        const placeName = place.displayName?.text || "";
+        const normalizedPlace = normalizeName(placeName);
+        if (normalizedPlace.includes(normalizedQuery) || normalizedQuery.includes(normalizedPlace)) {
+          bestPlace = place;
+          isVerified = true;
+          break;
+        }
+      }
+
+      if (!bestPlace) {
+        bestPlace = places.find((p: any) => p.photos?.length > 0) || places[0];
+        isVerified = false;
+      }
+
+      if (!bestPlace?.photos?.[0]?.name) {
+        results[name] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, matchedName: bestPlace?.displayName?.text || null };
+        return;
+      }
+
+      const allPhotos = bestPlace.photos.slice(0, 3).map((p: any) =>
         `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=800&key=${apiKey}`
       );
-      const photoRef = place.photos[0].name;
+      const photoRef = bestPlace.photos[0].name;
       results[name] = {
         photo: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}`,
         thumbPhoto: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}`,
         photos: allPhotos,
-        rating: place.rating || null,
+        rating: bestPlace.rating || null,
+        address: bestPlace.formattedAddress || null,
+        verified: isVerified,
+        matchedName: bestPlace.displayName?.text || null,
       };
     } catch (e) {
-      console.error(`Hotel photo search error for "${name}":`, e);
+      console.error(`Hotel validation error for "${name}":`, e);
+      results[name] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, matchedName: null };
     }
   });
   await Promise.all(promises);
@@ -325,12 +352,11 @@ serve(async (req) => {
     // All APIs in parallel
     const activityNames: string[] = Array.isArray(activities) ? activities : [];
     const hotelNamesList: string[] = Array.isArray(hotelNames) ? hotelNames : [];
-    const [countryData, googleImages, xoteloHotels, activityPhotos, hotelPhotos] = await Promise.all([
+    const [countryData, googleImages, activityResults, hotelResults] = await Promise.all([
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
       getGooglePlacePhotos(destination),
-      searchXoteloHotels(destination),
-      activityNames.length > 0 ? searchActivitiesPhotos(activityNames, destination) : Promise.resolve({}),
-      hotelNamesList.length > 0 ? searchHotelPhotos(hotelNamesList, destination) : Promise.resolve({}),
+      activityNames.length > 0 ? searchAndValidateActivities(activityNames, destination) : Promise.resolve({}),
+      hotelNamesList.length > 0 ? searchAndValidateHotels(hotelNamesList, destination) : Promise.resolve({}),
     ]);
 
     let currencyCode = "";
@@ -363,19 +389,27 @@ serve(async (req) => {
       };
     }
 
+    // Count verified items
+    const verifiedActivities = Object.values(activityResults).filter((a: any) => a.verified).length;
+    const verifiedHotels = Object.values(hotelResults).filter((h: any) => h.verified).length;
+
     const result = {
       destination,
       geo: { lat: geo.lat, lng: geo.lng, countryCode: geo.countryCode },
       country: countryInfo,
       exchange: exchangeData,
       images: googleImages,
-      places: [],
-      hotels: xoteloHotels,
-      activityPhotos,
-      hotelPhotos,
+      activityPhotos: activityResults,
+      hotelPhotos: hotelResults,
+      verification: {
+        activitiesTotal: activityNames.length,
+        activitiesVerified: verifiedActivities,
+        hotelsTotal: hotelNamesList.length,
+        hotelsVerified: verifiedHotels,
+      },
     };
 
-    console.log(`Enrichment complete for ${destination}: ${googleImages.length} images, ${Object.keys(activityPhotos).length} activity photos, ${Object.keys(hotelPhotos).length} hotel photos, ${xoteloHotels.length} hotels`);
+    console.log(`Enrichment complete for ${destination}: ${googleImages.length} images, ${verifiedActivities}/${activityNames.length} activities verified, ${verifiedHotels}/${hotelNamesList.length} hotels verified`);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
