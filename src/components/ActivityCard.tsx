@@ -1,4 +1,4 @@
-import { Clock, DollarSign, Heart, Utensils, Camera, Mountain, Music, Palette, ShoppingBag, Waves, MapPin, Ticket } from "lucide-react";
+import { Clock, DollarSign, Heart, Utensils, Camera, Mountain, Music, Palette, ShoppingBag, Waves, MapPin, Ticket, CheckCircle2 } from "lucide-react";
 
 export type ActivityData = {
   id: string;
@@ -18,6 +18,9 @@ export type ActivityData = {
   lng?: number;
   realPhoto?: string;
   isReal?: boolean;
+  verified?: boolean;
+  verifiedAddress?: string | null;
+  verifiedRating?: number | null;
 };
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -31,19 +34,9 @@ const categoryIcons: Record<string, React.ElementType> = {
   romance: Heart,
 };
 
-const occasionLabels: Record<string, string> = {
-  honeymoon: "Honeymoon",
-  birthday: "Birthday",
-  family: "Family",
-  solo: "Solo",
-  friends: "Friends",
-  anniversary: "Anniversary",
-};
-
 const ActivityCard = ({ activity, onClick }: { activity: ActivityData; onClick: () => void }) => {
   const Icon = categoryIcons[activity.category] || Camera;
   const hasImage = !!activity.realPhoto;
-  const occasionLabel = occasionLabels[activity.occasion] || activity.occasion;
 
   return (
     <div
@@ -59,17 +52,18 @@ const ActivityCard = ({ activity, onClick }: { activity: ActivityData; onClick: 
           </div>
         )}
         <div className="absolute top-2 left-2 flex items-center gap-1">
-          <span className="px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-medium">
-            {occasionLabel}
-          </span>
+          {activity.verified ? (
+            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/90 backdrop-blur-sm text-[9px] font-medium text-white flex items-center gap-0.5">
+              <CheckCircle2 className="h-2.5 w-2.5" /> Verified
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.5 rounded-full bg-muted/80 backdrop-blur-sm text-[9px] font-medium text-muted-foreground">
+              AI suggested
+            </span>
+          )}
           {activity.bookAhead && (
             <span className="px-1.5 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-sm text-[9px] font-medium text-white flex items-center gap-0.5">
               <Ticket className="h-2.5 w-2.5" /> Book ahead
-            </span>
-          )}
-          {activity.isReal && !activity.bookAhead && (
-            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/90 backdrop-blur-sm text-[9px] font-medium text-white">
-              Real
             </span>
           )}
         </div>
@@ -81,7 +75,7 @@ const ActivityCard = ({ activity, onClick }: { activity: ActivityData; onClick: 
         </div>
         {activity.neighborhood && (
           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <MapPin className="h-2.5 w-2.5" /> {activity.neighborhood}
+            <MapPin className="h-2.5 w-2.5" /> {activity.verifiedAddress || activity.neighborhood}
             {activity.hours && <span className="ml-1">· {activity.hours}</span>}
           </div>
         )}
@@ -92,7 +86,7 @@ const ActivityCard = ({ activity, onClick }: { activity: ActivityData; onClick: 
           </span>
           <span className="flex items-center gap-1 font-semibold text-foreground">
             <DollarSign className="h-3 w-3" />
-            {activity.currency}{activity.price}
+            ~{activity.currency}{activity.price}
           </span>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { Star, MapPin, GitCompare, Hotel } from "lucide-react";
+import { Star, MapPin, GitCompare, Hotel, CheckCircle2 } from "lucide-react";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
 
 const HotelCard = ({ hotel, onClick }: { hotel: HotelData; onClick: () => void }) => {
@@ -26,13 +26,17 @@ const HotelCard = ({ hotel, onClick }: { hotel: HotelData; onClick: () => void }
           </div>
         )}
         <div className="absolute top-2 right-2 flex items-center gap-1">
-          <span className={`px-1.5 py-0.5 rounded-full backdrop-blur-sm text-[9px] font-medium text-white ${hotel.isLive ? "bg-green-500/90" : "bg-amber-500/90"}`}>
-            {hotel.isLive ? "Live" : "Est."}
-          </span>
+          {(hotel as any).verified ? (
+            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/90 backdrop-blur-sm text-[9px] font-medium text-white flex items-center gap-0.5">
+              <CheckCircle2 className="h-2.5 w-2.5" /> Verified
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.5 rounded-full bg-muted/80 backdrop-blur-sm text-[9px] font-medium text-muted-foreground">
+              AI suggested
+            </span>
+          )}
           <span className="px-2 py-0.5 rounded-full bg-background/80 backdrop-blur-sm text-[10px] font-bold">
-            {hotel.priceRange
-              ? `${hotel.currency}${hotel.priceRange.min}–${hotel.priceRange.max}/night`
-              : `${hotel.currency}${hotel.pricePerNight}/night`}
+            ~{hotel.currency}{hotel.pricePerNight}/night
           </span>
         </div>
         {hotel.rating && (
@@ -56,7 +60,7 @@ const HotelCard = ({ hotel, onClick }: { hotel: HotelData; onClick: () => void }
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <MapPin className="h-3 w-3" />
-          {hotel.location}
+          {(hotel as any).verifiedAddress || hotel.location}
         </div>
       </div>
     </div>
