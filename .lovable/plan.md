@@ -1,40 +1,87 @@
 
+Goal: make Jolliday feel trustworthy by showing fewer, better, verified recommendations instead of flashy but random ones.
 
-# Plan: Improve Google Places Image Relevance
+What’s actually going wrong
+- The AI is being asked to invent very specific venues, prices, hotel picks, and itinerary details with no verification step, so it can hallucinate.
+- The image layer then tries to match those invented names to Google Places, which can return the wrong business/photo.
+- The frontend cache keys enrichment only by destination/month, so old photos can be reused for a different set of activities/hotels in the same city.
+- Hotels are currently replaced wholesale with generic live hotel results, which breaks the connection between the AI’s plan and what the user sees.
+- Destination fallback photos are still reused in places where they don’t represent the actual item.
 
-## Problem
-The current Google Places searches use generic queries that often return irrelevant photos — e.g. searching "Paris" might return a random business photo instead of iconic city imagery. Activity and hotel fallback photos cycle through these low-quality destination images.
+Implementation plan
 
-## Changes
+1. Rework the AI output to reduce hallucinations
+- Update `supabase/functions/rzuma-chat/index.ts` so the AI:
+  - asks short follow-ups when key trip facts are missing
+  - generates fewer recommendations, but each one must be specific and practical
+  - avoids exact claims it cannot know confidently
+  - prioritizes neighborhoods, sequencing, and rationale over made-up details
+- Tighten the prompt so flights/hotels are only included when trip inputs are actually sufficient.
 
-### 1. Improve destination-level photo queries
-**File:** `supabase/functions/enrich-destination/index.ts`
-- Change `getGooglePlacePhotos` textQuery from just `destination` to `"top attractions in {destination}"` or `"{destination} travel landmarks"` — this biases Google Places toward scenic/iconic results
-- Add `includedType: "tourist_attraction"` to the Places Text Search request to filter for landmarks instead of businesses
-- Request `maxResultCount: 3` places (not 1) and gather photos across all of them for variety — currently we only look at the first place result
+2. Add a validation layer before trusting plan details
+- Extend `supabase/functions/enrich-destination/index.ts` to validate each activity and hotel against Google Places using:
+  - normalized name matching
+  - destination/city matching
+  - category/type matching
+  - confidence thresholds
+- Return verification metadata per item, such as:
+  - matched place name
+  - formatted address
+  - rating
+  - confidence score
+  - verified photo URLs
+- If confidence is low, do not attach a random photo or fake metadata.
 
-### 2. Improve per-activity photo searches
-**File:** `supabase/functions/enrich-destination/index.ts`
-- In `searchActivitiesPhotos`, add the activity category to the query (e.g. `"Bar BenFiddich cocktail bar in Tokyo"` instead of just `"Bar BenFiddich in Tokyo"`) for more precise matching
-- Request `maxResultCount: 3` places and pick the best photo (first result with photos) rather than blindly taking the first result which might not have photos
+3. Stop swapping the plan out from under the user
+- Update `src/pages/Chat.tsx` so AI-generated hotels are not blindly replaced by generic hotel listings.
+- Keep the original plan items, then enrich only the ones that can be confidently matched.
+- If live hotel data is shown, present it as alternative booking options instead of silently replacing the plan.
 
-### 3. Improve per-hotel photo searches
-**File:** `supabase/functions/enrich-destination/index.ts`
-- In `searchHotelPhotos`, add `includedType: "lodging"` to constrain results to actual hotels
-- Grab multiple photos per hotel (first 2) so the detail modal can show more than one image
+4. Fix image relevance and stale-photo bugs
+- Change the enrichment cache key in `src/pages/Chat.tsx` to include destination + activity names + hotel names, not just destination/month.
+- Only show Google photos when the item match is confident.
+- Remove misleading destination-photo fallbacks for hotels/flights/activities where there is no exact match.
+- Keep destination hero images only for destination-level cards.
 
-### 4. Better fallback logic — no generic city photos on activities
-**File:** `src/pages/Chat.tsx`
-- Stop cycling generic destination images onto activities that didn't get a specific match — it's misleading. Instead, leave `realPhoto` empty so the gradient placeholder with category icon shows (which is more honest than a random city photo)
-- Keep destination images only for the TripSummaryCard hero and PlaceShowcase
+5. Make trust visible in the UI
+- Update `src/components/ActivityCard.tsx`, `src/components/HotelCard.tsx`, and relevant detail modals/pages to show:
+  - verified place/address when available
+  - “verified” vs “suggested” state
+  - cleaner fallback UI when an item is not verified
+- This makes it obvious what is real-time matched versus AI suggestion.
 
-### 5. Clean up dead weather code in enrichment
-**File:** `supabase/functions/enrich-destination/index.ts`
-- Remove `getWeather()`, `weatherCodeToCondition()`, and weather processing — already removed from frontend but still runs server-side wasting time
+6. Improve usefulness of the plan itself
+- Refine itinerary generation so it solves travel pain points:
+  - realistic geographic flow
+  - practical transit between stops
+  - book-ahead warnings
+  - fewer filler items
+  - clearer daily pacing
+- Keep the focus on decisions users actually need: where to stay, what to book first, and how to structure the day.
 
-## Files Modified
-| File | Change |
-|---|---|
-| `supabase/functions/enrich-destination/index.ts` | Better search queries, type filters, multi-place photo gathering, remove dead weather code |
-| `src/pages/Chat.tsx` | Stop assigning generic city photos to unmatched activities |
+7. Add safeguards for bad outputs
+- In `supabase/functions/rzuma-chat/index.ts`, detect incomplete/truncated AI output and handle it safely instead of trusting partial plan data.
+- If validation fails for too many items, fall back to a simpler, more honest plan rather than rendering messy, low-confidence content.
 
+Files to update
+- `supabase/functions/rzuma-chat/index.ts`
+- `supabase/functions/enrich-destination/index.ts`
+- `src/pages/Chat.tsx`
+- `src/components/ActivityCard.tsx`
+- `src/components/HotelCard.tsx`
+- likely `src/components/ActivityDetailModal.tsx`
+- likely `src/components/HotelDetailModal.tsx`
+- possibly `src/components/TripSummaryCard.tsx` / `src/pages/TripDetail.tsx` for verified-state display consistency
+
+Expected outcome
+- Better venue accuracy
+- Better image relevance
+- No stale/random photos from previous enrichments
+- No confusing hotel replacement
+- Plans that feel simpler, more grounded, and more useful for real travel decisions
+
+Technical notes
+- I recommend keeping Google APIs as the source of truth for images and place verification.
+- The AI should handle taste, structure, and personalization.
+- The backend enrichment step should handle verification, metadata, and trust scoring.
+- The UI should clearly separate verified facts from AI suggestions.
