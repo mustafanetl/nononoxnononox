@@ -22,6 +22,7 @@ import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
 import PlanPreviewGate from "@/components/PlanPreviewGate";
 import PlaceShowcase from "@/components/PlaceShowcase";
+import PlacesGallery, { PlaceItem } from "@/components/PlacesGallery";
 import PaywallModal from "@/components/PaywallModal";
 import { useSubscription } from "@/hooks/useSubscription";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
@@ -75,6 +76,7 @@ const parseMessageContent = (content: string) => {
   let quickReplies: string[] = [];
   let destinationEnrich: { destination: string; travelMonth?: string } | null = null;
   let placeImages: { place: string; vibes?: string[] }[] = [];
+  let places: PlaceItem[] = [];
   let text = content;
 
   const extractBlock = (blockType: string) => {
@@ -154,8 +156,16 @@ const parseMessageContent = (content: string) => {
     placeImages = piArr.map((p: any) => ({ place: p.place || "", vibes: p.vibes }));
   }
 
+  const placesArr = extractBlock("places");
+  if (placesArr.length > 0) {
+    places = placesArr
+      .filter((p: any) => p && typeof p.name === "string" && typeof p.location === "string")
+      .slice(0, 12)
+      .map((p: any) => ({ name: p.name, location: p.location, why: p.why, category: p.category }));
+  }
+
   // Strip incomplete/unterminated code blocks during streaming to prevent raw JSON leaking
-  const blockTypes = ["flights", "activities", "hotels", "itinerary", "timeline", "destination_enrich", "travelinfo", "weather", "quickreplies", "place_images"];
+  const blockTypes = ["flights", "activities", "hotels", "itinerary", "timeline", "destination_enrich", "travelinfo", "weather", "quickreplies", "place_images", "places"];
   for (const bt of blockTypes) {
     // Match an opening ```blocktype that has NO closing ```
     const openPattern = new RegExp("```" + bt + "\\s[\\s\\S]*$");
@@ -164,7 +174,7 @@ const parseMessageContent = (content: string) => {
     }
   }
 
-  return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich, placeImages };
+  return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich, placeImages, places };
 };
 
 const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
@@ -350,7 +360,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       ...msg,
       parsed: msg.role === "assistant"
         ? parseMessageContent(msg.content)
-        : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null, placeImages: [] },
+        : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null, placeImages: [], places: [] },
     }));
   }, [messages]);
 
@@ -831,6 +841,9 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                   <>
                                     {parsed.timeline.length > 0 && (
                                       <TripTimeline legs={parsed.timeline} />
+                                    )}
+                                    {parsed.places.length > 0 && (
+                                      <PlacesGallery places={parsed.places} />
                                     )}
                                     {parsed.flights.length > 0 && (
                                       <HorizontalCarousel>
