@@ -156,8 +156,16 @@ const parseMessageContent = (content: string) => {
     placeImages = piArr.map((p: any) => ({ place: p.place || "", vibes: p.vibes }));
   }
 
+  const placesArr = extractBlock("places");
+  if (placesArr.length > 0) {
+    places = placesArr
+      .filter((p: any) => p && typeof p.name === "string" && typeof p.location === "string")
+      .slice(0, 12)
+      .map((p: any) => ({ name: p.name, location: p.location, why: p.why, category: p.category }));
+  }
+
   // Strip incomplete/unterminated code blocks during streaming to prevent raw JSON leaking
-  const blockTypes = ["flights", "activities", "hotels", "itinerary", "timeline", "destination_enrich", "travelinfo", "weather", "quickreplies", "place_images"];
+  const blockTypes = ["flights", "activities", "hotels", "itinerary", "timeline", "destination_enrich", "travelinfo", "weather", "quickreplies", "place_images", "places"];
   for (const bt of blockTypes) {
     // Match an opening ```blocktype that has NO closing ```
     const openPattern = new RegExp("```" + bt + "\\s[\\s\\S]*$");
@@ -166,7 +174,7 @@ const parseMessageContent = (content: string) => {
     }
   }
 
-  return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich, placeImages };
+  return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich, placeImages, places };
 };
 
 const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
