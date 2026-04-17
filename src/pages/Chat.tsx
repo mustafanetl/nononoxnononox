@@ -360,7 +360,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       ...msg,
       parsed: msg.role === "assistant"
         ? parseMessageContent(msg.content)
-        : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null, placeImages: [] },
+        : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null, placeImages: [], places: [] },
     }));
   }, [messages]);
 
