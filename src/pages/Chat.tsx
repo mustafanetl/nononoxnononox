@@ -22,6 +22,7 @@ import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
 import PlanPreviewGate from "@/components/PlanPreviewGate";
 import PlaceShowcase from "@/components/PlaceShowcase";
+import PlacesGallery, { PlaceItem } from "@/components/PlacesGallery";
 import PaywallModal from "@/components/PaywallModal";
 import { useSubscription } from "@/hooks/useSubscription";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
@@ -75,6 +76,7 @@ const parseMessageContent = (content: string) => {
   let quickReplies: string[] = [];
   let destinationEnrich: { destination: string; travelMonth?: string } | null = null;
   let placeImages: { place: string; vibes?: string[] }[] = [];
+  let places: PlaceItem[] = [];
   let text = content;
 
   const extractBlock = (blockType: string) => {
