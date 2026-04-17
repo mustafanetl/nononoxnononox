@@ -842,6 +842,9 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                     {parsed.timeline.length > 0 && (
                                       <TripTimeline legs={parsed.timeline} />
                                     )}
+                                    {parsed.places.length > 0 && (
+                                      <PlacesGallery places={parsed.places} />
+                                    )}
                                     {parsed.flights.length > 0 && (
                                       <HorizontalCarousel>
                                         {parsed.flights.map((f, idx) => (
