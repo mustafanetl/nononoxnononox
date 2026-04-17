@@ -127,6 +127,18 @@ ITINERARY RULES:
 {"destination":"Dubai","travelMonth":"March"}
 \`\`\`
 
+\`\`\`places
+[{"name":"Banff National Park","location":"Alberta, Canada","why":"Turquoise glacial lakes and jagged peaks — the most photogenic Rockies experience.","category":"nature"}]
+\`\`\`
+USE THIS BLOCK when the user asks for a LIST of places (e.g. "top 10 nature spots", "best beaches in the world", "must-see cities in Europe", "coolest hidden gems"). NOT a trip plan — just curated discovery.
+RULES for places block:
+- Each item MUST have name + location (city/region + country) so we can find a real photo.
+- name should be the EXACT well-known name searchable on Google Maps (e.g. "Plitvice Lakes National Park", not "those famous Croatian lakes").
+- why: 1 short opinionated sentence — why THIS place is special.
+- category: nature|city|beach|culture|food|adventure|nightlife (optional).
+- Include 5-10 items. Don't combine with flights/hotels/itinerary blocks — places block is standalone.
+- Still end with quickreplies.
+
 \`\`\`quickreplies
 ["Make it cheaper","Add a free day","More food spots","Swap Day 2 activities"]
 \`\`\`
