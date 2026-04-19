@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MapPin, CheckCircle2, Sparkles } from "lucide-react";
+import { MapPin, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface PlaceItem {
