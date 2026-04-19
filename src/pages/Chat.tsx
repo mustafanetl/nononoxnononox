@@ -719,23 +719,25 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                         isLive: true,
                       };
                     }
-                    // Enrich AI hotels with verified Google Places photos — do NOT replace them
+                    // Enrich AI hotels with verified Google Places photos.
+                    // Drop hotels where we couldn't find a real photo.
                     const hotelPhotos = enrichData.hotelPhotos || {};
-                    parsed.hotels = parsed.hotels.map((h: HotelData) => {
-                      const match = hotelPhotos[h.name];
-                      if (match?.verified && (match?.thumbPhoto || match?.photo)) {
-                        return {
-                          ...h,
-                          realImage: match.thumbPhoto || match.photo,
-                          rating: match.rating || h.rating,
-                          isLive: true,
-                          verified: true,
-                          verifiedAddress: match.address || null,
-                        };
-                      }
-                      // Non-verified: keep AI data, no fake photo
-                      return { ...h, verified: false };
-                    });
+                    parsed.hotels = parsed.hotels
+                      .map((h: HotelData) => {
+                        const match = hotelPhotos[h.name];
+                        if (match?.hasRealPhoto && (match?.thumbPhoto || match?.photo)) {
+                          return {
+                            ...h,
+                            realImage: match.thumbPhoto || match.photo,
+                            rating: match.rating || h.rating,
+                            isLive: true,
+                            verified: true,
+                            verifiedAddress: match.address || null,
+                          };
+                        }
+                        return null;
+                      })
+                      .filter(Boolean) as HotelData[];
                     // Apply destination images to flights
                     const images = enrichData.images || [];
                     if (images.length > 0) {
@@ -745,23 +747,25 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                         return { ...f, realPhoto: img.thumbUrl || img.url };
                       });
                     }
-                    // Assign verified Google Places photos to activities
+                    // Assign verified Google Places photos to activities.
+                    // Drop activities without a real photo.
                     const activityPhotos = enrichData.activityPhotos || {};
-                    parsed.activities = parsed.activities.map((act: ActivityData) => {
-                      const match = activityPhotos[act.name];
-                      if (match?.verified && (match?.thumbPhoto || match?.photo)) {
-                        return {
-                          ...act,
-                          realPhoto: match.thumbPhoto || match.photo,
-                          isReal: true,
-                          verified: true,
-                          verifiedAddress: match.address || null,
-                          verifiedRating: match.rating || null,
-                        };
-                      }
-                      // Not verified: no photo, keep AI data
-                      return { ...act, verified: false };
-                    });
+                    parsed.activities = parsed.activities
+                      .map((act: ActivityData) => {
+                        const match = activityPhotos[act.name];
+                        if (match?.hasRealPhoto && (match?.thumbPhoto || match?.photo)) {
+                          return {
+                            ...act,
+                            realPhoto: match.thumbPhoto || match.photo,
+                            isReal: true,
+                            verified: true,
+                            verifiedAddress: match.address || null,
+                            verifiedRating: match.rating || null,
+                          };
+                        }
+                        return null;
+                      })
+                      .filter(Boolean) as ActivityData[];
                   }
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
