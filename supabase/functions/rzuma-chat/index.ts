@@ -136,7 +136,9 @@ RULES for places block:
 - name should be the EXACT well-known name searchable on Google Maps (e.g. "Plitvice Lakes National Park", not "those famous Croatian lakes").
 - why: 1 short opinionated sentence — why THIS place is special.
 - category: nature|city|beach|culture|food|adventure|nightlife (optional).
-- Include 5-10 items. Don't combine with flights/hotels/itinerary blocks — places block is standalone.
+- Include 10-12 items (the system hides any item without a verified real photo, so a few extras absorb that filtering).
+- Prefer ICONIC, well-photographed places — landmarks Google Maps definitely has photos for. Quality > quantity.
+- Don't combine with flights/hotels/itinerary blocks — places block is standalone.
 - Still end with quickreplies.
 
 \`\`\`quickreplies
