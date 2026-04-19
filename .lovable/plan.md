@@ -1,39 +1,48 @@
 
 
-The user asked "Top 10 nature places to visit before I die" — got a list back but no photos. Reason: this is a LOCAL/list-style query, not a TRIP plan. The chat only triggers Google Places enrichment when there's a `destination` field on a trip plan. List-style answers (multiple places, no single destination) skip enrichment entirely, so no images load.
+User wants: every result must have a real photo. No photoless cards, no fake/wrong photos either.
 
-Looking at Chat.tsx enrichment trigger — it runs once per AI message keyed on `destination`. For a top-10 list, the AI either returns prose or activities without a parent destination, so `enrichDestination` is never called per place.
+Current behavior:
+- `enrich-destination` (after recent verification work) returns `verified: false` + no photo when name match isn't confident → cards render with gradient placeholder + "AI suggested" badge.
+- `PlacesGallery` shows placeholder cards when no photo found.
+- Same for `ActivityCard` / `HotelCard`.
 
-## Plan: Add image enrichment for list-style/multi-place answers
+User's rule: if we can't get a real verified photo, **don't show the item at all**. Better to show 6 solid items than 10 with gray boxes.
 
-### 1. Update AI prompt (`supabase/functions/rzuma-chat/index.ts`)
-For list-style answers ("top X places", "best beaches", "must-see..."), require the AI to emit a structured `places` block:
-```
-\`\`\`places
-[{"name": "Banff National Park", "location": "Alberta, Canada", "why": "..."}]
-\`\`\`
-```
-Each item must include `name` + `location` (country/region) so we can geocode/photo-match each one individually.
+## Plan: Hide unverified items, keep only ones with real Google photos
 
-### 2. Parse `places` block (`src/pages/Chat.tsx`)
-Extract the new `places` array from streamed content alongside existing flights/hotels/activities parsing.
+### 1. Backend: be honest about photo source
+`supabase/functions/enrich-destination/index.ts`
+- Keep strict Jaccard/word-token matching already in place.
+- For each activity / hotel / place: only return `photo` URL if Google Places returned an actual photo for a confidently matched venue.
+- Add `hasRealPhoto: true/false` flag explicitly so frontend can filter.
 
-### 3. Per-place photo enrichment
-Reuse `enrich-destination` edge function in `imageOnly` mode, calling it once per place in the list (parallel, capped at 10). Cache results by `name+location`. Use the first verified Google Places photo as the card image.
+### 2. Frontend: filter out photoless items before render
+`src/pages/Chat.tsx`
+- After enrichment resolves, drop activities/hotels where `hasRealPhoto !== true`.
+- If a day ends up empty after filtering, show a small note ("a few suggestions couldn't be verified — ask me to find more").
 
-### 4. New `PlaceShowcase` rendering for lists
-The `PlaceShowcase.tsx` component already exists — extend or render it as a grid/carousel of place cards (image, name, location, short "why"). Show gradient placeholder while loading, then swap in the verified Google photo. No image = no fake fallback (consistent with existing trust rules).
+`src/components/PlacesGallery.tsx`
+- After photo fetch resolves, remove items with no photo from the rendered list (instead of showing gradient + "AI suggested").
+- If everything fails (rare), show a single "couldn't find verified photos for these — try a more specific query" message.
 
-### 5. Trust badges
-Same "Verified" / "AI suggested" badges as activity cards so users know which photos are real Google matches.
+### 3. AI prompt nudge
+`supabase/functions/rzuma-chat/index.ts`
+- Add: "Prefer iconic, well-photographed places. The system will hide any suggestion we can't verify with a real photo, so quality > quantity."
+- Bump list requests slightly (ask for 12 instead of 10) so after filtering we still land near the requested count.
+
+### 4. Loading UX
+- Keep skeleton placeholders during fetch (so the list doesn't flicker shorter).
+- Only filter once all enrichment promises settle.
 
 ## Files to change
 | File | Change |
 |---|---|
-| `supabase/functions/rzuma-chat/index.ts` | Add `places` block format to prompt for list-style queries |
-| `src/pages/Chat.tsx` | Parse `places` block, batch-call enrichment in imageOnly mode, render showcase |
-| `src/components/PlaceShowcase.tsx` | Render verified place cards with photos + trust badges |
+| `supabase/functions/enrich-destination/index.ts` | Add explicit `hasRealPhoto` flag; never attach photo unless Google returned one for a verified match |
+| `supabase/functions/rzuma-chat/index.ts` | Prompt: prefer iconic places; ask for ~20% more items to absorb filtering |
+| `src/pages/Chat.tsx` | Filter activities/hotels missing real photos before rendering |
+| `src/components/PlacesGallery.tsx` | Drop unphotoed places after enrichment settles |
 
 ## Outcome
-Asking "top 10 nature places to visit" returns a visual gallery — each place shows its real Google Places photo (when verified), location, and a short reason. No more text-only lists.
+Every card the user sees has a real Google Places photo of the actual place. Nothing photoless, nothing faked. If we can't verify it, it doesn't show up.
 
