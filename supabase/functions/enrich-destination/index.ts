@@ -118,6 +118,32 @@ function normalizeName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+// Word-token Jaccard-style similarity. Drops stopwords; requires at least
+// one significant (>=4 char) shared token AND >=0.5 overlap ratio.
+const STOPWORDS = new Set([
+  "the", "a", "an", "of", "and", "in", "at", "on", "to", "for", "by",
+  "restaurant", "cafe", "café", "bar", "hotel", "resort", "museum", "park",
+  "national", "the", "le", "la", "el", "il", "de", "du", "des",
+]);
+function tokenize(s: string): string[] {
+  return s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((t) => t && !STOPWORDS.has(t));
+}
+function nameMatches(query: string, candidate: string): boolean {
+  const q = tokenize(query);
+  const c = tokenize(candidate);
+  if (q.length === 0 || c.length === 0) return false;
+  const cset = new Set(c);
+  const shared = q.filter((t) => cset.has(t));
+  if (shared.length === 0) return false;
+  const hasSignificant = shared.some((t) => t.length >= 4);
+  const ratio = shared.length / Math.max(q.length, c.length);
+  return hasSignificant && ratio >= 0.5;
+}
+
 // Per-activity Google Places validation + photo
 async function searchAndValidateActivities(
   activities: string[],
@@ -152,43 +178,31 @@ async function searchAndValidateActivities(
       const data = await res.json();
       const places = data.places || [];
       
-      // Find best matching place
-      const normalizedQuery = normalizeName(actName);
-      let bestPlace = null;
-      let isVerified = false;
-
+      // Find best matching place using strict word-token match.
+      // No fallback: if nothing matches confidently, we return no photo.
+      let bestPlace: any = null;
       for (const place of places) {
         const placeName = place.displayName?.text || "";
-        const normalizedPlace = normalizeName(placeName);
-        // Check if names have meaningful overlap
-        if (normalizedPlace.includes(normalizedQuery) || normalizedQuery.includes(normalizedPlace) ||
-            // Check for significant word overlap
-            normalizedQuery.split("").filter((c: string) => normalizedPlace.includes(c)).length > normalizedQuery.length * 0.5) {
+        if (nameMatches(actName, placeName) && place.photos?.length > 0) {
           bestPlace = place;
-          isVerified = true;
           break;
         }
       }
 
-      // Fallback: use first result with photos but mark as unverified
       if (!bestPlace) {
-        bestPlace = places.find((p: any) => p.photos?.length > 0) || places[0];
-        // If the first result exists, it's a weak match
-        isVerified = false;
-      }
-
-      if (!bestPlace) {
-        results[actName] = { photo: null, thumbPhoto: null, rating: null, address: null, verified: false, matchedName: null };
+        results[actName] = { photo: null, thumbPhoto: null, rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null };
         return;
       }
 
       const photoRef = bestPlace.photos?.[0]?.name;
+      const hasRealPhoto = !!photoRef;
       results[actName] = {
-        photo: photoRef ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}` : null,
-        thumbPhoto: photoRef ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}` : null,
+        photo: hasRealPhoto ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}` : null,
+        thumbPhoto: hasRealPhoto ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}` : null,
         rating: bestPlace.rating || null,
         address: bestPlace.formattedAddress || null,
-        verified: isVerified && !!photoRef,
+        verified: hasRealPhoto,
+        hasRealPhoto,
         matchedName: bestPlace.displayName?.text || null,
       };
     } catch (e) {
@@ -236,27 +250,17 @@ async function searchAndValidateHotels(
       const data = await res.json();
       const places = data.places || [];
 
-      const normalizedQuery = normalizeName(name);
-      let bestPlace = null;
-      let isVerified = false;
-
+      let bestPlace: any = null;
       for (const place of places) {
         const placeName = place.displayName?.text || "";
-        const normalizedPlace = normalizeName(placeName);
-        if (normalizedPlace.includes(normalizedQuery) || normalizedQuery.includes(normalizedPlace)) {
+        if (nameMatches(name, placeName) && place.photos?.length > 0) {
           bestPlace = place;
-          isVerified = true;
           break;
         }
       }
 
-      if (!bestPlace) {
-        bestPlace = places.find((p: any) => p.photos?.length > 0) || places[0];
-        isVerified = false;
-      }
-
       if (!bestPlace?.photos?.[0]?.name) {
-        results[name] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, matchedName: bestPlace?.displayName?.text || null };
+        results[name] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null };
         return;
       }
 
@@ -270,7 +274,8 @@ async function searchAndValidateHotels(
         photos: allPhotos,
         rating: bestPlace.rating || null,
         address: bestPlace.formattedAddress || null,
-        verified: isVerified,
+        verified: true,
+        hasRealPhoto: true,
         matchedName: bestPlace.displayName?.text || null,
       };
     } catch (e) {
