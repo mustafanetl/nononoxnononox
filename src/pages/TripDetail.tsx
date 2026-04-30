@@ -169,6 +169,33 @@ const TripDetail = () => {
     return (anyAct as any)?.realPhoto || tripData.enrichedImages?.[(dayNum - 1) % Math.max(tripData.enrichedImages?.length || 1, 1)]?.thumbUrl;
   };
 
+  // Match a slot venue name to an activity (token-overlap, case-insensitive)
+  const STOP = new Set(["the","a","an","of","and","in","at","on","to","for","by","de","la","le","el","il","du","des"]);
+  const tokens = (s: string) =>
+    (s || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(t => t && !STOP.has(t));
+  const matchActivity = (venue: string): any | null => {
+    if (!venue) return null;
+    const q = tokens(venue);
+    if (q.length === 0) return null;
+    let best: any = null;
+    let bestScore = 0;
+    for (const a of data.activities as any[]) {
+      const c = tokens(a.name);
+      if (c.length === 0) continue;
+      const cset = new Set(c);
+      const shared = q.filter(t => cset.has(t));
+      if (shared.length === 0) continue;
+      const significant = shared.some(t => t.length >= 4);
+      const ratio = shared.length / Math.max(q.length, c.length);
+      const score = ratio + (significant ? 0.5 : 0);
+      if (score > bestScore && (significant || ratio >= 0.6)) {
+        bestScore = score;
+        best = a;
+      }
+    }
+    return best;
+  };
+
   const handleShare = async () => {
     try {
       await shareTripSummary([{ role: "assistant" as const, content: data.text }]);
