@@ -644,6 +644,14 @@ const TripDetail = () => {
       <FlightDetailModal flight={selectedFlight} open={flightModalOpen} onOpenChange={setFlightModalOpen} />
       <HotelDetailModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={setHotelModalOpen} />
       <ActivityDetailModal activity={selectedActivity} open={activityModalOpen} onOpenChange={setActivityModalOpen} />
+      <PhotoLightbox
+        photos={lightboxPhotos}
+        startIndex={lightboxIndex}
+        venueName={lightboxVenue}
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+        onViewDetails={lightboxOnDetails}
+      />
     </div>
   );
 };
