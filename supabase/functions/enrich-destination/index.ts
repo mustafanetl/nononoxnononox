@@ -218,6 +218,20 @@ async function searchAndValidateActivities(
         }
       }
 
+      // Fallback: the search was already city-scoped ("{name}, {city}"),
+      // so if Google returned a result whose address is in-city and has a photo,
+      // accept it even if the name overlap is weak. Prevents "no image" cases
+      // for small/foreign-name venues whose tokens don't overlap cleanly.
+      if (!bestPlace) {
+        for (const place of places) {
+          const addr = place.formattedAddress || "";
+          if (addressMatchesCity(addr) && place.photos?.length > 0) {
+            bestPlace = place;
+            break;
+          }
+        }
+      }
+
       if (!bestPlace) {
         results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null };
         return;
