@@ -959,7 +959,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                     {parsed.activities.length > 0 && (
                                       <HorizontalCarousel>
                                         {parsed.activities.map((a, idx) => (
-                          <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a, i, enrichDest || "")} />
+                          <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a, i, enrichDest || latestDestination)} />
                                         ))}
                                       </HorizontalCarousel>
                                     )}
@@ -970,7 +970,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                             key={idx}
                                             item={item}
                                             onSlotClick={(slot, slotIdx) =>
-                                              handleItinerarySlotClick(slot, slotIdx, item.day, i, enrichDest || "")
+                                              handleItinerarySlotClick(slot, slotIdx, item.day, i, enrichDest || latestDestination)
                                             }
                                           />
                                         ))}
