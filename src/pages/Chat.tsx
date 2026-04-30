@@ -787,22 +787,22 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                         }
                       }
                       if (match?.hasRealPhoto && (match?.thumbPhoto || match?.photo)) {
+                        const heroPhoto = match.photo || match.thumbPhoto;
+                        const allPhotos = Array.isArray(match.photos) && match.photos.length > 0
+                          ? match.photos.slice(0, 4)
+                          : (heroPhoto ? [heroPhoto] : []);
                         return {
                           ...act,
-                          realPhoto: match.thumbPhoto || match.photo,
-                          realPhotos: Array.isArray(match.photos) ? match.photos : undefined,
+                          realPhoto: heroPhoto,
+                          realPhotos: allPhotos,
                           isReal: true,
                           verified: true,
                           verifiedAddress: match.address || null,
                           verifiedRating: match.rating || null,
                         };
                       }
-                      // Fallback: assign a destination hero image so the card isn't empty
-                      if (images.length > 0) {
-                        const idx = parsed.activities.indexOf(act) % images.length;
-                        const img = images[idx];
-                        return { ...act, realPhoto: img.thumbUrl || img.url };
-                      }
+                      // No verified place match — leave the card without a fake/wrong image.
+                      // The UI shows a clean gradient placeholder instead.
                       return act;
                     });
                   }
