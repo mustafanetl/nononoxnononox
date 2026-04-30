@@ -1,43 +1,60 @@
 ## Goal
 
-Right now the day-by-day itinerary is a clean text timeline — venue, time, neighborhood, cost — but **no photos per slot**. Activities have photos in the gallery below, but the timeline itself feels flat. We'll add real Google Places photos to every itinerary slot (matched by venue name), plus a swipeable "reels-style" mini-gallery for venues that have multiple photos.
+Right now, every photo in an itinerary slot (the big hero AND the small thumbnail strip below) does the exact same thing: opens the activity modal. So the extra Google Places photos feel pointless. Let's make them feel like a real photo gallery — Instagram/reels style — that the user actually wants to scroll through.
 
-## What changes
+## What changes for the user
 
-### 1. Edge function: return multiple photos per activity
-`supabase/functions/enrich-destination/index.ts` — `searchAndValidateActivities` currently returns only one `photo` per venue. Extend it (mirroring the hotel logic) to also return a `photos: string[]` array of up to 4 photos. No new API calls — Google's response already includes multiple photo refs.
+**On the trip detail page (each itinerary slot):**
+- The hero photo gets a subtle "1 / 6" counter and a small "View photos" hint when there are extras.
+- Tapping the hero photo still opens the activity modal (for booking / details).
+- Tapping any thumbnail in the strip below opens a new **full-screen lightbox** focused on that photo — not the activity modal.
+- The thumbnail strip is restyled as a polished "reel" row: rounded portrait tiles, soft gradient overlay, a "+N" indicator on the last visible tile if there are more photos than fit.
 
-### 2. TripDetail itinerary slots: photos + reels gallery
-`src/pages/TripDetail.tsx`
+**New full-screen photo lightbox (`PhotoLightbox`):**
+- Black, immersive, edge-to-edge image with the venue name and "3 / 8" counter at the top.
+- Swipe left/right on mobile, arrow buttons + keyboard arrows on desktop to move between photos.
+- Bottom strip with all thumbnails — current one highlighted, tap to jump.
+- A clear "View activity details" button at the bottom that closes the lightbox and opens the existing activity modal — so users can still get to booking info, but only when they want to.
+- Esc closes; tap outside image area closes; swipe down on mobile closes.
 
-For each slot in the day timeline:
+**Activity modal itself (small upgrade):**
+- Replace the static single hero image with a mini carousel using the same `realPhotos` array (left/right arrows, dot indicators), so opening the modal also shows all photos rather than just one.
 
-- **Match slot → activity** by `slot.venue` name (token-overlap, similar to existing `nameMatches` in the edge function — case-insensitive, ignore punctuation/stopwords). If matched, pull `realPhoto` and `realPhotos[]` from the activity.
-- **Hero photo** beside the slot text on desktop (left column = photo ~160×160 rounded, right column = existing text). On mobile: photo on top, full-width, ~h-44.
-- **Reels-style mini-gallery**: if the venue has 2+ photos, show a horizontally swipeable carousel of square tiles below the slot photo (snap scrolling, ~96px tiles, no scrollbar). Tapping a tile opens it in the existing `ActivityDetailModal` for the matched activity.
-- **Fallback**: if no matched activity / no photo, show a small gradient tile with the venue's category icon (so the layout stays balanced — no empty space).
-- Keep the existing timeline dot, time, transit-next line, and book-ahead badge.
+## Technical notes
 
-### 3. Re-enrichment hook
-The existing on-mount re-enrich already populates `realPhoto` per activity. Update the merge logic to also store the new `photos` array as `realPhotos` on each activity, and persist back to `sessionStorage` so reels survive reloads.
+Files to touch:
 
-## Layout sketch (per slot)
+1. **New: `src/components/PhotoLightbox.tsx`**
+   - Props: `photos: string[]`, `startIndex: number`, `venueName: string`, `open`, `onOpenChange`, `onViewDetails?: () => void`.
+   - Built on existing `Dialog` (full-screen variant: `max-w-none w-screen h-screen p-0 bg-black`).
+   - Internal `currentIndex` state, keyboard listener (ArrowLeft/Right/Escape), touch swipe handlers (track `touchStartX`).
+   - Bottom thumbnail rail (horizontal scroll, snap), highlight active.
+   - "View activity details" button only renders if `onViewDetails` is provided.
 
-```text
-┌────────────┬─────────────────────────────────────┐
-│            │ 10:30  · book ahead                  │
-│  [photo]   │ Shinjuku Gyoen                       │
-│  160×160   │ Morning Blossoms                     │
-│            │ 📍 Shinjuku · ⏱ 2.5h · €3            │
-│            │ [▣][▣][▣][▣]  ← reels strip          │
-│            │ → 10 min walk                        │
-└────────────┴─────────────────────────────────────┘
-```
+2. **`src/pages/TripDetail.tsx` (slot rendering block, lines ~432–558)**
+   - Add state: `lightboxOpen`, `lightboxPhotos`, `lightboxIndex`, `lightboxVenue`, `lightboxOnDetails`.
+   - Hero `<button>` keeps `onClick={openModal}`. Add a "1 / N" badge in the corner when `reels.length > 1`.
+   - Thumbnail strip buttons change `onClick` to `openLightbox(reels, ri, slot.venue, matched ? openModal : undefined)`.
+   - Last visible tile shows "+N" overlay if `reels.length > 5`.
+   - Render `<PhotoLightbox … />` once at the bottom of the page next to the existing modals.
+
+3. **`src/components/ActivityDetailModal.tsx`**
+   - Replace the single `<img>` in the 48-height header with a small carousel:
+     - Use `activity.realPhotos ?? (activity.realPhoto ? [activity.realPhoto] : [])`.
+     - Local `idx` state, prev/next chevron buttons (only when length > 1), dot indicators at the bottom of the image.
+     - Same overlay/title structure preserved.
+
+4. **No backend / data changes.** All photos are already being passed through via `realPhotos` from the prior fix.
 
 ## Out of scope
-- Real video reels (TikTok-style autoplaying clips). Google Places returns photos only, not video. We're using "reels-style" to mean the swipeable photo strip aesthetic. If you want actual video later, we'd need a separate provider (YouTube Data API search by venue name) — happy to add that as a follow-up.
-- Touching activity gallery, hotels, or hero (those already have photos).
 
-## Files
-- `supabase/functions/enrich-destination/index.ts` — return `photos[]` per activity
-- `src/pages/TripDetail.tsx` — slot photo column + reels strip + venue→activity matcher; persist `realPhotos`
+- Video reels (Google Places API doesn't return video; would need a separate provider — flag this for later if user asks).
+- Pinch-to-zoom inside the lightbox (can add later if requested).
+
+## Acceptance check
+
+- Open a Tokyo (or any) itinerary with multiple photos per venue.
+- Tap hero → activity modal opens (with carousel inside).
+- Tap a thumbnail → full-screen lightbox opens on that photo, can swipe through all of them.
+- "View activity details" button in lightbox opens the activity modal.
+- Esc / tap outside / swipe down closes the lightbox.
