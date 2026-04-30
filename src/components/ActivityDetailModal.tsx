@@ -1,24 +1,38 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Clock, DollarSign, Lightbulb, PlusCircle, CheckCircle, Camera, MapPin, Star, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, DollarSign, Lightbulb, PlusCircle, CheckCircle, Camera, MapPin, Star, CheckCircle2, ChevronLeft, ChevronRight, Shuffle, Loader2, ArrowLeft } from "lucide-react";
 import { ActivityData } from "./ActivityCard";
 import { useTripContext } from "@/contexts/TripContext";
 import { useEffect, useState } from "react";
 import { createDistinctPhotoGallery } from "@/utils/photoGallery";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const ActivityDetailModal = ({
   activity,
   open,
   onOpenChange,
+  destination,
+  onReplace,
 }: {
   activity: ActivityData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  destination?: string;
+  onReplace?: (newActivity: ActivityData) => void;
 }) => {
   const { addItem, removeItem, isInTrip } = useTripContext();
 
   const [photoIdx, setPhotoIdx] = useState(0);
-  useEffect(() => { setPhotoIdx(0); }, [activity?.id]);
+  const [showAlternatives, setShowAlternatives] = useState(false);
+  const [alternatives, setAlternatives] = useState<ActivityData[]>([]);
+  const [loadingAlts, setLoadingAlts] = useState(false);
+
+  useEffect(() => {
+    setPhotoIdx(0);
+    setShowAlternatives(false);
+    setAlternatives([]);
+  }, [activity?.id]);
 
   if (!activity) return null;
 
@@ -35,9 +49,95 @@ const ActivityDetailModal = ({
     else addItem({ type: "activity", data: activity });
   };
 
+  const fetchAlternatives = async () => {
+    if (!destination) {
+      toast.error("Can't find alternatives without a destination");
+      return;
+    }
+    setLoadingAlts(true);
+    setShowAlternatives(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("suggest-activity-alternatives", {
+        body: { activity, destination },
+      });
+      if (error) throw error;
+      const sugg = (data?.suggestions || []) as ActivityData[];
+      if (sugg.length === 0) {
+        toast.error("Couldn't find good alternatives — try again");
+        setShowAlternatives(false);
+      } else {
+        setAlternatives(sugg);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to load alternatives");
+      setShowAlternatives(false);
+    } finally {
+      setLoadingAlts(false);
+    }
+  };
+
+  const pickAlternative = (alt: ActivityData) => {
+    if (!onReplace) return;
+    onReplace(alt);
+    toast.success(`Swapped in ${alt.name}`);
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 overflow-hidden">
+        {showAlternatives ? (
+          <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowAlternatives(false)} className="gap-1 -ml-2">
+                <ArrowLeft className="h-4 w-4" /> Back
+              </Button>
+              <h3 className="font-semibold text-sm">Alternatives to {activity.name}</h3>
+            </div>
+            {loadingAlts ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="text-xs text-muted-foreground">Finding similar spots…</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {alternatives.map((alt) => (
+                  <div key={alt.id} className="rounded-xl border border-border overflow-hidden hover:shadow-md transition-all">
+                    {alt.realPhoto ? (
+                      <img src={alt.realPhoto} alt={alt.name} className="w-full h-32 object-cover" />
+                    ) : (
+                      <div className="w-full h-32 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                        <Camera className="h-8 w-8 text-muted-foreground/50" />
+                      </div>
+                    )}
+                    <div className="p-3 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-semibold text-sm leading-tight">{alt.name}</h4>
+                        {alt.verifiedRating && (
+                          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            {alt.verifiedRating}
+                          </span>
+                        )}
+                      </div>
+                      {alt.why && <p className="text-xs italic text-muted-foreground">"{alt.why}"</p>}
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        {alt.neighborhood && <span className="flex items-center gap-0.5"><MapPin className="h-3 w-3" />{alt.neighborhood}</span>}
+                        <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" />{alt.duration}</span>
+                        <span className="font-semibold text-foreground">~{alt.currency}{alt.price}</span>
+                      </div>
+                      <Button size="sm" className="w-full mt-1" onClick={() => pickAlternative(alt)} disabled={!onReplace}>
+                        Use this instead
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+        <>
         <div className="relative h-48">
           {hasImage ? (
             <img src={photos[photoIdx]} alt={activity.name} className="w-full h-full object-cover" />
@@ -156,8 +256,15 @@ const ActivityDetailModal = ({
               {inTrip ? <CheckCircle className="h-4 w-4" /> : <PlusCircle className="h-4 w-4" />}
               {inTrip ? "Added" : "Add to Trip"}
             </Button>
+            {onReplace && (
+              <Button variant="outline" className="gap-2" onClick={fetchAlternatives}>
+                <Shuffle className="h-4 w-4" /> Swap
+              </Button>
+            )}
           </div>
         </div>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
