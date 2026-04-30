@@ -148,8 +148,12 @@ Include 2-4 ACTION-ORIENTED follow-ups. Things that modify the plan.
 NOT generic like "Tell me more". Make them useful: "Make it cheaper", "Add nightlife", "More food spots", "Add a free day", "Swap Day 2", "Show budget hotels".
 ALWAYS end with quickreplies.
 
-FULL TRIP PLAN must include ALL: flights (if TRIP), hotels (if TRIP), activities, itinerary, travelinfo, destination_enrich, quickreplies.
-LOCAL/DATE plans: activities, itinerary, destination_enrich, quickreplies. NO flights, NO hotels.
+FULL TRIP PLAN — ABSOLUTELY MANDATORY (no exceptions, no excuses):
+- TRIP mode MUST include ALL of these blocks in this order: flights, hotels, activities (3-5), itinerary (every day, 5-7 slots/day), travelinfo, destination_enrich, quickreplies.
+- NEVER emit ONLY flights. NEVER emit ONLY hotels. A "trip plan" without activities + itinerary is INVALID — the user gets an empty page.
+- Even if the user only asked for "flights to X" — once you cook the plan, include the FULL set so they can see the whole experience.
+- LOCAL/DATE plans: activities, itinerary, destination_enrich, quickreplies. NO flights, NO hotels.
+- If you can only confidently name 2 activities, INCLUDE THEM ANYWAY — never skip the activities/itinerary blocks.
 
 PRICES: Use approximate ranges. All coordinates must be realistic for the actual city/neighborhood.
 
