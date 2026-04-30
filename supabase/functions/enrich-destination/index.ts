@@ -110,7 +110,7 @@ async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any
       if (!place.photos?.length) continue;
       for (const photo of place.photos.slice(0, Math.ceil(limit / places.length))) {
         allPhotos.push({
-          url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=800&key=${apiKey}`,
+          url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=1600&key=${apiKey}`,
           thumbUrl: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=400&key=${apiKey}`,
           width: photo.widthPx || 800,
           height: photo.heightPx || 600,
@@ -210,11 +210,11 @@ async function searchAndValidateActivities(
       const hasRealPhoto = !!photoRef;
       const allPhotoUrls: string[] = hasRealPhoto
         ? bestPlace.photos.slice(0, 4).map((p: any) =>
-            `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=600&key=${apiKey}`
+            `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=1600&key=${apiKey}`
           )
         : [];
       results[actName] = {
-        photo: hasRealPhoto ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}` : null,
+        photo: hasRealPhoto ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=1600&key=${apiKey}` : null,
         thumbPhoto: hasRealPhoto ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}` : null,
         photos: allPhotoUrls,
         rating: bestPlace.rating || null,
@@ -283,11 +283,11 @@ async function searchAndValidateHotels(
       }
 
       const allPhotos = bestPlace.photos.slice(0, 3).map((p: any) =>
-        `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=800&key=${apiKey}`
+        `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=1600&key=${apiKey}`
       );
       const photoRef = bestPlace.photos[0].name;
       results[name] = {
-        photo: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}`,
+        photo: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=1600&key=${apiKey}`,
         thumbPhoto: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}`,
         photos: allPhotos,
         rating: bestPlace.rating || null,
@@ -329,7 +329,7 @@ async function searchCityPhoto(
     const photoRef = data.places?.[0]?.photos?.[0]?.name;
     if (!photoRef) return null;
     return {
-      photo: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}`,
+      photo: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=1600&key=${apiKey}`,
       thumbPhoto: `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}`,
     };
   } catch (e) {
