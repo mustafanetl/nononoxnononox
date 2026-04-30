@@ -1,8 +1,9 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Clock, DollarSign, Lightbulb, PlusCircle, CheckCircle, Camera, MapPin, Star, CheckCircle2 } from "lucide-react";
+import { Clock, DollarSign, Lightbulb, PlusCircle, CheckCircle, Camera, MapPin, Star, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { ActivityData } from "./ActivityCard";
 import { useTripContext } from "@/contexts/TripContext";
+import { useEffect, useState } from "react";
 
 const ActivityDetailModal = ({
   activity,
@@ -17,7 +18,14 @@ const ActivityDetailModal = ({
 
   if (!activity) return null;
 
-  const hasImage = !!activity.realPhoto;
+  const photos: string[] = (activity.realPhotos && activity.realPhotos.length > 0
+    ? activity.realPhotos
+    : activity.realPhoto
+      ? [activity.realPhoto]
+      : []).filter(Boolean);
+  const hasImage = photos.length > 0;
+  const [photoIdx, setPhotoIdx] = useState(0);
+  useEffect(() => { setPhotoIdx(0); }, [activity?.id]);
   const inTrip = isInTrip("activity", activity.id);
 
   const toggleTrip = () => {
@@ -30,13 +38,49 @@ const ActivityDetailModal = ({
       <DialogContent className="max-w-lg p-0 overflow-hidden">
         <div className="relative h-48">
           {hasImage ? (
-            <img src={activity.realPhoto} alt={activity.name} className="w-full h-full object-cover" />
+            <img src={photos[photoIdx]} alt={activity.name} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
               <Camera className="h-12 w-12 text-muted-foreground/40" />
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+          {photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setPhotoIdx((i) => Math.max(0, i - 1))}
+                disabled={photoIdx === 0}
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/40 hover:bg-black/60 disabled:opacity-30 backdrop-blur flex items-center justify-center text-white transition"
+                aria-label="Previous photo"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPhotoIdx((i) => Math.min(photos.length - 1, i + 1))}
+                disabled={photoIdx === photos.length - 1}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/40 hover:bg-black/60 disabled:opacity-30 backdrop-blur flex items-center justify-center text-white transition"
+                aria-label="Next photo"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur text-[10px] font-medium text-white tabular-nums">
+                {photoIdx + 1} / {photos.length}
+              </div>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {photos.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setPhotoIdx(i)}
+                    className={`h-1.5 rounded-full transition-all ${i === photoIdx ? "w-4 bg-white" : "w-1.5 bg-white/50"}`}
+                    aria-label={`Photo ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
           <div className="absolute bottom-4 left-4 right-4 text-white">
             <div className="flex items-center gap-2 mb-1">
               <h2 className="text-xl font-bold">{activity.name}</h2>
