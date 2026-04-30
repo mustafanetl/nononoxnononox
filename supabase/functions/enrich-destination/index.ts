@@ -168,6 +168,9 @@ async function searchAndValidateActivities(
   const batch = Array.from(new Set(activities.filter(Boolean))).slice(0, 18);
   const promises = batch.map(async (actName) => {
     try {
+      // ALWAYS scope the lookup to the destination city so we don't pull
+      // a same-named venue from another city (e.g. an "Aura" in another country).
+      const cityScopedQuery = `${actName}, ${destination}`;
       const res = await fetchWithTimeout(
         "https://places.googleapis.com/v1/places:searchText",
         {
@@ -178,8 +181,8 @@ async function searchAndValidateActivities(
             "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress",
           },
           body: JSON.stringify({
-            textQuery: `${actName} in ${destination}`,
-            maxResultCount: 3,
+            textQuery: cityScopedQuery,
+            maxResultCount: 5,
           }),
         }
       );
