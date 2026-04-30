@@ -385,7 +385,7 @@ export const useRzumaChat = () => {
       if (hasStructuredPlan(planText)) {
         for (let attempt = 0; attempt < MAX_REVISIONS; attempt++) {
           setQaStatus("verifying");
-          let review: { approved: boolean; issues?: string[] } = { approved: true };
+          let review: { approved: boolean; issues?: string[]; enrichedPlan?: string } = { approved: true };
           try {
             const reviewResp = await fetch(REVIEW_URL, {
               method: "POST",
@@ -407,6 +407,22 @@ export const useRzumaChat = () => {
           }
 
           if (review.approved || !review.issues || review.issues.length === 0) {
+            // If reviewer returned a Google-Places-verified enriched plan,
+            // swap it into the assistant message so cards render with real
+            // coords + matched venue names.
+            if (review.enrichedPlan && review.enrichedPlan !== planText) {
+              assistantContent = review.enrichedPlan;
+              const finalContent = review.enrichedPlan;
+              setConversations(prev => prev.map(c => {
+                if (c.id !== currentId) return c;
+                const msgs = c.messages;
+                const last = msgs[msgs.length - 1];
+                if (last?.role === "assistant") {
+                  return { ...c, messages: msgs.map((m, i) => i === msgs.length - 1 ? { ...m, content: finalContent } : m), updatedAt: Date.now() };
+                }
+                return c;
+              }));
+            }
             break;
           }
 

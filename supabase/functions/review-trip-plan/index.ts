@@ -5,43 +5,140 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const REVIEWER_PROMPT = `You are AI2, a strict travel-plan QA reviewer. Another AI (AI1) just produced a trip plan. Your job is to find any problems with it BEFORE the user sees it.
+/**
+ * AI2 reviewer — replaced by a real Google Places fact-checker.
+ * For every venue in the plan (activities, hotels, itinerary slots) we hit
+ * Google Places Text Search. If a venue has no real match we flag it.
+ * On success we patch the plan blocks with verified lat/lng + matched names.
+ */
 
-CHECK FOR THESE SPECIFIC PROBLEMS:
+type Block = { type: string; raw: string; json: any; fullMatch: string };
 
-1. INVENTED VENUES — Any restaurant, bar, museum, hotel, or attraction that does NOT actually exist in the destination city. If you're unsure whether a venue is real, assume it's invented and flag it. Famous landmarks (Eiffel Tower, Hagia Sophia, Colosseum etc.) are fine.
+const BLOCK_TYPES = ["activities", "hotels", "itinerary"];
 
-2. WRONG COORDINATES — Any lat/lng that:
-   - Is missing
-   - Is 0,0 or near 0,0
-   - Is geographically NOT in the destination city (e.g. lat/lng in Tokyo when destination is Paris)
-   - Doesn't match the stated neighborhood
+function extractBlocks(planText: string): Block[] {
+  const blocks: Block[] = [];
+  for (const type of BLOCK_TYPES) {
+    const re = new RegExp("```" + type + "\\s*([\\s\\S]*?)```", "g");
+    for (const m of planText.matchAll(re)) {
+      const raw = m[1].trim();
+      try {
+        const json = JSON.parse(raw);
+        blocks.push({ type, raw, json, fullMatch: m[0] });
+      } catch { /* skip un-parseable */ }
+    }
+  }
+  return blocks;
+}
 
-3. GEOGRAPHIC INCOHERENCE — Same-day itinerary slots that are absurdly far apart (e.g. >20km between consecutive slots in a city). Days must cluster geographically.
+function inferDestination(planText: string, hint?: string): string {
+  if (hint && hint.trim()) return hint.trim();
+  const m = planText.match(/```destination_enrich\s*([\s\S]*?)```/);
+  if (m) {
+    try {
+      const j = JSON.parse(m[1].trim());
+      if (j.destination) return String(j.destination);
+    } catch { /* */ }
+  }
+  const ti = planText.match(/```travelinfo\s*([\s\S]*?)```/);
+  if (ti) {
+    try {
+      const j = JSON.parse(ti[1].trim());
+      if (j.destination) return String(j.destination);
+    } catch { /* */ }
+  }
+  return "";
+}
 
-4. MODE VIOLATIONS:
-   - TRIP plan with no flights or no hotels block
-   - LOCAL/DATE plan that includes flights or hotels (those should NOT be there)
+function collectVenues(blocks: Block[]): { name: string; kind: "activity" | "hotel" | "itinerary"; ref: any; field: string }[] {
+  const venues: { name: string; kind: "activity" | "hotel" | "itinerary"; ref: any; field: string }[] = [];
+  for (const b of blocks) {
+    if (b.type === "activities" && Array.isArray(b.json)) {
+      for (const a of b.json) {
+        if (a && typeof a.name === "string" && a.name.trim()) {
+          venues.push({ name: a.name, kind: "activity", ref: a, field: "name" });
+        }
+      }
+    } else if (b.type === "hotels" && Array.isArray(b.json)) {
+      for (const h of b.json) {
+        if (h && typeof h.name === "string" && h.name.trim()) {
+          venues.push({ name: h.name, kind: "hotel", ref: h, field: "name" });
+        }
+      }
+    } else if (b.type === "itinerary" && Array.isArray(b.json)) {
+      for (const day of b.json) {
+        if (Array.isArray(day?.slots)) {
+          for (const slot of day.slots) {
+            const venueName = typeof slot.venue === "string" && slot.venue.trim() ? slot.venue : null;
+            if (venueName) {
+              venues.push({ name: venueName, kind: "itinerary", ref: slot, field: "venue" });
+            }
+          }
+        }
+      }
+    }
+  }
+  return venues;
+}
 
-5. HOTEL PROBLEMS — Hotel names that don't sound like real hotels in that city, or famous chain names placed in wrong locations.
+async function verifyVenue(name: string, destination: string, apiKey: string): Promise<{ matched: boolean; lat?: number; lng?: number; placeId?: string; matchedName?: string } > {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.location,places.formattedAddress",
+      },
+      body: JSON.stringify({
+        textQuery: destination ? `${name} ${destination}` : name,
+        maxResultCount: 3,
+      }),
+    });
+    clearTimeout(t);
+    if (!res.ok) return { matched: false };
+    const data = await res.json();
+    const places = data.places || [];
+    if (places.length === 0) return { matched: false };
 
-6. DUPLICATES — Same activity/venue appearing more than once across days.
+    // Token-overlap match: at least one significant word from the venue name
+    // must appear in the matched place displayName.
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(w => w.length >= 3);
+    const wantedTokens = new Set(norm(name));
+    for (const p of places) {
+      const dn = p.displayName?.text || "";
+      const haveTokens = new Set(norm(dn));
+      let overlap = 0;
+      for (const w of wantedTokens) if (haveTokens.has(w)) overlap++;
+      const ok = wantedTokens.size > 0 && overlap >= Math.min(1, wantedTokens.size);
+      if (ok) {
+        return {
+          matched: true,
+          lat: p.location?.latitude,
+          lng: p.location?.longitude,
+          placeId: p.id,
+          matchedName: dn,
+        };
+      }
+    }
+    return { matched: false };
+  } catch (e) {
+    console.warn("verifyVenue error", name, (e as Error).message);
+    return { matched: false };
+  }
+}
 
-7. TRAVELINFO MISMATCH — Currency code, timezone, or visa info that doesn't match the country.
-
-WHAT YOU DO NOT CHECK:
-- Writing style, tone, opinions, "why" descriptions, prices (these are fine as approximations).
-- Whether the plan matches the user's exact preferences.
-- Image fields, quickreplies, ID fields.
-
-YOU MUST CALL EXACTLY ONE TOOL:
-- approve_plan() if the plan passes all checks.
-- request_revision({issues}) if ANY problem exists. Each issue must be specific and actionable, e.g.:
-  - "Activity 'Café Lumière' in Lisbon — this venue does not exist. Replace with a real Lisbon café."
-  - "Hotel 'Sakura Boutique Tokyo' has lat 48.8566 (Paris coords). Fix coordinates or replace hotel."
-  - "Day 2 itinerary: 9:00 slot is in Shibuya, 10:30 slot is in Asakusa (10km apart) — re-cluster."
-
-Be strict. If in doubt, request revision. The user expects every place to be real.`;
+function rebuildPlanText(planText: string, blocks: Block[]): string {
+  let out = planText;
+  for (const b of blocks) {
+    const fenced = "```" + b.type + "\n" + JSON.stringify(b.json, null, 2) + "\n```";
+    out = out.replace(b.fullMatch, fenced);
+  }
+  return out;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -55,120 +152,81 @@ serve(async (req) => {
       );
     }
 
-    const { planText, destinationHint } = body;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY missing");
-      return new Response(
-        JSON.stringify({ error: "AI service not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const planText: string = body.planText;
+    const destination = inferDestination(planText, body.destinationHint);
+    const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
 
-    const userMsg = `Destination context: ${destinationHint || "(infer from plan)"}\n\nPLAN TO REVIEW:\n\n${planText}`;
-
-    const tools = [
-      {
-        type: "function",
-        function: {
-          name: "approve_plan",
-          description: "Approve the plan — no problems found.",
-          parameters: { type: "object", properties: {}, additionalProperties: false },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "request_revision",
-          description: "Reject the plan and list specific, actionable issues for AI1 to fix.",
-          parameters: {
-            type: "object",
-            properties: {
-              issues: {
-                type: "array",
-                description: "Specific problems found. Each item must name the offending venue/field and what to fix.",
-                items: { type: "string" },
-                minItems: 1,
-              },
-            },
-            required: ["issues"],
-            additionalProperties: false,
-          },
-        },
-      },
-    ];
-
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: REVIEWER_PROMPT },
-          { role: "user", content: userMsg },
-        ],
-        tools,
-        tool_choice: "required",
-      }),
-    });
-
-    if (!aiResp.ok) {
-      const txt = await aiResp.text();
-      console.error("Reviewer AI error", aiResp.status, txt);
-      if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ approved: true, issues: [], skipped: "rate_limited" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ approved: true, issues: [], skipped: "credits" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      // Fail-open: don't block users on reviewer outage
-      return new Response(JSON.stringify({ approved: true, issues: [], skipped: "reviewer_error" }), {
+    if (!apiKey) {
+      console.warn("GOOGLE_PLACES_API_KEY missing — fail-open");
+      return new Response(JSON.stringify({ approved: true, issues: [], skipped: "no_api_key" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await aiResp.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      console.warn("Reviewer returned no tool call, fail-open");
-      return new Response(JSON.stringify({ approved: true, issues: [], skipped: "no_tool_call" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (toolCall.function?.name === "approve_plan") {
+    const blocks = extractBlocks(planText);
+    if (blocks.length === 0) {
       return new Response(JSON.stringify({ approved: true, issues: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    let issues: string[] = [];
-    try {
-      const parsed = JSON.parse(toolCall.function?.arguments || "{}");
-      if (Array.isArray(parsed.issues)) issues = parsed.issues.filter((s: any) => typeof s === "string" && s.trim()).slice(0, 12);
-    } catch (e) {
-      console.warn("Could not parse revision args", e);
-    }
-
-    if (issues.length === 0) {
-      return new Response(JSON.stringify({ approved: true, issues: [], skipped: "empty_issues" }), {
+    const venues = collectVenues(blocks);
+    if (venues.length === 0) {
+      return new Response(JSON.stringify({ approved: true, issues: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ approved: false, issues }), {
+    // De-dup by name to avoid double Places calls for the same venue
+    const uniqueNames = Array.from(new Set(venues.map(v => v.name)));
+    console.log(`Verifying ${uniqueNames.length} unique venues for "${destination}"`);
+
+    const verifications: Record<string, Awaited<ReturnType<typeof verifyVenue>>> = {};
+    const CONCURRENCY = 6;
+    for (let i = 0; i < uniqueNames.length; i += CONCURRENCY) {
+      const slice = uniqueNames.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(slice.map(n => verifyVenue(n, destination, apiKey)));
+      slice.forEach((n, idx) => { verifications[n] = results[idx]; });
+    }
+
+    // Patch verified venues back into the block JSON
+    const issues: string[] = [];
+    for (const v of venues) {
+      const r = verifications[v.name];
+      if (r?.matched) {
+        // Use real coords + matched display name
+        if (typeof r.lat === "number" && typeof r.lng === "number") {
+          v.ref.lat = r.lat;
+          v.ref.lng = r.lng;
+        }
+        if (r.matchedName && v.kind !== "itinerary") {
+          // Only update top-level activity/hotel name — itinerary slots keep their description
+          v.ref[v.field] = r.matchedName;
+        } else if (r.matchedName && v.kind === "itinerary") {
+          v.ref.venue = r.matchedName;
+        }
+        if (r.placeId) v.ref.placeId = r.placeId;
+      } else {
+        issues.push(
+          `${v.kind === "hotel" ? "Hotel" : v.kind === "activity" ? "Activity" : "Itinerary venue"} "${v.name}"${destination ? ` in ${destination}` : ""} — could not verify on Google Maps. Replace with a well-known real venue${destination ? ` in ${destination}` : ""}.`
+        );
+      }
+    }
+
+    if (issues.length > 0) {
+      console.log(`Plan rejected: ${issues.length} unverified venues`);
+      return new Response(JSON.stringify({ approved: false, issues: issues.slice(0, 12) }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const enrichedPlan = rebuildPlanText(planText, blocks);
+    console.log(`Plan approved: ${uniqueNames.length} venues all verified`);
+    return new Response(JSON.stringify({ approved: true, issues: [], enrichedPlan }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("review-trip-plan crash", e);
-    // Fail-open
     return new Response(JSON.stringify({ approved: true, issues: [], skipped: "exception" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
