@@ -251,15 +251,23 @@ const TripDetail = () => {
     })),
   ];
 
-  // pick a photo for each day from activities mapped to that day
+  // pick a photo for each day from venues actually scheduled on that day
   const photoForDay = (dayNum: number): string | undefined => {
-    const acts = data.activities.filter((_, i) => data.itinerary.length > 0 && ((i % data.itinerary.length) + 1) === dayNum);
-    const withPhoto = acts.find((a: any) => a.realPhoto);
-    if (withPhoto?.realPhoto) return withPhoto.realPhoto;
-    // fallback to any activity photo or hero
-    const anyAct = data.activities.find((a: any) => a.realPhoto);
+    const day = data.itinerary.find((d: any) => d.day === dayNum);
+    const slots: any[] = day?.slots || [];
+
+    // 1) Try each slot venue in order — look up its verified Google Places photo
+    for (const slot of slots) {
+      const m = resolveVenuePhotoMatch(slot?.venue, tripData.itineraryVenuePhotos);
+      const p = m?.photo || m?.thumbPhoto;
+      if (p) return p;
+      const matched = matchActivity(slot?.venue);
+      if (matched?.realPhoto) return matched.realPhoto;
+    }
+
+    // 2) Fallback to a generic destination hero image (NOT another day's activity)
     const fallback = tripData.enrichedImages?.[(dayNum - 1) % Math.max(tripData.enrichedImages?.length || 1, 1)];
-    return (anyAct as any)?.realPhoto || fallback?.url || fallback?.thumbUrl;
+    return fallback?.url || fallback?.thumbUrl;
   };
 
   // Match a slot venue name to an activity (token-overlap, case-insensitive)
