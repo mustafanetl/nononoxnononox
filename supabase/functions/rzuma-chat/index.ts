@@ -169,7 +169,7 @@ serve(async (req) => {
       );
     }
 
-    const { messages, preferences } = body;
+    const { messages, preferences, revisionRequest } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -239,6 +239,14 @@ serve(async (req) => {
           content: "The user is a PREMIUM subscriber with full access. Do NOT suggest starting a free trial, do NOT mention upgrading, and do NOT include \"Start 3-day free trial\" in quickreplies. They already have everything unlocked."
         });
       }
+    }
+
+    if (Array.isArray(revisionRequest) && revisionRequest.length > 0) {
+      const issuesText = revisionRequest.map((s: any, i: number) => `${i + 1}. ${String(s)}`).join("\n");
+      systemMessages.push({
+        role: "system",
+        content: `REVISION REQUEST — A QA reviewer flagged the previous plan with these specific problems. You MUST fix ALL of them and re-emit the FULL plan with ALL the original blocks (flights/hotels/activities/itinerary/travelinfo/destination_enrich/quickreplies as applicable). Do NOT just say "fixed" — re-output every block in full.\n\nIssues:\n${issuesText}\n\nRules:\n- Replace any invented venue with a REAL well-known one in the same city.\n- Fix any wrong lat/lng to realistic coords inside the destination city.\n- Re-cluster days that zig-zag geographically.\n- Keep the same destination, dates, and overall vibe — just fix the issues.\n- Output the FULL revised plan in the same code-block format as before.`
+      });
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
