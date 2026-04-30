@@ -25,6 +25,23 @@ export type UserPreferences = {
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rzuma-chat`;
+const REVIEW_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/review-trip-plan`;
+
+export type QaStatus = null | "verifying" | "fixing";
+const MAX_REVISIONS = 3;
+
+const hasStructuredPlan = (text: string): boolean => {
+  return /```(activities|itinerary|hotels|flights)\b/.test(text);
+};
+
+const extractDestinationHint = (text: string): string => {
+  const m = text.match(/```destination_enrich\s*([\s\S]*?)```/) || text.match(/```travelinfo\s*([\s\S]*?)```/);
+  if (!m) return "";
+  try {
+    const j = JSON.parse(m[1].trim());
+    return j.destination || "";
+  } catch { return ""; }
+};
 const STORAGE_KEY = "jolliday-conversations";
 const PREFS_KEY = "jolliday-preferences";
 
@@ -73,6 +90,7 @@ export const useRzumaChat = () => {
     return convos.length > 0 ? convos[0].id : null;
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [qaStatus, setQaStatus] = useState<QaStatus>(null);
   const [error, setError] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(loadPreferences);
   const convosRef = useRef(conversations);
@@ -241,7 +259,7 @@ export const useRzumaChat = () => {
     };
 
     try {
-      const currentMessages = [...(convosRef.current.find(c => c.id === currentId)?.messages || []), userMsg]
+      const baseMessages = [...(convosRef.current.find(c => c.id === currentId)?.messages || []), userMsg]
         .filter(m => m.role === "user" || m.role === "assistant");
 
       // Build full preferences context for the AI
@@ -255,11 +273,8 @@ export const useRzumaChat = () => {
         likedCategories: preferences.likedCategories?.length > 0 ? preferences.likedCategories : undefined,
         dislikedCategories: preferences.dislikedCategories?.length > 0 ? preferences.dislikedCategories : undefined,
       };
-
-      // Only send if there's at least some data
       const hasPrefs = Object.values(prefsContext).some(v => v !== undefined);
 
-      // Check subscription status to inform AI about premium users
       let isPremiumUser = false;
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -278,75 +293,141 @@ export const useRzumaChat = () => {
 
       const fullPrefs = hasPrefs ? { ...prefsContext, isPremium: isPremiumUser } : (isPremiumUser ? { isPremium: true } : undefined);
 
-      const resp = await fetch(CHAT_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ messages: currentMessages, preferences: fullPrefs }),
-      });
+      // Stream one AI1 response. Returns the full text streamed.
+      const runStream = async (revisionRequest?: string[]): Promise<string> => {
+        const resp = await fetch(CHAT_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ messages: baseMessages, preferences: fullPrefs, revisionRequest }),
+        });
+        if (!resp.ok) {
+          const errData = await resp.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed to get response");
+        }
+        if (!resp.body) throw new Error("No response body");
 
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to get response");
-      }
+        // On a revision, we are REPLACING the previous assistant message content.
+        if (revisionRequest && revisionRequest.length) {
+          assistantContent = "";
+          setConversations(prev => prev.map(c => {
+            if (c.id !== currentId) return c;
+            const msgs = c.messages;
+            const last = msgs[msgs.length - 1];
+            if (last?.role === "assistant") {
+              return { ...c, messages: msgs.map((m, i) => i === msgs.length - 1 ? { ...m, content: "" } : m), updatedAt: Date.now() };
+            }
+            return c;
+          }));
+        }
 
-      if (!resp.body) throw new Error("No response body");
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let textBuffer = "";
+        let streamDone = false;
+        let collected = "";
 
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-      let streamDone = false;
+        const handleContent = (chunk: string) => {
+          collected += chunk;
+          updateAssistant(chunk);
+        };
 
-      while (!streamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
+        while (!streamDone) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          textBuffer += decoder.decode(value, { stream: true });
 
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
-
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") { streamDone = true; break; }
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) updateAssistant(content);
-          } catch {
-            textBuffer = line + "\n" + textBuffer;
-            break;
+          let newlineIndex: number;
+          while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+            let line = textBuffer.slice(0, newlineIndex);
+            textBuffer = textBuffer.slice(newlineIndex + 1);
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (line.startsWith(":") || line.trim() === "") continue;
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") { streamDone = true; break; }
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+              if (content) handleContent(content);
+            } catch {
+              textBuffer = line + "\n" + textBuffer;
+              break;
+            }
           }
         }
-      }
 
-      if (textBuffer.trim()) {
-        for (let raw of textBuffer.split("\n")) {
-          if (!raw) continue;
-          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-          if (raw.startsWith(":") || raw.trim() === "") continue;
-          if (!raw.startsWith("data: ")) continue;
-          const jsonStr = raw.slice(6).trim();
-          if (jsonStr === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) updateAssistant(content);
-          } catch { /* ignore */ }
+        if (textBuffer.trim()) {
+          for (let raw of textBuffer.split("\n")) {
+            if (!raw) continue;
+            if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+            if (raw.startsWith(":") || raw.trim() === "") continue;
+            if (!raw.startsWith("data: ")) continue;
+            const jsonStr = raw.slice(6).trim();
+            if (jsonStr === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+              if (content) handleContent(content);
+            } catch { /* ignore */ }
+          }
         }
+
+        return collected;
+      };
+
+      // === First pass (AI1) ===
+      let planText = await runStream();
+
+      // === QA loop (AI2) — only if AI1 produced a structured plan ===
+      if (hasStructuredPlan(planText)) {
+        for (let attempt = 0; attempt < MAX_REVISIONS; attempt++) {
+          setQaStatus("verifying");
+          let review: { approved: boolean; issues?: string[] } = { approved: true };
+          try {
+            const reviewResp = await fetch(REVIEW_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+              body: JSON.stringify({
+                planText,
+                destinationHint: extractDestinationHint(planText),
+              }),
+            });
+            if (reviewResp.ok) {
+              review = await reviewResp.json();
+            }
+          } catch (err) {
+            console.warn("Reviewer failed, fail-open:", err);
+            break;
+          }
+
+          if (review.approved || !review.issues || review.issues.length === 0) {
+            break;
+          }
+
+          // Need a revision
+          setQaStatus("fixing");
+          try {
+            planText = await runStream(review.issues);
+          } catch (err) {
+            console.warn("Revision stream failed:", err);
+            break;
+          }
+          if (!hasStructuredPlan(planText)) break;
+        }
+        setQaStatus(null);
       }
     } catch (e) {
       console.error("Chat error:", e);
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setIsLoading(false);
+      setQaStatus(null);
     }
   }, [activeId, preferences]);
 
@@ -369,6 +450,7 @@ export const useRzumaChat = () => {
   return {
     messages,
     isLoading,
+    qaStatus,
     error,
     sendMessage,
     clearChat,
