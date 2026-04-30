@@ -1095,7 +1095,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       <BudgetPanel />
       <ComparisonModal open={compareOpen} onOpenChange={setCompareOpen} />
       <FlightDetailModal flight={selectedFlight} open={flightModalOpen} onOpenChange={setFlightModalOpen} />
-      <ActivityDetailModal activity={selectedActivity} open={activityModalOpen} onOpenChange={setActivityModalOpen} />
+      <ActivityDetailModal
+        activity={selectedActivity}
+        open={activityModalOpen}
+        onOpenChange={setActivityModalOpen}
+        destination={selectedActivityDest}
+        onReplace={selectedActivity && selectedActivityMsgIdx >= 0 ? (newAct) => {
+          replaceActivity(selectedActivityMsgIdx, selectedActivity.id, newAct);
+        } : undefined}
+      />
       <HotelDetailModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={setHotelModalOpen} />
       <PaywallModal
         open={showPaywall}
