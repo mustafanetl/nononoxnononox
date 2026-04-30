@@ -258,7 +258,8 @@ const TripDetail = () => {
     if (withPhoto?.realPhoto) return withPhoto.realPhoto;
     // fallback to any activity photo or hero
     const anyAct = data.activities.find((a: any) => a.realPhoto);
-    return (anyAct as any)?.realPhoto || tripData.enrichedImages?.[(dayNum - 1) % Math.max(tripData.enrichedImages?.length || 1, 1)]?.thumbUrl;
+    const fallback = tripData.enrichedImages?.[(dayNum - 1) % Math.max(tripData.enrichedImages?.length || 1, 1)];
+    return (anyAct as any)?.realPhoto || fallback?.url || fallback?.thumbUrl;
   };
 
   // Match a slot venue name to an activity (token-overlap, case-insensitive)
@@ -444,7 +445,8 @@ const TripDetail = () => {
                           {(() => {
                             const matched = matchActivity(slot.venue);
                             const slotPhotoMatch = resolveVenuePhotoMatch(slot.venue, tripData.itineraryVenuePhotos);
-                            const heroPhoto: string | undefined = slotPhotoMatch?.thumbPhoto || slotPhotoMatch?.photo || matched?.realPhoto;
+                            // Hero is rendered ~160px wide but at 2x DPR; prefer full-res photo for sharpness
+                            const heroPhoto: string | undefined = slotPhotoMatch?.photo || slotPhotoMatch?.thumbPhoto || matched?.realPhoto;
                             const reels: string[] = slotPhotoMatch?.photos?.filter(Boolean)
                               || (matched?.realPhotos as string[] | undefined)?.filter(Boolean)
                               || (heroPhoto ? [heroPhoto] : []);
