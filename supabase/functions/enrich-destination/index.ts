@@ -248,6 +248,7 @@ async function searchAndValidateHotels(
   const batch = hotelNames.slice(0, 8);
   const promises = batch.map(async (name) => {
     try {
+      const cityScopedQuery = `${name} hotel, ${destination}`;
       const res = await fetchWithTimeout(
         "https://places.googleapis.com/v1/places:searchText",
         {
@@ -258,8 +259,8 @@ async function searchAndValidateHotels(
             "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress",
           },
           body: JSON.stringify({
-            textQuery: `${name} hotel in ${destination}`,
-            maxResultCount: 3,
+            textQuery: cityScopedQuery,
+            maxResultCount: 5,
             includedType: "lodging",
           }),
         }
