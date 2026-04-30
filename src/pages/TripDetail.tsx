@@ -555,7 +555,7 @@ const TripDetail = () => {
                                               setLightboxPhotos(reels);
                                               setLightboxIndex(ri);
                                               setLightboxVenue(slot.venue);
-                                              setLightboxOnDetails(matched ? () => openModal : undefined);
+                                              setLightboxOnDetails(() => (matched ? openModal : undefined));
                                               setLightboxOpen(true);
                                             }}
                                             className="relative shrink-0 snap-start w-20 h-28 rounded-xl overflow-hidden ring-1 ring-border hover:ring-foreground/60 hover:scale-[1.02] transition group/thumb"
