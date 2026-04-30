@@ -947,7 +947,13 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                     {parsed.itinerary.length > 0 && (
                                       <HorizontalCarousel>
                                         {parsed.itinerary.map((item, idx) => (
-                                          <ItineraryCard key={idx} item={item} />
+                                          <ItineraryCard
+                                            key={idx}
+                                            item={item}
+                                            onSlotClick={(slot, slotIdx) =>
+                                              handleItinerarySlotClick(slot, slotIdx, item.day, i, enrichDest || "")
+                                            }
+                                          />
                                         ))}
                                       </HorizontalCarousel>
                                     )}
