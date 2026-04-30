@@ -16,6 +16,9 @@ const ActivityDetailModal = ({
 }) => {
   const { addItem, removeItem, isInTrip } = useTripContext();
 
+  const [photoIdx, setPhotoIdx] = useState(0);
+  useEffect(() => { setPhotoIdx(0); }, [activity?.id]);
+
   if (!activity) return null;
 
   const photos: string[] = (activity.realPhotos && activity.realPhotos.length > 0
@@ -24,8 +27,6 @@ const ActivityDetailModal = ({
       ? [activity.realPhoto]
       : []).filter(Boolean);
   const hasImage = photos.length > 0;
-  const [photoIdx, setPhotoIdx] = useState(0);
-  useEffect(() => { setPhotoIdx(0); }, [activity?.id]);
   const inTrip = isInTrip("activity", activity.id);
 
   const toggleTrip = () => {
