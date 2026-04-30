@@ -468,6 +468,36 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     setSelectedActivity(activity);
     setSelectedActivityMsgIdx(msgIdx);
     setSelectedActivityDest(destination);
+    setSelectedSlotRef(null);
+    setActivityModalOpen(true);
+  };
+
+  const handleItinerarySlotClick = (
+    slot: any,
+    slotIdx: number,
+    day: number,
+    msgIdx: number,
+    destination: string,
+  ) => {
+    const pseudo: ActivityData = {
+      id: `slot-${msgIdx}-${day}-${slotIdx}`,
+      name: slot.venue,
+      category: slot.activity || "activity",
+      duration: slot.duration || "~1 hour",
+      price: slot.cost || 0,
+      currency: "$",
+      image: "food",
+      occasion: "",
+      description: `${slot.activity || "Planned stop"} in ${slot.neighborhood || destination}`,
+      neighborhood: slot.neighborhood || "",
+      hours: slot.time || "",
+      bookAhead: !!slot.bookAhead,
+      why: "",
+    } as ActivityData;
+    setSelectedActivity(pseudo);
+    setSelectedActivityMsgIdx(msgIdx);
+    setSelectedActivityDest(destination);
+    setSelectedSlotRef({ day, slotIdx });
     setActivityModalOpen(true);
   };
 
