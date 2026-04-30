@@ -105,7 +105,7 @@ why: 1 sentence explaining why THIS specific place over alternatives. Be opinion
 Include 3-5 activities. Only real, well-known places.
 
 \`\`\`itinerary
-[{"day":1,"title":"Arrival & Old Town Vibes","slots":[{"time":"9:00","activity":"Breakfast at Sarnıç Café","venue":"Sarnıç Café","neighborhood":"Sultanahmet","duration":"1h","cost":15,"bookAhead":false,"transitNext":"5 min walk"},{"time":"10:30","activity":"Hagia Sophia visit","venue":"Hagia Sophia","neighborhood":"Sultanahmet","duration":"1.5h","cost":25,"bookAhead":true,"transitNext":"3 min walk"},{"time":"12:30","activity":"Lunch at Matbah","venue":"Matbah Restaurant","neighborhood":"Sultanahmet","duration":"1.5h","cost":40,"bookAhead":true,"transitNext":"10 min walk"},{"time":"14:30","activity":"Grand Bazaar exploration","venue":"Grand Bazaar","neighborhood":"Beyazıt","duration":"2h","cost":0,"bookAhead":false,"transitNext":"15 min tram"},{"time":"17:00","activity":"Sunset drinks at Mikla","venue":"Mikla Restaurant","neighborhood":"Beyoğlu","duration":"1.5h","cost":30,"bookAhead":true,"transitNext":"walk to hotel"},{"time":"19:30","activity":"Dinner at Karaköy Lokantası","venue":"Karaköy Lokantası","neighborhood":"Karaköy","duration":"2h","cost":45,"bookAhead":true,"transitNext":"—"}]}]
+[{"day":1,"title":"Arrival & Old Town Vibes","slots":[{"time":"9:00","activity":"Breakfast at Sarnıç Café","venue":"Sarnıç Café","neighborhood":"Sultanahmet","duration":"1h","cost":15,"bookAhead":false,"transitNext":"5 min walk"},{"time":"10:30","activity":"Hagia Sophia visit","venue":"Hagia Sophia","neighborhood":"Sultanahmet","duration":"1.5h","cost":25,"bookAhead":true,"transitNext":"3 min walk"},{"time":"12:30","activity":"Lunch at Matbah","venue":"Matbah Restaurant","neighborhood":"Sultanahmet","duration":"1.5h","cost":40,"bookAhead":true,"transitNext":"10 min walk"},{"time":"14:30","activity":"Grand Bazaar exploration","venue":"Grand Bazaar","neighborhood":"Beyazıt","duration":"2h","cost":0,"bookAhead":false,"transitNext":"15 min tram"},{"time":"17:00","activity":"Sunset drinks at Mikla","venue":"Mikla Restaurant","neighborhood":"Beyoğlu","duration":"1.5h","cost":30,"bookAhead":true,"transitNext":"15 min walk"},{"time":"19:30","activity":"Dinner at Karaköy Lokantası","venue":"Karaköy Lokantası","neighborhood":"Karaköy","duration":"2h","cost":45,"bookAhead":true,"transitNext":"—"}]}]
 \`\`\`
 ITINERARY RULES:
 - Every slot MUST have a specific real venue name — ONLY use well-known, famous places.
@@ -114,6 +114,8 @@ ITINERARY RULES:
 - cost: approximate per-person estimate.
 - bookAhead: true for things that need reservations or sell out.
 - Include 5-7 slots per day covering breakfast through dinner.
+- NEVER include the hotel as an itinerary slot. No "check-in", "check-out", "drop bags", "return to hotel", "rest at hotel", or any hotel-related slot. The hotel lives only in the dedicated hotels block. Itinerary slots are strictly for activities, food, sightseeing, and experiences.
+- transitNext must reference the next venue or transit, never the hotel (e.g. "10 min walk to dinner", not "walk to hotel").
 
 \`\`\`timeline
 [{"from":"Paris","to":"Rome","transport":"Flight","duration":"2h 15m","date":"Mar 18"}]
