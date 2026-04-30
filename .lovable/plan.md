@@ -1,127 +1,70 @@
 
-# Landing page redesign — "big brand" feel
+## What's actually broken
 
-Goal: kill the generic-AI-startup vibe. The page should feel like a confident consumer travel brand (think Airbnb / Hopper / Going.com / Linear-level polish), not a Tailwind template. Same black & white palette, same fonts (Inter, per current setup), but with stronger typography, real product proof, and intentional layout.
+Looking at the message you pasted, three problems compounded:
 
-## What changes, section by section
+1. **AI1 dropped the code fences.** It wrote `activities\n[{...}]` instead of ` ```activities\n[{...}]\n``` `. Our parser in `Chat.tsx` only recognizes fenced blocks, so the raw JSON leaked into the chat as text and no cards rendered.
+2. **AI1 (gemini-2.5-flash) invented venues.** "The Nest Cocktail Bar" in Brunkebergstorg, generic "Etoile" descriptions, etc. The reviewer (AI2) only checks the text — it can't actually verify the place exists on Google Maps.
+3. **No real photos.** The activities used `"image":"food"` (generic gradient placeholder) because the venue names didn't match a real Google Place, so enrichment dropped the photos.
 
-### 1. Header
-- Slim, almost invisible until scroll; logo wordmark + minimal nav.
-- Add subtle nav links: `Plan a trip`, `Examples`, `Pricing` (anchor links). Keeps it feeling like a real product.
-- Auth/CTA buttons stay top-right.
+## The fix — three layers
 
-### 2. Hero (search stays in hero, per your call)
-Replace the centered "Plan your next trip with AI" template hero with a **left-aligned editorial hero on a 12-col grid**:
+### Layer 1 — Stronger AI1 + fence-tolerant parser
 
 ```text
-┌────────────────────────────────────────────────────┐
-│  [eyebrow: Your AI travel agent]                   │
-│                                                    │
-│  Trips, planned                                    │
-│  in a conversation.        ← oversized display     │
-│                              type, tight leading   │
-│                                                    │
-│  Tell us where. We handle flights, hotels,         │
-│  what to eat, what to skip.                        │
-│                                                    │
-│  ┌────────────────────────────────────┐ [Plan →]   │
-│  │ Where do you want to go?           │            │
-│  └────────────────────────────────────┘            │
-│  Try: Paris · Tokyo · Bali                         │
-│                                                    │
-│  [tiny row: ★ 4.9  ·  10k+ trips planned  ·  …]    │
-└────────────────────────────────────────────────────┘
+User → AI1 (upgraded model, stricter fence rules)
+         ↓
+       Parser: tolerate missing fences, recover blocks anyway
 ```
 
-- Display headline ~72–96px on desktop, tracking tight, weight 700.
-- No gradient, no animated blob, no "AI sparkle" — just type.
-- Search bar keeps current behavior, restyled flatter (single thin border, no heavy shadow).
-- Tiny social-proof strip under the search (static, honest copy — no fake numbers).
+- **Switch AI1 from `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`** (better instruction-following, far less likely to drop fences).
+- **Add to system prompt** an explicit "FORMATTING IS NON-NEGOTIABLE" section with a wrong-vs-right example showing the exact ` ``` ` fences.
+- **Patch `parseMessageContent` in `src/pages/Chat.tsx`** to also recognize **unfenced** blocks: if it sees a line that is exactly `activities` / `itinerary` / `hotels` / `flights` / `destination_enrich` / `travelinfo` / `quickreplies` / `places` followed by a JSON array or object, treat it as that block. This is the safety net so old/sloppy responses still render as cards.
 
-### 3. NEW — Live product preview ("This is what you get")
-The strongest anti-AI-template move. A faux-browser frame showing a real-looking Jolliday plan:
+### Layer 2 — Real Google Places verification for every venue (AI2 → real API)
+
+Right now `review-trip-plan` is just another LLM guessing whether places are real. It isn't. We replace its core check with the actual Google Places API.
 
 ```text
-┌─ jolliday.online/trip ─────────────────────────────┐
-│  Lisbon · 4 days · for two                         │
-│                                                    │
-│  Day 1                                             │
-│  09:00  Pastéis de Belém — pastry + walk           │
-│  11:30  Jerónimos Monastery                        │
-│  13:00  Lunch at Cervejaria Ramiro                 │
-│  ...                                               │
-│  ┌─────┐  ┌─────┐  ┌─────┐                         │
-│  │photo│  │photo│  │photo│   ← real Lisbon photos  │
-│  └─────┘  └─────┘  └─────┘     (Google Places)     │
-└────────────────────────────────────────────────────┘
+AI1 plan → Reviewer
+              ├─ for each venue (activities + itinerary slots + hotels):
+              │     Google Places Text Search (name + destination)
+              │     ↓
+              │     ├─ found? → swap in the REAL place_id, name, lat/lng, photo_reference
+              │     └─ not found? → flag as issue + suggest alternative
+              │
+              ├─ all venues verified → approve, return ENRICHED plan
+              └─ any unverified → request_revision with concrete swap suggestions
 ```
 
-- Static / hand-built mock — no real API call needed on landing.
-- Real Google Places photos for Lisbon (already available via the cached enrichment OR commit a few stable URLs).
-- Slight tilt / drop shadow to feel like a screenshot of the real app, not a marketing illustration.
-- Caption: small, italic — "An actual 4-day Lisbon plan, made by Jolliday in 14 seconds."
+Files:
+- **Rewrite `supabase/functions/review-trip-plan/index.ts`** to:
+  - Parse all venue names out of the plan blocks.
+  - For each venue, call Google Places **Text Search (New)** — `https://places.googleapis.com/v1/places:searchText` with `textQuery: "<venue> <destination>"`, fields `id,displayName,location,photos,rating,formattedAddress`.
+  - If a result exists: keep the venue, attach `placeId`, real `lat`/`lng`, `photo` (first photo name), and `rating`.
+  - If no result: add to `issues[]` with text like `"Tak in Stockholm — couldn't verify on Google Maps. Replace with a real Stockholm fine-dining venue (e.g., Operakällaren, Frantzén, Mathias Dahlgren)."`
+  - Return either `{approved:true, enrichedPlan: <patched markdown>}` or `{approved:false, issues:[...]}`.
+- The reviewer becomes a **fact-checker**, not a second opinion.
 
-### 4. Popular destinations — redesigned (asymmetric magazine grid)
-Keep the cities, kill the templated 2-up + 4-up grid. Replace with:
+### Layer 3 — Use the verified data downstream
 
-```text
-┌──────────────────┬─────────┐
-│                  │         │
-│   PARIS  (big)   │  TOKYO  │
-│                  │         │
-├──────────┬───────┴─────────┤
-│          │                 │
-│  BALI    │  MALDIVES (big) │
-│          │                 │
-├──────────┴────┬────────────┤
-│  BARCELONA    │  DUBAI     │
-└───────────────┴────────────┘
-```
+- **`useRzumaChat.ts`**: if review returns `enrichedPlan`, replace `assistantContent` with it before showing — so the cards render with verified names + real coords.
+- **`Chat.tsx` enrichment step** (already calls `enrich-destination`): now that AI2 has guaranteed every venue is a real Google Place, the existing photo-fetch will succeed for ~all activities/hotels instead of dropping them or showing gradient placeholders.
 
-- Mixed aspect ratios, oversized destination names overlapping the image edge (classic editorial move).
-- City name in heavy display type, country/region as tiny caps below.
-- Hover: image zooms slowly, name underlines. No buttons.
-- Section heading: small uppercase eyebrow `Where people go` + large headline `Start somewhere`.
-
-### 5. NEW — "How it feels" / value props (replaces 1-2-3 step cards)
-Drop the templated numbered steps. Replace with **3 short value statements as full-width rows** with a single supporting visual on the right of each:
-
-- `Stop tab-hopping.` — one prompt, full plan.
-- `Real places, real photos.` — every spot verified.
-- `Yours forever.` — save, edit, share, export.
-
-Each row: large statement (left) + small supporting image or icon-free typographic detail (right). No cards, no borders, just rhythm.
-
-### 6. Closing CTA band
-A single quiet band before the footer:
-- Headline: `Where to next?`
-- One input field (mirrors hero) + one button.
-- No background image, no gradient. Just a thin top border and generous padding.
-
-### 7. Footer — refined
-Keep the existing 4-column footer but:
-- Tighten typography (smaller, more letter-spacing on column titles).
-- Add a top row with an oversized wordmark `Jolliday` (display weight) — the kind of touch big brands do.
-- Keep all current links.
-
-## Style notes (technical)
-
-- **No new dependencies.** All Tailwind + existing components.
-- **Type scale**: introduce 2 utility classes via inline Tailwind for display (`text-6xl md:text-8xl tracking-tight font-bold leading-[0.95]`) — used in hero + closing CTA + footer wordmark.
-- **Color**: stay strict B&W. Allowed greys only. No accent color (keeps the "big brand confidence" look).
-- **Borders**: single hairline (`border-border`), never doubled.
-- **No scroll-triggered reveal animations** (per project memory).
-- **Images**: keep current Unsplash city images for the destinations grid for now (they're already in `Index.tsx`). For the product preview mock, use 3 stable Lisbon Google Places photo URLs hardcoded in the component (no live fetch on landing).
-
-## Files
+## Files changed
 
 | File | Change |
 |---|---|
-| `src/pages/Index.tsx` | Replace destinations grid layout, replace "How It Works" section, add product preview section, add closing CTA band, refine footer top |
-| `src/components/HeroSection.tsx` | Rewrite to left-aligned editorial layout with display type + social-proof strip |
-| `src/components/landing/ProductPreview.tsx` (new) | Faux-browser Lisbon trip mock with real photos |
-| `src/components/landing/ValueRows.tsx` (new) | Three full-width value statements replacing step cards |
-| `src/components/landing/DestinationsMosaic.tsx` (new) | Asymmetric magazine-grid version of popular destinations |
+| `supabase/functions/rzuma-chat/index.ts` | Model → `google/gemini-3-flash-preview`; add stronger fencing rules + wrong/right example to system prompt |
+| `supabase/functions/review-trip-plan/index.ts` | Replace LLM-only review with Google Places Text Search verification of every venue; return enrichedPlan with real coords + placeIds, or concrete swap suggestions |
+| `src/pages/Chat.tsx` | `parseMessageContent`: add fallback regex for unfenced blocks (`^activities\n[...]`) |
+| `src/hooks/useRzumaChat.ts` | If reviewer returns `enrichedPlan`, swap it into the assistant message before final render |
 
-## Outcome
-Same conversion path (search-first hero → destinations → CTA), but the page now reads like a polished consumer brand: confident typography, real product proof instead of generic step cards, and an editorial destinations grid. Nothing on the page screams "Tailwind template" anymore.
+## Trade-offs
+
+- **+1 Google Places call per venue** during review — typically 8–15 calls per plan. Costs ~$0.005/plan at current Places pricing. Worth it for 100% real venues.
+- **+2–4s latency** during the QA "verifying" phase (already shown to user). No change to streaming feel.
+- **AI2 no longer hallucinates approvals** — it has hard evidence (or no evidence) for every venue.
+- Reviewer `MAX_REVISIONS` stays at 3, but with real Places data, attempt 1 will usually pass.
+
+Approve and I build.
