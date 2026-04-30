@@ -758,7 +758,12 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const parsed = { ...msg.parsed };
 
                   // Merge enriched live data if available
-                  const enrichDest = parsed.destinationEnrich?.destination;
+                 const enrichDest =
+                   parsed.destinationEnrich?.destination ||
+                   parsed.travelInfo?.destination ||
+                   (parsed.itinerary[0] as any)?.destination ||
+                   (parsed.places[0]?.location?.split(",")[0] || "").trim() ||
+                   undefined;
                   const enrichData = enrichDest ? enrichedData[enrichDest] : null;
                   if (enrichData) {
                     if (enrichData.country && parsed.travelInfo) {
