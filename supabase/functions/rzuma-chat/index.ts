@@ -90,7 +90,7 @@ cityImage = one word for destination. Include 2-3 options sorted by price. ONLY 
 image: luxury|resort|boutique|beach|city|villa|hostel.
 description MUST include neighborhood context: walking distance to transit, landmarks, what's nearby.
 bestFor: couples|budget|families|solo|friends|business.
-Include 2-3 varied price options. ONLY in TRIP mode.
+Include exactly ONE hotel by default — the single best pick for the user's vibe and budget. Only include 2-3 options if the user explicitly asks for choices, alternatives, comparisons, or budget tiers. ONLY in TRIP mode.
 IMPORTANT: Only suggest hotels you are confident exist. Use well-known hotel names (chains like Marriott, Hilton, Ritz-Carlton, or famous boutique hotels).
 
 \`\`\`activities

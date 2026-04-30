@@ -152,8 +152,11 @@ function nameMatches(query: string, candidate: string): boolean {
   const shared = q.filter((t) => cset.has(t));
   if (shared.length === 0) return false;
   const hasSignificant = shared.some((t) => t.length >= 4);
+  // If every query token is present in the candidate, accept it — this
+  // handles short queries like "Aura" vs "Restaurant Aura Rotterdam".
+  if (shared.length === q.length && hasSignificant) return true;
   const ratio = shared.length / Math.max(q.length, c.length);
-  return hasSignificant && ratio >= 0.5;
+  return hasSignificant && ratio >= 0.4;
 }
 
 // Per-activity Google Places validation + photo
@@ -212,6 +215,20 @@ async function searchAndValidateActivities(
         ) {
           bestPlace = place;
           break;
+        }
+      }
+
+      // Fallback: the search was already city-scoped ("{name}, {city}"),
+      // so if Google returned a result whose address is in-city and has a photo,
+      // accept it even if the name overlap is weak. Prevents "no image" cases
+      // for small/foreign-name venues whose tokens don't overlap cleanly.
+      if (!bestPlace) {
+        for (const place of places) {
+          const addr = place.formattedAddress || "";
+          if (addressMatchesCity(addr) && place.photos?.length > 0) {
+            bestPlace = place;
+            break;
+          }
         }
       }
 
