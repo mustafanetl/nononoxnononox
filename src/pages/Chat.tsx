@@ -909,7 +909,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                     {parsed.activities.length > 0 && (
                                       <HorizontalCarousel>
                                         {parsed.activities.map((a, idx) => (
-                                          <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a)} />
+                          <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a, i, enrichDest || "")} />
                                         ))}
                                       </HorizontalCarousel>
                                     )}
