@@ -384,6 +384,20 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     }));
   }, [messages]);
 
+  // Track the latest destination across the conversation so Swap works
+  // even on messages that don't include a destination_enrich block.
+  const latestDestination = useMemo(() => {
+    for (let i = parsedMessages.length - 1; i >= 0; i--) {
+      const p: any = parsedMessages[i].parsed;
+      const d =
+        p?.destinationEnrich?.destination ||
+        p?.travelInfo?.destination ||
+        (p?.places?.[0]?.location?.split(",")[0] || "").trim();
+      if (d) return d;
+    }
+    return "";
+  }, [parsedMessages]);
+
   // Clear enriched data when switching conversations
   useEffect(() => {
     if (activeId !== prevActiveId.current) {
