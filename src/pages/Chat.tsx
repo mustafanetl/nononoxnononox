@@ -260,11 +260,13 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [flightModalOpen, setFlightModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityData | null>(null);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [selectedActivityMsgIdx, setSelectedActivityMsgIdx] = useState<number>(-1);
+  const [selectedActivityDest, setSelectedActivityDest] = useState<string>("");
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
-  const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData } = useRzumaChat();
+  const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData, replaceActivity } = useRzumaChat();
   const { compareItems } = useTripContext();
 
   // Track whether assistant has started streaming content for current response
@@ -461,8 +463,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     setFlightModalOpen(true);
   };
 
-  const handleActivityClick = (activity: ActivityData) => {
+  const handleActivityClick = (activity: ActivityData, msgIdx: number, destination: string) => {
     setSelectedActivity(activity);
+    setSelectedActivityMsgIdx(msgIdx);
+    setSelectedActivityDest(destination);
     setActivityModalOpen(true);
   };
 
@@ -905,7 +909,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                     {parsed.activities.length > 0 && (
                                       <HorizontalCarousel>
                                         {parsed.activities.map((a, idx) => (
-                                          <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a)} />
+                          <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a, i, enrichDest || "")} />
                                         ))}
                                       </HorizontalCarousel>
                                     )}
@@ -1091,7 +1095,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       <BudgetPanel />
       <ComparisonModal open={compareOpen} onOpenChange={setCompareOpen} />
       <FlightDetailModal flight={selectedFlight} open={flightModalOpen} onOpenChange={setFlightModalOpen} />
-      <ActivityDetailModal activity={selectedActivity} open={activityModalOpen} onOpenChange={setActivityModalOpen} />
+      <ActivityDetailModal
+        activity={selectedActivity}
+        open={activityModalOpen}
+        onOpenChange={setActivityModalOpen}
+        destination={selectedActivityDest}
+        onReplace={selectedActivity && selectedActivityMsgIdx >= 0 ? (newAct) => {
+          replaceActivity(selectedActivityMsgIdx, selectedActivity.id, newAct);
+        } : undefined}
+      />
       <HotelDetailModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={setHotelModalOpen} />
       <PaywallModal
         open={showPaywall}

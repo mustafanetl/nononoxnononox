@@ -463,6 +463,38 @@ export const useRzumaChat = () => {
     return { conversations, preferences };
   }, [conversations, preferences]);
 
+  // Replace an activity inside a specific assistant message's `activities` JSON block.
+  // Used by the "Find alternatives" / swap feature.
+  const replaceActivity = useCallback((messageIndex: number, oldActivityId: string, newActivity: any) => {
+    setConversations(prev => prev.map(c => {
+      if (c.id !== activeId) return c;
+      const msgs = c.messages;
+      if (messageIndex < 0 || messageIndex >= msgs.length) return c;
+      const target = msgs[messageIndex];
+      if (!target || target.role !== "assistant") return c;
+
+      const blockRegex = /```activities\s*([\s\S]*?)```/;
+      const match = target.content.match(blockRegex);
+      if (!match) return c;
+      let arr: any[] = [];
+      try { arr = JSON.parse(match[1].trim()); } catch { return c; }
+      if (!Array.isArray(arr)) return c;
+
+      const idx = arr.findIndex((a) => a?.id === oldActivityId);
+      if (idx === -1) return c;
+      // Preserve the old id so downstream references (trip context, etc.) stay stable
+      arr[idx] = { ...newActivity, id: oldActivityId };
+      const newBlock = "```activities\n" + JSON.stringify(arr) + "\n```";
+      const newContent = target.content.replace(blockRegex, newBlock);
+
+      return {
+        ...c,
+        messages: msgs.map((m, i) => i === messageIndex ? { ...m, content: newContent } : m),
+        updatedAt: Date.now(),
+      };
+    }));
+  }, [activeId]);
+
   return {
     messages,
     isLoading,
@@ -480,5 +512,6 @@ export const useRzumaChat = () => {
     updatePreferences,
     syncPrefsToDb,
     exportLocalData,
+    replaceActivity,
   };
 };

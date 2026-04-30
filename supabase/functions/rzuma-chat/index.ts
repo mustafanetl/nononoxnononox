@@ -140,7 +140,7 @@ neighborhood: the area/district name.
 hours: general like "morning–evening", "lunch–late", "24h", or "check hours". Only use exact times if confident.
 bookAhead: true if it commonly sells out or needs reservation, false otherwise.
 why: 1 sentence explaining why THIS specific place over alternatives. Be opinionated.
-Include 3-5 activities. Only real, well-known places.
+Include 5-8 activities. At least 2 MUST be dining/food spots (restaurants, cafés, food markets) so the user has real meal options. Mix categories: food, sightseeing, culture, nightlife, etc. Only real, well-known places.
 
 \`\`\`itinerary
 [{"day":1,"title":"Arrival & Old Town Vibes","slots":[{"time":"9:00","activity":"Breakfast at Sarnıç Café","venue":"Sarnıç Café","neighborhood":"Sultanahmet","duration":"1h","cost":15,"bookAhead":false,"transitNext":"5 min walk"},{"time":"10:30","activity":"Hagia Sophia visit","venue":"Hagia Sophia","neighborhood":"Sultanahmet","duration":"1.5h","cost":25,"bookAhead":true,"transitNext":"3 min walk"},{"time":"12:30","activity":"Lunch at Matbah","venue":"Matbah Restaurant","neighborhood":"Sultanahmet","duration":"1.5h","cost":40,"bookAhead":true,"transitNext":"10 min walk"},{"time":"14:30","activity":"Grand Bazaar exploration","venue":"Grand Bazaar","neighborhood":"Beyazıt","duration":"2h","cost":0,"bookAhead":false,"transitNext":"15 min tram"},{"time":"17:00","activity":"Sunset drinks at Mikla","venue":"Mikla Restaurant","neighborhood":"Beyoğlu","duration":"1.5h","cost":30,"bookAhead":true,"transitNext":"15 min walk"},{"time":"19:30","activity":"Dinner at Karaköy Lokantası","venue":"Karaköy Lokantası","neighborhood":"Karaköy","duration":"2h","cost":45,"bookAhead":true,"transitNext":"—"}]}]
@@ -151,7 +151,8 @@ ITINERARY RULES:
 - transitNext: walking/transit time to next spot (e.g. "5 min walk", "15 min metro", "10 min taxi").
 - cost: approximate per-person estimate.
 - bookAhead: true for things that need reservations or sell out.
-- Include 5-7 slots per day covering breakfast through dinner.
+- Include 6-8 slots PER DAY. EVERY single day MUST have all three meals: breakfast (7-10am), lunch (12-2pm), and dinner (7-10pm). Travelers eat every day — no exceptions, not even arrival or departure days. Fill the rest with sightseeing, activities, coffee/drinks stops.
+- A day with fewer than 3 meal slots is INVALID. If it's a half-day (arrival/departure), still include the meals that fit the time window.
 - NEVER include the hotel as an itinerary slot. No "check-in", "check-out", "drop bags", "return to hotel", "rest at hotel", or any hotel-related slot. The hotel lives only in the dedicated hotels block. Itinerary slots are strictly for activities, food, sightseeing, and experiences.
 - transitNext must reference the next venue or transit, never the hotel (e.g. "10 min walk to dinner", not "walk to hotel").
 
