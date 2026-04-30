@@ -20,19 +20,27 @@ const TripMap = ({ points, activeDay, onMarkerClick }: Props) => {
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const polylineRef = useRef<any>(null);
+  const disposedRef = useRef(false);
 
   useEffect(() => {
+    disposedRef.current = false;
     if (!mapRef.current || points.length === 0) return;
 
     const loadMap = async () => {
       const L = await import("leaflet");
       await import("leaflet/dist/leaflet.css");
+      if (disposedRef.current || !mapRef.current) return;
 
       if (mapInstanceRef.current) {
         try { mapInstanceRef.current.remove(); } catch {}
       }
 
-      const map = L.map(mapRef.current!, { zoomControl: false }).setView(
+      const map = L.map(mapRef.current!, {
+        zoomControl: false,
+        zoomAnimation: false,
+        fadeAnimation: false,
+        markerZoomAnimation: false,
+      }).setView(
         [points[0].lat, points[0].lng],
         13
       );
@@ -50,25 +58,30 @@ const TripMap = ({ points, activeDay, onMarkerClick }: Props) => {
     loadMap();
 
     return () => {
+      disposedRef.current = true;
+      try { mapInstanceRef.current?.off(); } catch {}
       try { mapInstanceRef.current?.remove(); } catch {}
       mapInstanceRef.current = null;
       markersRef.current = [];
+      polylineRef.current = null;
     };
   }, [points]);
 
   // Update markers when activeDay changes
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || disposedRef.current) return;
 
     const updateAsync = async () => {
-      if (!mapInstanceRef.current) return;
+      if (!mapInstanceRef.current || disposedRef.current) return;
       const L = await import("leaflet");
+      if (!mapInstanceRef.current || disposedRef.current) return;
       updateMarkers(L, mapInstanceRef.current);
     };
     updateAsync();
   }, [activeDay, points]);
 
   const updateMarkers = (L: any, map: any) => {
+    if (!map || disposedRef.current) return;
     // Clear existing markers
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
