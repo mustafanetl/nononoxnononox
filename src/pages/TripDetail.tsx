@@ -18,6 +18,7 @@ import { TripPlanData } from "@/components/TripSummaryCard";
 import { shareTripSummary } from "@/utils/tripSummary";
 import { setWikimediaImage } from "@/utils/cityImages";
 import { exportTripPlanPDF } from "@/utils/pdfExport";
+import { createDistinctPhotoGallery } from "@/utils/photoGallery";
 import { getSkyscannerUrl, getBookingDotComUrl } from "@/utils/bookingLinks";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -186,15 +187,13 @@ const TripDetail = () => {
             // Always prefer full-size photo for hero usage; thumb only as last-resort fallback
             if (!next.realPhoto) next.realPhoto = m.photo || m.thumbPhoto;
             next.verified = true;
-          } else if (!next.realPhoto && images.length > 0) {
-            const idx = data.activities.indexOf(a) % images.length;
-            next.realPhoto = images[idx].url || images[idx].thumbUrl;
           }
-          if (Array.isArray(m?.photos) && m.photos.length > 0) {
-            next.realPhotos = m.photos;
-          } else if (!next.realPhotos && next.realPhoto) {
-            next.realPhotos = [next.realPhoto];
-          }
+          next.realPhotos = createDistinctPhotoGallery({
+            primary: next.realPhoto,
+            sources: [m?.photos, next.realPhotos],
+            limit: 8,
+          });
+          if (!next.realPhoto) next.realPhoto = next.realPhotos[0];
           return next;
         });
         const newHotels = data.hotels.map((h: any) => {
@@ -455,9 +454,11 @@ const TripDetail = () => {
                             const slotPhotoMatch = resolveVenuePhotoMatch(slot.venue, tripData.itineraryVenuePhotos);
                             // Hero is rendered ~160px wide but at 2x DPR; prefer full-res photo for sharpness
                             const heroPhoto: string | undefined = slotPhotoMatch?.photo || slotPhotoMatch?.thumbPhoto || matched?.realPhoto;
-                            const reels: string[] = slotPhotoMatch?.photos?.filter(Boolean)
-                              || (matched?.realPhotos as string[] | undefined)?.filter(Boolean)
-                              || (heroPhoto ? [heroPhoto] : []);
+                            const reels = createDistinctPhotoGallery({
+                              primary: heroPhoto,
+                              sources: [slotPhotoMatch?.photos, matched?.realPhotos],
+                              limit: 8,
+                            });
                             const openModal = () => {
                               if (matched) {
                                 setSelectedActivity(matched);
