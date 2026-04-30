@@ -1,70 +1,43 @@
+## Goal
 
-## What's actually broken
+Right now the day-by-day itinerary is a clean text timeline — venue, time, neighborhood, cost — but **no photos per slot**. Activities have photos in the gallery below, but the timeline itself feels flat. We'll add real Google Places photos to every itinerary slot (matched by venue name), plus a swipeable "reels-style" mini-gallery for venues that have multiple photos.
 
-Looking at the message you pasted, three problems compounded:
+## What changes
 
-1. **AI1 dropped the code fences.** It wrote `activities\n[{...}]` instead of ` ```activities\n[{...}]\n``` `. Our parser in `Chat.tsx` only recognizes fenced blocks, so the raw JSON leaked into the chat as text and no cards rendered.
-2. **AI1 (gemini-2.5-flash) invented venues.** "The Nest Cocktail Bar" in Brunkebergstorg, generic "Etoile" descriptions, etc. The reviewer (AI2) only checks the text — it can't actually verify the place exists on Google Maps.
-3. **No real photos.** The activities used `"image":"food"` (generic gradient placeholder) because the venue names didn't match a real Google Place, so enrichment dropped the photos.
+### 1. Edge function: return multiple photos per activity
+`supabase/functions/enrich-destination/index.ts` — `searchAndValidateActivities` currently returns only one `photo` per venue. Extend it (mirroring the hotel logic) to also return a `photos: string[]` array of up to 4 photos. No new API calls — Google's response already includes multiple photo refs.
 
-## The fix — three layers
+### 2. TripDetail itinerary slots: photos + reels gallery
+`src/pages/TripDetail.tsx`
 
-### Layer 1 — Stronger AI1 + fence-tolerant parser
+For each slot in the day timeline:
 
-```text
-User → AI1 (upgraded model, stricter fence rules)
-         ↓
-       Parser: tolerate missing fences, recover blocks anyway
-```
+- **Match slot → activity** by `slot.venue` name (token-overlap, similar to existing `nameMatches` in the edge function — case-insensitive, ignore punctuation/stopwords). If matched, pull `realPhoto` and `realPhotos[]` from the activity.
+- **Hero photo** beside the slot text on desktop (left column = photo ~160×160 rounded, right column = existing text). On mobile: photo on top, full-width, ~h-44.
+- **Reels-style mini-gallery**: if the venue has 2+ photos, show a horizontally swipeable carousel of square tiles below the slot photo (snap scrolling, ~96px tiles, no scrollbar). Tapping a tile opens it in the existing `ActivityDetailModal` for the matched activity.
+- **Fallback**: if no matched activity / no photo, show a small gradient tile with the venue's category icon (so the layout stays balanced — no empty space).
+- Keep the existing timeline dot, time, transit-next line, and book-ahead badge.
 
-- **Switch AI1 from `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`** (better instruction-following, far less likely to drop fences).
-- **Add to system prompt** an explicit "FORMATTING IS NON-NEGOTIABLE" section with a wrong-vs-right example showing the exact ` ``` ` fences.
-- **Patch `parseMessageContent` in `src/pages/Chat.tsx`** to also recognize **unfenced** blocks: if it sees a line that is exactly `activities` / `itinerary` / `hotels` / `flights` / `destination_enrich` / `travelinfo` / `quickreplies` / `places` followed by a JSON array or object, treat it as that block. This is the safety net so old/sloppy responses still render as cards.
+### 3. Re-enrichment hook
+The existing on-mount re-enrich already populates `realPhoto` per activity. Update the merge logic to also store the new `photos` array as `realPhotos` on each activity, and persist back to `sessionStorage` so reels survive reloads.
 
-### Layer 2 — Real Google Places verification for every venue (AI2 → real API)
-
-Right now `review-trip-plan` is just another LLM guessing whether places are real. It isn't. We replace its core check with the actual Google Places API.
+## Layout sketch (per slot)
 
 ```text
-AI1 plan → Reviewer
-              ├─ for each venue (activities + itinerary slots + hotels):
-              │     Google Places Text Search (name + destination)
-              │     ↓
-              │     ├─ found? → swap in the REAL place_id, name, lat/lng, photo_reference
-              │     └─ not found? → flag as issue + suggest alternative
-              │
-              ├─ all venues verified → approve, return ENRICHED plan
-              └─ any unverified → request_revision with concrete swap suggestions
+┌────────────┬─────────────────────────────────────┐
+│            │ 10:30  · book ahead                  │
+│  [photo]   │ Shinjuku Gyoen                       │
+│  160×160   │ Morning Blossoms                     │
+│            │ 📍 Shinjuku · ⏱ 2.5h · €3            │
+│            │ [▣][▣][▣][▣]  ← reels strip          │
+│            │ → 10 min walk                        │
+└────────────┴─────────────────────────────────────┘
 ```
 
-Files:
-- **Rewrite `supabase/functions/review-trip-plan/index.ts`** to:
-  - Parse all venue names out of the plan blocks.
-  - For each venue, call Google Places **Text Search (New)** — `https://places.googleapis.com/v1/places:searchText` with `textQuery: "<venue> <destination>"`, fields `id,displayName,location,photos,rating,formattedAddress`.
-  - If a result exists: keep the venue, attach `placeId`, real `lat`/`lng`, `photo` (first photo name), and `rating`.
-  - If no result: add to `issues[]` with text like `"Tak in Stockholm — couldn't verify on Google Maps. Replace with a real Stockholm fine-dining venue (e.g., Operakällaren, Frantzén, Mathias Dahlgren)."`
-  - Return either `{approved:true, enrichedPlan: <patched markdown>}` or `{approved:false, issues:[...]}`.
-- The reviewer becomes a **fact-checker**, not a second opinion.
+## Out of scope
+- Real video reels (TikTok-style autoplaying clips). Google Places returns photos only, not video. We're using "reels-style" to mean the swipeable photo strip aesthetic. If you want actual video later, we'd need a separate provider (YouTube Data API search by venue name) — happy to add that as a follow-up.
+- Touching activity gallery, hotels, or hero (those already have photos).
 
-### Layer 3 — Use the verified data downstream
-
-- **`useRzumaChat.ts`**: if review returns `enrichedPlan`, replace `assistantContent` with it before showing — so the cards render with verified names + real coords.
-- **`Chat.tsx` enrichment step** (already calls `enrich-destination`): now that AI2 has guaranteed every venue is a real Google Place, the existing photo-fetch will succeed for ~all activities/hotels instead of dropping them or showing gradient placeholders.
-
-## Files changed
-
-| File | Change |
-|---|---|
-| `supabase/functions/rzuma-chat/index.ts` | Model → `google/gemini-3-flash-preview`; add stronger fencing rules + wrong/right example to system prompt |
-| `supabase/functions/review-trip-plan/index.ts` | Replace LLM-only review with Google Places Text Search verification of every venue; return enrichedPlan with real coords + placeIds, or concrete swap suggestions |
-| `src/pages/Chat.tsx` | `parseMessageContent`: add fallback regex for unfenced blocks (`^activities\n[...]`) |
-| `src/hooks/useRzumaChat.ts` | If reviewer returns `enrichedPlan`, swap it into the assistant message before final render |
-
-## Trade-offs
-
-- **+1 Google Places call per venue** during review — typically 8–15 calls per plan. Costs ~$0.005/plan at current Places pricing. Worth it for 100% real venues.
-- **+2–4s latency** during the QA "verifying" phase (already shown to user). No change to streaming feel.
-- **AI2 no longer hallucinates approvals** — it has hard evidence (or no evidence) for every venue.
-- Reviewer `MAX_REVISIONS` stays at 3, but with real Places data, attempt 1 will usually pass.
-
-Approve and I build.
+## Files
+- `supabase/functions/enrich-destination/index.ts` — return `photos[]` per activity
+- `src/pages/TripDetail.tsx` — slot photo column + reels strip + venue→activity matcher; persist `realPhotos`
