@@ -361,34 +361,97 @@ const TripDetail = () => {
                       {day.slots.map((slot, sIdx) => (
                         <li key={sIdx} className="relative">
                           <span className="absolute -left-[33px] sm:-left-[37px] top-1.5 w-3.5 h-3.5 rounded-full bg-foreground ring-4 ring-background" />
-                          <div className="flex items-baseline gap-3 mb-1">
-                            <span className="text-xs font-mono font-semibold text-muted-foreground tabular-nums">{slot.time}</span>
-                            {slot.bookAhead && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                                <Ticket className="h-3 w-3" /> Book ahead
-                              </span>
-                            )}
-                          </div>
-                          <h4 className="text-base sm:text-lg font-semibold text-foreground leading-snug">
-                            {slot.venue}
-                          </h4>
-                          <p className="text-sm text-muted-foreground mt-0.5">{slot.activity}</p>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
-                            {slot.neighborhood && (
-                              <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {slot.neighborhood}</span>
-                            )}
-                            {slot.duration && (
-                              <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {slot.duration}</span>
-                            )}
-                            {slot.cost > 0 && (
-                              <span className="font-semibold text-foreground">{currency}{slot.cost}</span>
-                            )}
-                          </div>
-                          {slot.transitNext && slot.transitNext !== "—" && sIdx < day.slots!.length - 1 && (
-                            <div className="flex items-center gap-1.5 mt-3 text-[11px] italic text-muted-foreground/80">
-                              <ArrowRight className="h-3 w-3" /> {slot.transitNext}
-                            </div>
-                          )}
+                          {(() => {
+                            const matched = matchActivity(slot.venue);
+                            const heroPhoto: string | undefined = matched?.realPhoto;
+                            const reels: string[] = (matched?.realPhotos as string[] | undefined)?.filter(Boolean) || [];
+                            const openModal = () => {
+                              if (matched) { setSelectedActivity(matched); setActivityModalOpen(true); }
+                            };
+                            return (
+                              <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4">
+                                {/* Hero photo column */}
+                                <button
+                                  type="button"
+                                  onClick={openModal}
+                                  disabled={!matched}
+                                  className="relative h-44 sm:h-40 sm:w-40 rounded-2xl overflow-hidden group/photo bg-gradient-to-br from-primary/15 via-muted to-accent/15 disabled:cursor-default"
+                                >
+                                  {heroPhoto ? (
+                                    <img
+                                      src={heroPhoto}
+                                      alt={slot.venue}
+                                      className="w-full h-full object-cover transition-transform duration-500 group-hover/photo:scale-105"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <MapPin className="h-7 w-7 text-muted-foreground/40" />
+                                    </div>
+                                  )}
+                                  {matched && (
+                                    <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-background/85 backdrop-blur text-[9px] font-semibold tracking-wide text-foreground">
+                                      {slot.time}
+                                    </span>
+                                  )}
+                                </button>
+
+                                {/* Text column */}
+                                <div className="min-w-0">
+                                  <div className="flex items-baseline gap-3 mb-1">
+                                    <span className="text-xs font-mono font-semibold text-muted-foreground tabular-nums">{slot.time}</span>
+                                    {slot.bookAhead && (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                                        <Ticket className="h-3 w-3" /> Book ahead
+                                      </span>
+                                    )}
+                                  </div>
+                                  <h4
+                                    className={`text-base sm:text-lg font-semibold text-foreground leading-snug ${matched ? "cursor-pointer hover:underline underline-offset-4" : ""}`}
+                                    onClick={openModal}
+                                  >
+                                    {slot.venue}
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground mt-0.5">{slot.activity}</p>
+                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+                                    {slot.neighborhood && (
+                                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {slot.neighborhood}</span>
+                                    )}
+                                    {slot.duration && (
+                                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {slot.duration}</span>
+                                    )}
+                                    {slot.cost > 0 && (
+                                      <span className="font-semibold text-foreground">{currency}{slot.cost}</span>
+                                    )}
+                                  </div>
+
+                                  {/* Reels-style strip */}
+                                  {reels.length >= 2 && (
+                                    <div
+                                      className="mt-3 flex gap-1.5 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
+                                      style={{ scrollbarWidth: "none" }}
+                                    >
+                                      {reels.map((src, ri) => (
+                                        <button
+                                          key={ri}
+                                          type="button"
+                                          onClick={openModal}
+                                          className="relative shrink-0 snap-start w-20 h-28 rounded-xl overflow-hidden ring-1 ring-border hover:ring-foreground/40 transition"
+                                        >
+                                          <img src={src} alt="" className="w-full h-full object-cover" />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {slot.transitNext && slot.transitNext !== "—" && sIdx < day.slots!.length - 1 && (
+                                    <div className="flex items-center gap-1.5 mt-3 text-[11px] italic text-muted-foreground/80">
+                                      <ArrowRight className="h-3 w-3" /> {slot.transitNext}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </li>
                       ))}
                     </ol>
