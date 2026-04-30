@@ -168,6 +168,9 @@ async function searchAndValidateActivities(
   const batch = Array.from(new Set(activities.filter(Boolean))).slice(0, 18);
   const promises = batch.map(async (actName) => {
     try {
+      // ALWAYS scope the lookup to the destination city so we don't pull
+      // a same-named venue from another city (e.g. an "Aura" in another country).
+      const cityScopedQuery = `${actName}, ${destination}`;
       const res = await fetchWithTimeout(
         "https://places.googleapis.com/v1/places:searchText",
         {
@@ -178,8 +181,8 @@ async function searchAndValidateActivities(
             "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress",
           },
           body: JSON.stringify({
-            textQuery: `${actName} in ${destination}`,
-            maxResultCount: 3,
+            textQuery: cityScopedQuery,
+            maxResultCount: 5,
           }),
         }
       );
@@ -189,13 +192,24 @@ async function searchAndValidateActivities(
       }
       const data = await res.json();
       const places = data.places || [];
-      
-      // Find best matching place using strict word-token match.
-      // No fallback: if nothing matches confidently, we return no photo.
+
+      // Strict match: name overlap AND the place address must contain the destination city.
+      // This prevents pulling a same-named venue from a different city.
+      const destTokens = tokenize(destination);
+      const addressMatchesCity = (addr: string) => {
+        if (!addr) return false;
+        const aTokens = new Set(tokenize(addr));
+        return destTokens.some((t) => t.length >= 3 && aTokens.has(t));
+      };
       let bestPlace: any = null;
       for (const place of places) {
         const placeName = place.displayName?.text || "";
-        if (nameMatches(actName, placeName) && place.photos?.length > 0) {
+        const addr = place.formattedAddress || "";
+        if (
+          nameMatches(actName, placeName) &&
+          addressMatchesCity(addr) &&
+          place.photos?.length > 0
+        ) {
           bestPlace = place;
           break;
         }
@@ -245,6 +259,7 @@ async function searchAndValidateHotels(
   const batch = hotelNames.slice(0, 8);
   const promises = batch.map(async (name) => {
     try {
+      const cityScopedQuery = `${name} hotel, ${destination}`;
       const res = await fetchWithTimeout(
         "https://places.googleapis.com/v1/places:searchText",
         {
@@ -255,8 +270,8 @@ async function searchAndValidateHotels(
             "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress",
           },
           body: JSON.stringify({
-            textQuery: `${name} hotel in ${destination}`,
-            maxResultCount: 3,
+            textQuery: cityScopedQuery,
+            maxResultCount: 5,
             includedType: "lodging",
           }),
         }
@@ -268,10 +283,21 @@ async function searchAndValidateHotels(
       const data = await res.json();
       const places = data.places || [];
 
+      const destTokens = tokenize(destination);
+      const addressMatchesCity = (addr: string) => {
+        if (!addr) return false;
+        const aTokens = new Set(tokenize(addr));
+        return destTokens.some((t) => t.length >= 3 && aTokens.has(t));
+      };
       let bestPlace: any = null;
       for (const place of places) {
         const placeName = place.displayName?.text || "";
-        if (nameMatches(name, placeName) && place.photos?.length > 0) {
+        const addr = place.formattedAddress || "";
+        if (
+          nameMatches(name, placeName) &&
+          addressMatchesCity(addr) &&
+          place.photos?.length > 0
+        ) {
           bestPlace = place;
           break;
         }
