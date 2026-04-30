@@ -165,7 +165,7 @@ async function searchAndValidateActivities(
   if (!apiKey || activities.length === 0) return {};
 
   const results: Record<string, any> = {};
-  const batch = activities.slice(0, 8);
+  const batch = Array.from(new Set(activities.filter(Boolean))).slice(0, 18);
   const promises = batch.map(async (actName) => {
     try {
       const res = await fetchWithTimeout(
