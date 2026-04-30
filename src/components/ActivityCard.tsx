@@ -17,6 +17,7 @@ export type ActivityData = {
   lat?: number;
   lng?: number;
   realPhoto?: string;
+  realPhotos?: string[];
   isReal?: boolean;
   verified?: boolean;
   verifiedAddress?: string | null;

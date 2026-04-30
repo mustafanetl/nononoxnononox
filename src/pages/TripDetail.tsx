@@ -25,10 +25,80 @@ import { toast } from "sonner";
 /* ═══════════════════════════════════════════
    Editorial-style trip view
    ═══════════════════════════════════════════ */
+type VenuePhotoMatch = {
+  photo: string | null;
+  thumbPhoto: string | null;
+  photos: string[];
+  rating: number | null;
+  address: string | null;
+  verified: boolean;
+  matchedName: string | null;
+  hasRealPhoto?: boolean;
+};
+
+const VENUE_STOP = new Set(["the", "a", "an", "of", "and", "in", "at", "on", "to", "for", "by", "de", "la", "le", "el", "il", "du", "des"]);
+const venueTokens = (s: string) =>
+  (s || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((t) => t && !VENUE_STOP.has(t));
+
+const scoreVenueMatch = (query: string, candidate: string) => {
+  const q = venueTokens(query);
+  const c = venueTokens(candidate);
+  if (q.length === 0 || c.length === 0) return 0;
+  const cset = new Set(c);
+  const shared = q.filter((t) => cset.has(t));
+  if (shared.length === 0) return 0;
+  const significant = shared.some((t) => t.length >= 4);
+  const ratio = shared.length / Math.max(q.length, c.length);
+  if (!significant && ratio < 0.6) return 0;
+  return ratio + (significant ? 0.5 : 0);
+};
+
+const resolveVenuePhotoMatch = (
+  venue: string,
+  collection?: Record<string, VenuePhotoMatch>
+): VenuePhotoMatch | null => {
+  if (!venue || !collection) return null;
+  const normalizedVenue = venue.toLowerCase().trim();
+
+  if (collection[venue]) return collection[venue];
+
+  for (const [key, value] of Object.entries(collection)) {
+    const normalizedKey = key.toLowerCase().trim();
+    const normalizedMatched = value?.matchedName?.toLowerCase().trim();
+    if (normalizedKey === normalizedVenue || normalizedMatched === normalizedVenue) return value;
+    if (normalizedKey.includes(normalizedVenue) || normalizedVenue.includes(normalizedKey)) return value;
+    if (normalizedMatched && (normalizedMatched.includes(normalizedVenue) || normalizedVenue.includes(normalizedMatched))) return value;
+  }
+
+  let best: VenuePhotoMatch | null = null;
+  let bestScore = 0;
+  for (const [key, value] of Object.entries(collection)) {
+    const candidates = [key, value?.matchedName].filter(Boolean) as string[];
+    for (const candidate of candidates) {
+      const score = scoreVenueMatch(venue, candidate);
+      if (score > bestScore) {
+        bestScore = score;
+        best = value;
+      }
+    }
+  }
+
+  return bestScore >= 0.9 ? best : null;
+};
+
 const TripDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [tripData, setTripData] = useState<{ data: TripPlanData; destination: string; enrichedImages?: any[] } | null>(null);
+  const [tripData, setTripData] = useState<{
+    data: TripPlanData;
+    destination: string;
+    enrichedImages?: any[];
+    itineraryVenuePhotos?: Record<string, VenuePhotoMatch>;
+  } | null>(null);
   const [selectedFlight, setSelectedFlight] = useState<FlightData | null>(null);
   const [flightModalOpen, setFlightModalOpen] = useState(false);
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
@@ -59,15 +129,26 @@ const TripDetail = () => {
     const { data, destination } = tripData;
     if (!destination) return;
 
-    const needsActivityPhotos = data.activities.some((a: any) => !a.realPhoto);
+    const itineraryVenues = data.itinerary.flatMap((day: any) =>
+      Array.isArray(day?.slots) ? day.slots.map((slot: any) => slot?.venue).filter(Boolean) : []
+    );
+    const needsActivityPhotos = data.activities.some(
+      (a: any) => !a.realPhoto || !Array.isArray(a.realPhotos) || a.realPhotos.length === 0
+    );
     const needsHotelPhotos = data.hotels.some((h: any) => !h.realImage);
     const needsHeroImages = !tripData.enrichedImages || tripData.enrichedImages.length === 0;
-    if (!needsActivityPhotos && !needsHotelPhotos && !needsHeroImages) return;
+    const needsItineraryVenuePhotos = itineraryVenues.some(
+      (venue) => !resolveVenuePhotoMatch(venue, tripData.itineraryVenuePhotos)
+    );
+    if (!needsActivityPhotos && !needsHotelPhotos && !needsHeroImages && !needsItineraryVenuePhotos) return;
 
     let cancelled = false;
     (async () => {
       try {
-        const activityNames = data.activities.map((a: any) => a.name).filter(Boolean);
+        const activityNames = Array.from(new Set([
+          ...data.activities.map((a: any) => a.name).filter(Boolean),
+          ...itineraryVenues,
+        ]));
         const hotelNamesList = data.hotels.map((h: any) => h.name).filter(Boolean);
         const res = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/enrich-destination`,
@@ -88,12 +169,12 @@ const TripDetail = () => {
         const enrich = await res.json();
         if (cancelled) return;
 
-        const activityPhotos = enrich.activityPhotos || {};
+        const activityPhotos = (enrich.activityPhotos || {}) as Record<string, VenuePhotoMatch>;
         const hotelPhotos = enrich.hotelPhotos || {};
         const images = enrich.images || [];
 
         const newActivities = data.activities.map((a: any) => {
-          const m = activityPhotos[a.name];
+          const m = resolveVenuePhotoMatch(a.name, activityPhotos);
           const next: any = { ...a };
           if (m?.hasRealPhoto && (m.thumbPhoto || m.photo)) {
             if (!next.realPhoto) next.realPhoto = m.thumbPhoto || m.photo;
@@ -126,6 +207,10 @@ const TripDetail = () => {
           ...tripData,
           data: { ...data, activities: newActivities, hotels: newHotels },
           enrichedImages: tripData.enrichedImages?.length ? tripData.enrichedImages : images,
+          itineraryVenuePhotos: {
+            ...(tripData.itineraryVenuePhotos || {}),
+            ...activityPhotos,
+          },
         };
         setTripData(merged);
         sessionStorage.setItem("jolliday-trip-detail", JSON.stringify(merged));
@@ -170,30 +255,18 @@ const TripDetail = () => {
   };
 
   // Match a slot venue name to an activity (token-overlap, case-insensitive)
-  const STOP = new Set(["the","a","an","of","and","in","at","on","to","for","by","de","la","le","el","il","du","des"]);
-  const tokens = (s: string) =>
-    (s || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(t => t && !STOP.has(t));
   const matchActivity = (venue: string): any | null => {
     if (!venue) return null;
-    const q = tokens(venue);
-    if (q.length === 0) return null;
     let best: any = null;
     let bestScore = 0;
     for (const a of data.activities as any[]) {
-      const c = tokens(a.name);
-      if (c.length === 0) continue;
-      const cset = new Set(c);
-      const shared = q.filter(t => cset.has(t));
-      if (shared.length === 0) continue;
-      const significant = shared.some(t => t.length >= 4);
-      const ratio = shared.length / Math.max(q.length, c.length);
-      const score = ratio + (significant ? 0.5 : 0);
-      if (score > bestScore && (significant || ratio >= 0.6)) {
+      const score = scoreVenueMatch(venue, a.name);
+      if (score > bestScore) {
         bestScore = score;
         best = a;
       }
     }
-    return best;
+    return bestScore >= 0.9 ? best : null;
   };
 
   const handleShare = async () => {
@@ -363,10 +436,38 @@ const TripDetail = () => {
                           <span className="absolute -left-[33px] sm:-left-[37px] top-1.5 w-3.5 h-3.5 rounded-full bg-foreground ring-4 ring-background" />
                           {(() => {
                             const matched = matchActivity(slot.venue);
-                            const heroPhoto: string | undefined = matched?.realPhoto;
-                            const reels: string[] = (matched?.realPhotos as string[] | undefined)?.filter(Boolean) || [];
+                            const slotPhotoMatch = resolveVenuePhotoMatch(slot.venue, tripData.itineraryVenuePhotos);
+                            const heroPhoto: string | undefined = slotPhotoMatch?.thumbPhoto || slotPhotoMatch?.photo || matched?.realPhoto;
+                            const reels: string[] = slotPhotoMatch?.photos?.filter(Boolean)
+                              || (matched?.realPhotos as string[] | undefined)?.filter(Boolean)
+                              || (heroPhoto ? [heroPhoto] : []);
                             const openModal = () => {
-                              if (matched) { setSelectedActivity(matched); setActivityModalOpen(true); }
+                              if (matched) {
+                                setSelectedActivity(matched);
+                                setActivityModalOpen(true);
+                                return;
+                              }
+                              if (slotPhotoMatch?.hasRealPhoto || heroPhoto) {
+                                setSelectedActivity({
+                                  id: `${day.day}-${sIdx}-${slot.venue}`,
+                                  name: slot.venue,
+                                  category: "sightseeing",
+                                  duration: slot.duration || "",
+                                  price: slot.cost || 0,
+                                  currency,
+                                  image: heroPhoto || "",
+                                  occasion: "",
+                                  description: slot.activity || `A highlighted stop in your ${destination} plan.`,
+                                  neighborhood: slotPhotoMatch?.address || slot.neighborhood,
+                                  bookAhead: slot.bookAhead,
+                                  realPhoto: heroPhoto,
+                                  realPhotos: reels,
+                                  verified: !!slotPhotoMatch?.verified,
+                                  verifiedAddress: slotPhotoMatch?.address || slot.neighborhood,
+                                  verifiedRating: slotPhotoMatch?.rating || null,
+                                } as ActivityData);
+                                setActivityModalOpen(true);
+                              }
                             };
                             return (
                               <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4">

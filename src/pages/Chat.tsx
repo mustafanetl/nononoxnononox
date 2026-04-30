@@ -766,11 +766,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     // Assign verified Google Places photos to activities.
                     // Keep activities without a photo match — they still have name,
                     // description, etc. Card shows a gradient placeholder.
-                    const activityPhotos = enrichData.activityPhotos || {};
+                     const activityPhotos = enrichData.activityPhotos || {};
                     // Build a case-insensitive lookup so renamed venues still match
                     const photoLookup: Record<string, any> = {};
                     for (const [k, v] of Object.entries(activityPhotos)) {
                       photoLookup[k.toLowerCase().trim()] = v;
+                       const matchedName = (v as any)?.matchedName;
+                       if (typeof matchedName === "string" && matchedName.trim()) {
+                         photoLookup[matchedName.toLowerCase().trim()] = v;
+                       }
                     }
                     parsed.activities = parsed.activities.map((act: ActivityData) => {
                       const key = (act.name || "").toLowerCase().trim();
