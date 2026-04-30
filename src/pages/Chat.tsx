@@ -266,7 +266,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
-  const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData, replaceActivity } = useRzumaChat();
+  const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData, replaceActivity, replaceItinerarySlot } = useRzumaChat();
+  const [selectedSlotRef, setSelectedSlotRef] = useState<{ day: number; slotIdx: number } | null>(null);
   const { compareItems } = useTripContext();
 
   // Track whether assistant has started streaming content for current response
