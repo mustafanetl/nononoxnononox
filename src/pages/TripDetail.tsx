@@ -593,28 +593,28 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                 setActivityModalOpen(true);
                                 return;
                               }
-                              if (slotPhotoMatch?.hasRealPhoto || heroPhoto) {
-                                setSelectedActivity({
-                                  id: `${day.day}-${sIdx}-${slot.venue}`,
-                                  name: slot.venue,
-                                  category: "sightseeing",
-                                  duration: slot.duration || "",
-                                  price: slot.cost || 0,
-                                  currency,
-                                  image: heroPhoto || "",
-                                  occasion: "",
-                                  description: slot.activity || `A highlighted stop in your ${destination} plan.`,
-                                  neighborhood: slotPhotoMatch?.address || slot.neighborhood,
-                                  bookAhead: slot.bookAhead,
-                                  realPhoto: heroPhoto,
-                                  realPhotos: reels,
-                                  verified: !!slotPhotoMatch?.verified,
-                                  verifiedAddress: slotPhotoMatch?.address || slot.neighborhood,
-                                  verifiedRating: slotPhotoMatch?.rating || null,
-                                } as ActivityData);
-                                setActivitySource({ kind: "slot", dayNum: day.day, slotIdx: sIdx });
-                                setActivityModalOpen(true);
-                              }
+                              // Always open the modal so every slot can be swapped,
+                              // even when we don't have a matching activity card or photo yet.
+                              setSelectedActivity({
+                                id: `${day.day}-${sIdx}-${slot.venue}`,
+                                name: slot.venue,
+                                category: "sightseeing",
+                                duration: slot.duration || "",
+                                price: slot.cost || 0,
+                                currency,
+                                image: heroPhoto || "",
+                                occasion: "",
+                                description: slot.activity || `A highlighted stop in your ${destination} plan.`,
+                                neighborhood: slotPhotoMatch?.address || slot.neighborhood,
+                                bookAhead: slot.bookAhead,
+                                realPhoto: heroPhoto,
+                                realPhotos: reels,
+                                verified: !!slotPhotoMatch?.verified,
+                                verifiedAddress: slotPhotoMatch?.address || slot.neighborhood,
+                                verifiedRating: slotPhotoMatch?.rating || null,
+                              } as ActivityData);
+                              setActivitySource({ kind: "slot", dayNum: day.day, slotIdx: sIdx });
+                              setActivityModalOpen(true);
                             };
                             return (
                               <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4">
@@ -622,8 +622,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                 <button
                                   type="button"
                                   onClick={openModal}
-                                  disabled={!matched}
-                                  className="relative h-44 sm:h-40 sm:w-40 rounded-2xl overflow-hidden group/photo bg-gradient-to-br from-primary/15 via-muted to-accent/15 disabled:cursor-default"
+                                  className="relative h-44 sm:h-40 sm:w-40 rounded-2xl overflow-hidden group/photo bg-gradient-to-br from-primary/15 via-muted to-accent/15"
                                 >
                                   {heroPhoto ? (
                                     <img
@@ -636,11 +635,9 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                       <MapPin className="h-7 w-7 text-muted-foreground/40" />
                                     </div>
                                   )}
-                                  {matched && (
-                                    <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-background/85 backdrop-blur text-[9px] font-semibold tracking-wide text-foreground">
-                                      {slot.time}
-                                    </span>
-                                  )}
+                                  <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-background/85 backdrop-blur text-[9px] font-semibold tracking-wide text-foreground">
+                                    {slot.time}
+                                  </span>
                                   {reels.length > 1 && (
                                     <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-black/55 backdrop-blur text-[9px] font-semibold text-white inline-flex items-center gap-1">
                                       <Camera className="h-2.5 w-2.5" />
@@ -660,7 +657,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                     )}
                                   </div>
                                   <h4
-                                    className={`text-base sm:text-lg font-semibold text-foreground leading-snug ${matched ? "cursor-pointer hover:underline underline-offset-4" : ""}`}
+                                    className="text-base sm:text-lg font-semibold text-foreground leading-snug cursor-pointer hover:underline underline-offset-4"
                                     onClick={openModal}
                                   >
                                     {slot.venue}
