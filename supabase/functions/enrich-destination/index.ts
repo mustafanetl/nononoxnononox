@@ -21,24 +21,36 @@ interface GeoResult {
 }
 
 async function geocode(destination: string): Promise<GeoResult | null> {
-  try {
-    const res = await fetchWithTimeout(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1&accept-language=en&addressdetails=1`,
-      { headers: { "User-Agent": "Jolliday-TravelApp/1.0" } }
-    );
-    const data = await res.json();
-    if (!data || data.length === 0) return null;
-    const place = data[0];
-    return {
-      lat: parseFloat(place.lat),
-      lng: parseFloat(place.lon),
-      countryCode: place.address?.country_code?.toUpperCase() || "",
-      displayName: place.display_name,
-    };
-  } catch (e) {
-    console.error("Geocoding error:", e);
-    return null;
+  // Try Nominatim with one retry — it's strict & flaky from edge IPs.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetchWithTimeout(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1&accept-language=en&addressdetails=1`,
+        { headers: { "User-Agent": "Jolliday-TravelApp/1.0 (contact@jolliday.online)" } }
+      );
+      if (!res.ok) {
+        if (attempt === 0) { await new Promise(r => setTimeout(r, 400)); continue; }
+        return null;
+      }
+      const data = await res.json();
+      if (!data || data.length === 0) {
+        if (attempt === 0) { await new Promise(r => setTimeout(r, 400)); continue; }
+        return null;
+      }
+      const place = data[0];
+      return {
+        lat: parseFloat(place.lat),
+        lng: parseFloat(place.lon),
+        countryCode: place.address?.country_code?.toUpperCase() || "",
+        displayName: place.display_name,
+      };
+    } catch (e) {
+      console.error(`Geocoding error (attempt ${attempt + 1}):`, e);
+      if (attempt === 0) { await new Promise(r => setTimeout(r, 400)); continue; }
+      return null;
+    }
   }
+  return null;
 }
 
 async function getCountryInfo(countryCode: string): Promise<any> {
@@ -348,8 +360,12 @@ serve(async (req) => {
 
     const geo = await geocode(destination);
     if (!geo) {
-      return new Response(JSON.stringify({ error: "Could not find destination", destination }), {
-        status: 404,
+      // Fail-soft: enrichment is a progressive enhancement. Return photos-only
+      // so the plan still renders instead of breaking the UI with a 404.
+      console.warn(`Geocode failed for "${destination}" — returning photos-only enrichment`);
+      const images = await getGooglePlacePhotos(destination, 6).catch(() => []);
+      return new Response(JSON.stringify({ destination, images, partial: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
