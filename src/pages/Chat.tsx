@@ -384,6 +384,20 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     }));
   }, [messages]);
 
+  // Track the latest destination across the conversation so Swap works
+  // even on messages that don't include a destination_enrich block.
+  const latestDestination = useMemo(() => {
+    for (let i = parsedMessages.length - 1; i >= 0; i--) {
+      const p: any = parsedMessages[i].parsed;
+      const d =
+        p?.destinationEnrich?.destination ||
+        p?.travelInfo?.destination ||
+        (p?.places?.[0]?.location?.split(",")[0] || "").trim();
+      if (d) return d;
+    }
+    return "";
+  }, [parsedMessages]);
+
   // Clear enriched data when switching conversations
   useEffect(() => {
     if (activeId !== prevActiveId.current) {
@@ -758,7 +772,12 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const parsed = { ...msg.parsed };
 
                   // Merge enriched live data if available
-                  const enrichDest = parsed.destinationEnrich?.destination;
+                 const enrichDest =
+                   parsed.destinationEnrich?.destination ||
+                   parsed.travelInfo?.destination ||
+                   (parsed.itinerary[0] as any)?.destination ||
+                   (parsed.places[0]?.location?.split(",")[0] || "").trim() ||
+                   undefined;
                   const enrichData = enrichDest ? enrichedData[enrichDest] : null;
                   if (enrichData) {
                     if (enrichData.country && parsed.travelInfo) {
@@ -940,7 +959,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                     {parsed.activities.length > 0 && (
                                       <HorizontalCarousel>
                                         {parsed.activities.map((a, idx) => (
-                          <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a, i, enrichDest || "")} />
+                          <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a, i, enrichDest || latestDestination)} />
                                         ))}
                                       </HorizontalCarousel>
                                     )}
@@ -951,7 +970,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                             key={idx}
                                             item={item}
                                             onSlotClick={(slot, slotIdx) =>
-                                              handleItinerarySlotClick(slot, slotIdx, item.day, i, enrichDest || "")
+                                              handleItinerarySlotClick(slot, slotIdx, item.day, i, enrichDest || latestDestination)
                                             }
                                           />
                                         ))}

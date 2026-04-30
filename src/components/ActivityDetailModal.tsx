@@ -247,20 +247,24 @@ const ActivityDetailModal = ({
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="space-y-2">
+            {onReplace && (
+              <Button
+                variant="default"
+                className="w-full gap-2"
+                onClick={fetchAlternatives}
+              >
+                <Shuffle className="h-4 w-4" /> Swap with another option
+              </Button>
+            )}
             <Button
               variant={inTrip ? "secondary" : "outline"}
-              className="gap-2 flex-1"
+              className="gap-2 w-full"
               onClick={toggleTrip}
             >
               {inTrip ? <CheckCircle className="h-4 w-4" /> : <PlusCircle className="h-4 w-4" />}
               {inTrip ? "Added" : "Add to Trip"}
             </Button>
-            {onReplace && (
-              <Button variant="outline" className="gap-2" onClick={fetchAlternatives}>
-                <Shuffle className="h-4 w-4" /> Swap
-              </Button>
-            )}
           </div>
         </div>
         </>
