@@ -93,17 +93,21 @@ const TripDetail = () => {
         const images = enrich.images || [];
 
         const newActivities = data.activities.map((a: any) => {
-          if (a.realPhoto) return a;
           const m = activityPhotos[a.name];
+          const next: any = { ...a };
           if (m?.hasRealPhoto && (m.thumbPhoto || m.photo)) {
-            return { ...a, realPhoto: m.thumbPhoto || m.photo, verified: true };
-          }
-          // Fallback: use a destination hero image so cards aren't empty
-          if (images.length > 0) {
+            if (!next.realPhoto) next.realPhoto = m.thumbPhoto || m.photo;
+            next.verified = true;
+          } else if (!next.realPhoto && images.length > 0) {
             const idx = data.activities.indexOf(a) % images.length;
-            return { ...a, realPhoto: images[idx].thumbUrl || images[idx].url };
+            next.realPhoto = images[idx].thumbUrl || images[idx].url;
           }
-          return a;
+          if (Array.isArray(m?.photos) && m.photos.length > 0) {
+            next.realPhotos = m.photos;
+          } else if (!next.realPhotos && next.realPhoto) {
+            next.realPhotos = [next.realPhoto];
+          }
+          return next;
         });
         const newHotels = data.hotels.map((h: any) => {
           if (h.realImage) return h;
