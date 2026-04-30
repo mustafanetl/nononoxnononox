@@ -746,7 +746,11 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {data.activities.map((a, i) => (
               <ActivityTile key={a.id || i} activity={a}
-                onClick={() => { setSelectedActivity(a); setActivityModalOpen(true); }} />
+                onClick={() => {
+                  setSelectedActivity(a);
+                  setActivitySource({ kind: "activity", activityId: a.id });
+                  setActivityModalOpen(true);
+                }} />
             ))}
           </div>
         </Section>
