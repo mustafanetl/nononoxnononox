@@ -2,13 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Download, Share2, Plane, Hotel, Sparkles,
-  MapPin, Clock, ExternalLink, Star, Bookmark, Ticket, ArrowRight,
+  MapPin, Clock, ExternalLink, Star, Bookmark, Ticket, ArrowRight, Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import FlightDetailModal from "@/components/FlightDetailModal";
 import HotelDetailModal from "@/components/HotelDetailModal";
 import ActivityDetailModal from "@/components/ActivityDetailModal";
+import PhotoLightbox from "@/components/PhotoLightbox";
 import TripMap, { type MapPoint } from "@/components/TripMap";
 import { HotelData } from "@/contexts/TripContext";
 import { FlightData } from "@/components/FlightCard";
@@ -105,6 +106,11 @@ const TripDetail = () => {
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityData | null>(null);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxPhotos, setLightboxPhotos] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxVenue, setLightboxVenue] = useState<string>("");
+  const [lightboxOnDetails, setLightboxOnDetails] = useState<(() => void) | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
