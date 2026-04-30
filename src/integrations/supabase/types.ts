@@ -161,6 +161,39 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_trips: {
+        Row: {
+          created_at: string
+          data_json: Json
+          destination: string | null
+          id: string
+          owner_user_id: string | null
+          slug: string
+          title: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          data_json?: Json
+          destination?: string | null
+          id?: string
+          owner_user_id?: string | null
+          slug: string
+          title: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          data_json?: Json
+          destination?: string | null
+          id?: string
+          owner_user_id?: string | null
+          slug?: string
+          title?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -269,6 +302,10 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      increment_shared_trip_views: {
+        Args: { _slug: string }
+        Returns: undefined
       }
       move_to_dlq: {
         Args: {

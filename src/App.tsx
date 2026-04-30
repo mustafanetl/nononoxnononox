@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import MyTrips from "./pages/MyTrips";
 import ResetPassword from "./pages/ResetPassword";
 import TripDetail from "./pages/TripDetail";
+import SharedTrip from "./pages/SharedTrip";
 import Settings from "./pages/Settings";
 import FAQ from "./pages/FAQ";
 import Terms from "./pages/Terms";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/my-trips" element={<MyTrips />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/trip/view" element={<TripDetail />} />
+              <Route path="/p/:slug" element={<SharedTrip />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/terms" element={<Terms />} />

@@ -1,53 +1,64 @@
-## Plan
+## Plan: Public shareable trip links with import-to-account
 
-I’ll apply your solution. It is a good fix, and I’ll enforce it everywhere the app searches for activity or restaurant photos so the place lookup is always tied to the destination city.
+Let users share a trip via a public link. Anyone can view it without logging in. To import, edit, or customize it, they must create an account.
 
-### What I’ll update
+### 1. Database: a separate `shared_trips` table
+Add a public, read-only snapshot table (kept separate from private `saved_trips`).
 
-1. Tighten activity and restaurant photo search queries
-- Update the backend enrichment logic so every activity/place lookup always includes the city context explicitly.
-- Use a stronger query format than the current loose search, so restaurant/activity lookups are consistently scoped to the destination.
-- Keep matching strict so the app prefers “right place in the right city” over “some place with the same name elsewhere.”
+Columns:
+- `id uuid primary key default gen_random_uuid()`
+- `slug text unique not null` (short token used in the share URL)
+- `owner_user_id uuid` (nullable — guests can also share)
+- `title text not null`
+- `destination text`
+- `data_json jsonb not null` (full trip snapshot)
+- `view_count int default 0`
+- `created_at timestamptz default now()`
 
-2. Fix the first hydration path in chat
-- Update the chat page logic so it stops assigning generic destination images to activities when a place match fails.
-- Only use verified place photos for activities/restaurants.
-- If no verified match exists, show no photo instead of the wrong city or wrong venue.
+RLS:
+- SELECT: public (no auth required) — this is the whole point of a share link.
+- INSERT: only authenticated users; they must set `owner_user_id = auth.uid()`.
+- UPDATE/DELETE: only the owner.
 
-3. Restore multi-photo activity galleries
-- Keep up to 4 real place photos when the provider returns them.
-- Ensure the first photo becomes the main image and the remaining ones appear as supporting photos.
-- Preserve the dedupe logic so the same image does not appear twice in different sizes.
+A small SECURITY DEFINER function increments `view_count` so anonymous viewers can bump the counter without write access to the row.
 
-4. Keep trip detail behavior aligned
-- Make sure the trip detail page uses the same verified, city-scoped photo set.
-- Prevent day cards, slot cards, and activity modals from falling back to unrelated venue photos.
+### 2. Share button generates a public link
+On the trip detail page:
+- Replace the current "Share" (text summary) action with a real "Share link" flow.
+- On click: insert into `shared_trips`, get back the `slug`, copy `https://<host>/p/<slug>` to clipboard, toast "Link copied".
+- If the user is a guest, allow it but mark `owner_user_id = null`.
+- Cache the slug on the in-memory trip so repeated clicks reuse the same link.
 
-5. Verify the result in the preview
-- Check that a Rotterdam activity with a valid place match gets the correct city-specific photo set.
-- Confirm that activities/restaurants can show up to 4 real images again when available.
-- Confirm that unmatched places stay blank instead of showing the wrong image.
+### 3. New public viewer route `/p/:slug`
+- Loads the snapshot from `shared_trips` by slug, no auth required.
+- Renders the same `TripDetail` UI (read-only mode).
+- Adds a clear top banner: "Shared trip · Sign up to import & customize".
+- Disables: Save, Edit, PDF export-as-mine, Add-to-trip in modals.
+- Keeps: scroll, map, photos, lightbox, booking links — all read-only.
+- Calls the increment-view function once per session.
 
-## Expected outcome
+### 4. Import flow (account required)
+A prominent "Import this trip" button:
+- If logged in: copies the snapshot into the user's `saved_trips` (with their `user_id`), then redirects to `/trip/view` with the cloned trip in sessionStorage so they can edit/continue.
+- If logged out: redirects to `/auth?next=/p/<slug>?import=1`. After signup/login, returns to the share page and triggers the import automatically.
 
-- Activities and restaurants will be searched with city context every time.
-- Wrong-city matches should drop sharply.
-- If Google Places has 4 photos for a matched venue, those 4 will be available again.
-- If a place cannot be matched confidently, the UI will avoid fake or misleading images.
+### 5. UX touches
+- Footer/disclaimer on `/p/:slug`: "This is a shared plan. Create a free account to make it yours."
+- Show the original creator's display name if `owner_user_id` is set and a profile exists (otherwise "Shared by a Jolliday traveler").
+- "Continue planning" CTA after import lands on `/chat` with the imported plan as context.
+
+### 6. Out of scope
+- No edit-in-place on the public page.
+- No public list of shared trips.
+- No comments/likes.
 
 ## Technical details
+- Migration creates `shared_trips`, RLS, and `increment_shared_trip_views(slug text)` SECURITY DEFINER function.
+- Slug generated with `gen_random_bytes` → base32, ~10 chars, retried on collision.
+- New route in `src/App.tsx`: `/p/:slug` → `SharedTrip.tsx` page.
+- `SharedTrip.tsx` reuses `TripDetail` rendering by passing `readOnly` and `onImport`.
+- `TripDetail.tsx` accepts a new `mode: "owner" | "shared"` prop to hide owner-only actions.
+- Import handler: `supabase.from("saved_trips").insert({...snapshot, user_id: auth.uid()})` then `navigate("/trip/view")`.
+- Auth redirect: `Auth.tsx` already supports redirect; pass `next` query param and resume after sign-in.
 
-Files likely involved:
-- `supabase/functions/enrich-destination/index.ts`
-- `src/pages/Chat.tsx`
-- `src/pages/TripDetail.tsx`
-- `src/components/ActivityDetailModal.tsx`
-- `src/utils/photoGallery.ts`
-
-Concrete implementation notes:
-- Replace weak activity fallbacks in `Chat.tsx` that currently use destination hero images.
-- Standardize activity photo assignment to prefer `match.photo` plus `match.photos.slice(0, 4)`.
-- Strengthen lookup queries in the enrichment function to always include destination/city context for restaurants and activities.
-- Keep the existing duplicate-photo protection so 1600px and 400px variants of the same Google photo are treated as one image.
-
-If you approve, I’ll apply these changes now.
+If this matches what you want, I'll implement it.

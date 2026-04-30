@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Download, Share2, Plane, Hotel, Sparkles,
-  MapPin, Clock, ExternalLink, Star, Bookmark, Ticket, ArrowRight, Camera,
+  MapPin, Clock, ExternalLink, Star, Bookmark, Ticket, ArrowRight, Camera, Link2, LogIn,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -92,15 +92,26 @@ const resolveVenuePhotoMatch = (
   return bestScore >= 0.9 ? best : null;
 };
 
-const TripDetail = () => {
+type TripDetailMode = "owner" | "shared";
+
+interface TripDetailProps {
+  mode?: TripDetailMode;
+  /** When in "shared" mode, the slug of the shared trip (used for the Import flow). */
+  shareSlug?: string;
+  /** Pre-loaded snapshot for shared mode — bypasses sessionStorage. */
+  initialSnapshot?: { data: TripPlanData; destination: string; enrichedImages?: any[]; itineraryVenuePhotos?: Record<string, VenuePhotoMatch> } | null;
+}
+
+const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, initialSnapshot = null }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isShared = mode === "shared";
   const [tripData, setTripData] = useState<{
     data: TripPlanData;
     destination: string;
     enrichedImages?: any[];
     itineraryVenuePhotos?: Record<string, VenuePhotoMatch>;
-  } | null>(null);
+  } | null>(initialSnapshot);
   const [selectedFlight, setSelectedFlight] = useState<FlightData | null>(null);
   const [flightModalOpen, setFlightModalOpen] = useState(false);
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
@@ -113,8 +124,15 @@ const TripDetail = () => {
   const [lightboxVenue, setLightboxVenue] = useState<string>("");
   const [lightboxOnDetails, setLightboxOnDetails] = useState<(() => void) | undefined>(undefined);
   const [saving, setSaving] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
+    if (isShared) {
+      // Shared mode: snapshot is provided by parent route.
+      if (initialSnapshot) setTripData(initialSnapshot);
+      return;
+    }
     const raw = sessionStorage.getItem("jolliday-trip-detail");
     if (raw) {
       try {
@@ -125,7 +143,7 @@ const TripDetail = () => {
         }
       } catch { navigate("/chat"); }
     } else { navigate("/chat"); }
-  }, [navigate]);
+  }, [navigate, isShared, initialSnapshot]);
 
   // Re-enrich on mount: pulls real Google Places photos for activities,
   // hotels, and the destination hero — even if the user navigated here
@@ -288,10 +306,84 @@ const TripDetail = () => {
   };
 
   const handleShare = async () => {
+    // Shared-mode: copy the current public URL.
+    if (isShared) {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied!");
+      } catch { toast.error("Couldn't copy link"); }
+      return;
+    }
+    if (!user) {
+      toast.error("Sign in to create a shareable link");
+      navigate("/auth");
+      return;
+    }
+    setSharing(true);
     try {
-      await shareTripSummary([{ role: "assistant" as const, content: data.text }]);
-      toast.success("Trip summary copied!");
-    } catch { toast.error("Couldn't share"); }
+      // Generate a short, URL-safe slug.
+      const slug = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+        .map((b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36])
+        .join("");
+      const snapshot = {
+        data: tripData!.data,
+        destination: tripData!.destination,
+        enrichedImages: tripData!.enrichedImages || [],
+        itineraryVenuePhotos: tripData!.itineraryVenuePhotos || {},
+      };
+      const { error } = await supabase.from("shared_trips").insert({
+        slug,
+        owner_user_id: user.id,
+        title: `Trip to ${destination}`,
+        destination,
+        data_json: snapshot as any,
+      });
+      if (error) throw error;
+      const url = `${window.location.origin}/p/${slug}`;
+      try { await navigator.clipboard.writeText(url); } catch {}
+      if ((navigator as any).share) {
+        try { await (navigator as any).share({ title: `Trip to ${destination}`, url }); } catch {}
+      }
+      toast.success("Share link copied!", { description: url });
+    } catch (e) {
+      toast.error("Couldn't create share link");
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!user) {
+      // Stash intent and redirect to auth.
+      try { sessionStorage.setItem("jolliday-pending-import-slug", shareSlug || ""); } catch {}
+      toast.message("Create an account to import this trip");
+      navigate(`/auth?next=${encodeURIComponent(window.location.pathname + "?import=1")}`);
+      return;
+    }
+    setImporting(true);
+    try {
+      const { error } = await supabase.from("saved_trips").insert({
+        user_id: user.id,
+        title: `Trip to ${destination}`,
+        destination,
+        data_json: tripData!.data as any,
+        status: "planning",
+      });
+      if (error) throw error;
+      // Hand off to owner-mode trip view.
+      sessionStorage.setItem("jolliday-trip-detail", JSON.stringify({
+        data: tripData!.data,
+        destination: tripData!.destination,
+        enrichedImages: tripData!.enrichedImages || [],
+        itineraryVenuePhotos: tripData!.itineraryVenuePhotos || {},
+      }));
+      toast.success("Trip imported to your account!");
+      navigate("/trip/view");
+    } catch {
+      toast.error("Couldn't import trip");
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleExportPDF = () => {
@@ -315,6 +407,18 @@ const TripDetail = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24 sm:pb-12">
+      {isShared && (
+        <div className="sticky top-0 z-50 bg-foreground text-background px-4 py-2.5 text-sm flex items-center justify-between gap-3">
+          <span className="truncate">
+            <span className="font-semibold">Shared trip</span>
+            <span className="opacity-70 hidden sm:inline"> · Sign up to import & customize this plan</span>
+          </span>
+          <Button size="sm" variant="secondary" onClick={handleImport} disabled={importing}
+            className="h-7 gap-1.5 shrink-0">
+            <LogIn className="h-3.5 w-3.5" /> {importing ? "Importing..." : "Import this trip"}
+          </Button>
+        </div>
+      )}
       {/* ── Magazine Hero ── */}
       <div className="relative h-[58vh] min-h-[420px] max-h-[640px] overflow-hidden">
         {heroImg ? (
@@ -328,23 +432,34 @@ const TripDetail = () => {
 
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 px-4 sm:px-8 pt-4 flex items-center justify-between z-10">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/chat")}
+          <Button variant="ghost" size="icon" onClick={() => navigate(isShared ? "/" : "/chat")}
             className="rounded-full bg-white/15 backdrop-blur-md hover:bg-white/25 text-white">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="hidden sm:flex items-center gap-2">
-            <Button size="sm" onClick={handleSave} disabled={saving}
-              className="gap-1.5 bg-white text-black hover:bg-white/90">
-              <Bookmark className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save"}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleExportPDF}
+            {!isShared && (
+              <>
+                <Button size="sm" onClick={handleSave} disabled={saving}
+                  className="gap-1.5 bg-white text-black hover:bg-white/90">
+                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save"}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleExportPDF}
+                  className="gap-1.5 bg-white/15 backdrop-blur-md hover:bg-white/25 text-white">
+                  <Download className="h-3.5 w-3.5" /> PDF
+                </Button>
+              </>
+            )}
+            <Button variant="ghost" size="sm" onClick={handleShare} disabled={sharing}
               className="gap-1.5 bg-white/15 backdrop-blur-md hover:bg-white/25 text-white">
-              <Download className="h-3.5 w-3.5" /> PDF
+              {isShared ? <Link2 className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
+              {isShared ? "Copy link" : sharing ? "Creating..." : "Share link"}
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleShare}
-              className="gap-1.5 bg-white/15 backdrop-blur-md hover:bg-white/25 text-white">
-              <Share2 className="h-3.5 w-3.5" /> Share
-            </Button>
+            {isShared && (
+              <Button size="sm" onClick={handleImport} disabled={importing}
+                className="gap-1.5 bg-white text-black hover:bg-white/90">
+                <LogIn className="h-3.5 w-3.5" /> {importing ? "Importing..." : "Import"}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -644,15 +759,28 @@ const TripDetail = () => {
       <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden">
         <div className="bg-card/90 backdrop-blur-xl border-t border-border px-4 py-3">
           <div className="flex items-center justify-end gap-2 max-w-3xl mx-auto">
-            <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 h-9">
-              <Bookmark className="h-3.5 w-3.5" /> {saving ? "..." : "Save"}
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportPDF} className="h-9 w-9 p-0">
-              <Download className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleShare} className="h-9 w-9 p-0">
-              <Share2 className="h-3.5 w-3.5" />
-            </Button>
+            {isShared ? (
+              <>
+                <Button variant="outline" size="sm" onClick={handleShare} className="h-9 gap-1.5">
+                  <Link2 className="h-3.5 w-3.5" /> Copy link
+                </Button>
+                <Button size="sm" onClick={handleImport} disabled={importing} className="gap-1.5 h-9">
+                  <LogIn className="h-3.5 w-3.5" /> {importing ? "..." : "Import"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 h-9">
+                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "..." : "Save"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportPDF} className="h-9 w-9 p-0">
+                  <Download className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleShare} disabled={sharing} className="h-9 gap-1.5">
+                  <Link2 className="h-3.5 w-3.5" /> {sharing ? "..." : "Share"}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
