@@ -218,14 +218,27 @@ async function searchAndValidateActivities(
         }
       }
 
-      // Fallback: the search was already city-scoped ("{name}, {city}"),
-      // so if Google returned a result whose address is in-city and has a photo,
-      // accept it even if the name overlap is weak. Prevents "no image" cases
-      // for small/foreign-name venues whose tokens don't overlap cleanly.
+      // Fallback 1: name matches and there's a photo — accept even if address
+      // city-token check fails. Many cities have different local names
+      // (Gothenburg/Göteborg, Munich/München, Florence/Firenze, Vienna/Wien,
+      // Copenhagen/København) so the address won't contain our English token.
+      // The query was already city-scoped, so Google's top result is
+      // overwhelmingly in that city.
       if (!bestPlace) {
         for (const place of places) {
-          const addr = place.formattedAddress || "";
-          if (addressMatchesCity(addr) && place.photos?.length > 0) {
+          const placeName = place.displayName?.text || "";
+          if (nameMatches(actName, placeName) && place.photos?.length > 0) {
+            bestPlace = place;
+            break;
+          }
+        }
+      }
+
+      // Fallback 2: any first result with a photo — the search was already
+      // city-scoped ("{name}, {city}"), so trust Google's ranking.
+      if (!bestPlace) {
+        for (const place of places) {
+          if (place.photos?.length > 0) {
             bestPlace = place;
             break;
           }
@@ -317,6 +330,29 @@ async function searchAndValidateHotels(
         ) {
           bestPlace = place;
           break;
+        }
+      }
+
+      // Fallback 1: name match with photo (handles cities with different
+      // local names, e.g. Gothenburg → Göteborg).
+      if (!bestPlace) {
+        for (const place of places) {
+          const placeName = place.displayName?.text || "";
+          if (nameMatches(name, placeName) && place.photos?.length > 0) {
+            bestPlace = place;
+            break;
+          }
+        }
+      }
+
+      // Fallback 2: any first lodging result with a photo (query was
+      // city-scoped + lodging type, so trust Google's ranking).
+      if (!bestPlace) {
+        for (const place of places) {
+          if (place.photos?.length > 0) {
+            bestPlace = place;
+            break;
+          }
         }
       }
 
