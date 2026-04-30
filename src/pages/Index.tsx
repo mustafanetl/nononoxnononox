@@ -32,7 +32,7 @@ const Index = () => {
             <span className="font-semibold text-lg tracking-tight">Jolliday</span>
           </div>
 
-          <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
+          <div className="hidden lg:flex items-center gap-8 text-sm text-muted-foreground">
             <a href="#examples" className="hover:text-foreground transition-colors">Example</a>
             <a href="#destinations" className="hover:text-foreground transition-colors">Destinations</a>
             <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
@@ -107,7 +107,7 @@ const Index = () => {
                 type="text"
                 value={ctaQuery}
                 onChange={(e) => setCtaQuery(e.target.value)}
-                placeholder="A weekend in Rome, a week in Japan…"
+                placeholder="A weekend in Rome…"
                 className="flex-1 bg-transparent py-2 text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
               <Button type="submit" size="lg" className="rounded-full gap-1">
@@ -123,7 +123,7 @@ const Index = () => {
         <div className="container mx-auto px-4 pt-16 pb-10 max-w-6xl">
           {/* Oversized wordmark */}
           <div className="pb-12 mb-12 border-b border-border">
-            <div className="text-[18vw] md:text-[14rem] leading-[0.85] font-bold tracking-tighter text-foreground/90 select-none">
+            <div className="text-[22vw] sm:text-[18vw] lg:text-[14rem] leading-[0.85] font-bold tracking-tighter text-foreground/90 select-none break-all">
               Jolliday
             </div>
           </div>
