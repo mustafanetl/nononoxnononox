@@ -50,6 +50,88 @@ const TripDetail = () => {
     } else { navigate("/chat"); }
   }, [navigate]);
 
+  // Re-enrich on mount: pulls real Google Places photos for activities,
+  // hotels, and the destination hero — even if the user navigated here
+  // before the chat page finished its own enrichment, or if the trip was
+  // reopened from "My Trips" without cached photos.
+  useEffect(() => {
+    if (!tripData) return;
+    const { data, destination } = tripData;
+    if (!destination) return;
+
+    const needsActivityPhotos = data.activities.some((a: any) => !a.realPhoto);
+    const needsHotelPhotos = data.hotels.some((h: any) => !h.realImage);
+    const needsHeroImages = !tripData.enrichedImages || tripData.enrichedImages.length === 0;
+    if (!needsActivityPhotos && !needsHotelPhotos && !needsHeroImages) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const activityNames = data.activities.map((a: any) => a.name).filter(Boolean);
+        const hotelNamesList = data.hotels.map((h: any) => h.name).filter(Boolean);
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/enrich-destination`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({
+              destination,
+              activities: activityNames,
+              hotelNames: hotelNamesList,
+            }),
+          }
+        );
+        if (!res.ok) return;
+        const enrich = await res.json();
+        if (cancelled) return;
+
+        const activityPhotos = enrich.activityPhotos || {};
+        const hotelPhotos = enrich.hotelPhotos || {};
+        const images = enrich.images || [];
+
+        const newActivities = data.activities.map((a: any) => {
+          if (a.realPhoto) return a;
+          const m = activityPhotos[a.name];
+          if (m?.hasRealPhoto && (m.thumbPhoto || m.photo)) {
+            return { ...a, realPhoto: m.thumbPhoto || m.photo, verified: true };
+          }
+          // Fallback: use a destination hero image so cards aren't empty
+          if (images.length > 0) {
+            const idx = data.activities.indexOf(a) % images.length;
+            return { ...a, realPhoto: images[idx].thumbUrl || images[idx].url };
+          }
+          return a;
+        });
+        const newHotels = data.hotels.map((h: any) => {
+          if (h.realImage) return h;
+          const m = hotelPhotos[h.name];
+          if (m?.hasRealPhoto && (m.thumbPhoto || m.photo)) {
+            return { ...h, realImage: m.thumbPhoto || m.photo, verified: true };
+          }
+          if (images.length > 0) {
+            const idx = data.hotels.indexOf(h) % images.length;
+            return { ...h, realImage: images[idx].thumbUrl || images[idx].url };
+          }
+          return h;
+        });
+
+        const merged = {
+          ...tripData,
+          data: { ...data, activities: newActivities, hotels: newHotels },
+          enrichedImages: tripData.enrichedImages?.length ? tripData.enrichedImages : images,
+        };
+        setTripData(merged);
+        sessionStorage.setItem("jolliday-trip-detail", JSON.stringify(merged));
+        if (images.length > 0) setWikimediaImage(destination, images[0].thumbUrl || images[0].url);
+      } catch { /* silent */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripData?.destination]);
+
   if (!tripData) return null;
   const { data, destination } = tripData;
 
