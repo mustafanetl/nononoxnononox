@@ -183,11 +183,12 @@ const TripDetail = () => {
           const m = resolveVenuePhotoMatch(a.name, activityPhotos);
           const next: any = { ...a };
           if (m?.hasRealPhoto && (m.thumbPhoto || m.photo)) {
-            if (!next.realPhoto) next.realPhoto = m.thumbPhoto || m.photo;
+            // Always prefer full-size photo for hero usage; thumb only as last-resort fallback
+            if (!next.realPhoto) next.realPhoto = m.photo || m.thumbPhoto;
             next.verified = true;
           } else if (!next.realPhoto && images.length > 0) {
             const idx = data.activities.indexOf(a) % images.length;
-            next.realPhoto = images[idx].thumbUrl || images[idx].url;
+            next.realPhoto = images[idx].url || images[idx].thumbUrl;
           }
           if (Array.isArray(m?.photos) && m.photos.length > 0) {
             next.realPhotos = m.photos;
@@ -200,11 +201,11 @@ const TripDetail = () => {
           if (h.realImage) return h;
           const m = hotelPhotos[h.name];
           if (m?.hasRealPhoto && (m.thumbPhoto || m.photo)) {
-            return { ...h, realImage: m.thumbPhoto || m.photo, verified: true };
+            return { ...h, realImage: m.photo || m.thumbPhoto, verified: true };
           }
           if (images.length > 0) {
             const idx = data.hotels.indexOf(h) % images.length;
-            return { ...h, realImage: images[idx].thumbUrl || images[idx].url };
+            return { ...h, realImage: images[idx].url || images[idx].thumbUrl };
           }
           return h;
         });
@@ -220,7 +221,7 @@ const TripDetail = () => {
         };
         setTripData(merged);
         sessionStorage.setItem("jolliday-trip-detail", JSON.stringify(merged));
-        if (images.length > 0) setWikimediaImage(destination, images[0].thumbUrl || images[0].url);
+        if (images.length > 0) setWikimediaImage(destination, images[0].url || images[0].thumbUrl);
       } catch { /* silent */ }
     })();
     return () => { cancelled = true; };
@@ -257,7 +258,8 @@ const TripDetail = () => {
     if (withPhoto?.realPhoto) return withPhoto.realPhoto;
     // fallback to any activity photo or hero
     const anyAct = data.activities.find((a: any) => a.realPhoto);
-    return (anyAct as any)?.realPhoto || tripData.enrichedImages?.[(dayNum - 1) % Math.max(tripData.enrichedImages?.length || 1, 1)]?.thumbUrl;
+    const fallback = tripData.enrichedImages?.[(dayNum - 1) % Math.max(tripData.enrichedImages?.length || 1, 1)];
+    return (anyAct as any)?.realPhoto || fallback?.url || fallback?.thumbUrl;
   };
 
   // Match a slot venue name to an activity (token-overlap, case-insensitive)
@@ -443,7 +445,8 @@ const TripDetail = () => {
                           {(() => {
                             const matched = matchActivity(slot.venue);
                             const slotPhotoMatch = resolveVenuePhotoMatch(slot.venue, tripData.itineraryVenuePhotos);
-                            const heroPhoto: string | undefined = slotPhotoMatch?.thumbPhoto || slotPhotoMatch?.photo || matched?.realPhoto;
+                            // Hero is rendered ~160px wide but at 2x DPR; prefer full-res photo for sharpness
+                            const heroPhoto: string | undefined = slotPhotoMatch?.photo || slotPhotoMatch?.thumbPhoto || matched?.realPhoto;
                             const reels: string[] = slotPhotoMatch?.photos?.filter(Boolean)
                               || (matched?.realPhotos as string[] | undefined)?.filter(Boolean)
                               || (heroPhoto ? [heroPhoto] : []);
