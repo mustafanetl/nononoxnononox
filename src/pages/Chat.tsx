@@ -737,24 +737,23 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                       };
                     }
                     // Enrich AI hotels with verified Google Places photos.
-                    // Drop hotels where we couldn't find a real photo.
+                    // Keep hotels even if no photo match — the card has a graceful
+                    // gradient placeholder. Dropping them left users with empty plans.
                     const hotelPhotos = enrichData.hotelPhotos || {};
-                    parsed.hotels = parsed.hotels
-                      .map((h: HotelData) => {
-                        const match = hotelPhotos[h.name];
-                        if (match?.hasRealPhoto && (match?.thumbPhoto || match?.photo)) {
-                          return {
-                            ...h,
-                            realImage: match.thumbPhoto || match.photo,
-                            rating: match.rating || h.rating,
-                            isLive: true,
-                            verified: true,
-                            verifiedAddress: match.address || null,
-                          };
-                        }
-                        return null;
-                      })
-                      .filter(Boolean) as HotelData[];
+                    parsed.hotels = parsed.hotels.map((h: HotelData) => {
+                      const match = hotelPhotos[h.name];
+                      if (match?.hasRealPhoto && (match?.thumbPhoto || match?.photo)) {
+                        return {
+                          ...h,
+                          realImage: match.thumbPhoto || match.photo,
+                          rating: match.rating || h.rating,
+                          isLive: true,
+                          verified: true,
+                          verifiedAddress: match.address || null,
+                        };
+                      }
+                      return h;
+                    });
                     // Apply destination images to flights
                     const images = enrichData.images || [];
                     if (images.length > 0) {
@@ -765,24 +764,23 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                       });
                     }
                     // Assign verified Google Places photos to activities.
-                    // Drop activities without a real photo.
+                    // Keep activities without a photo match — they still have name,
+                    // description, etc. Card shows a gradient placeholder.
                     const activityPhotos = enrichData.activityPhotos || {};
-                    parsed.activities = parsed.activities
-                      .map((act: ActivityData) => {
-                        const match = activityPhotos[act.name];
-                        if (match?.hasRealPhoto && (match?.thumbPhoto || match?.photo)) {
-                          return {
-                            ...act,
-                            realPhoto: match.thumbPhoto || match.photo,
-                            isReal: true,
-                            verified: true,
-                            verifiedAddress: match.address || null,
-                            verifiedRating: match.rating || null,
-                          };
-                        }
-                        return null;
-                      })
-                      .filter(Boolean) as ActivityData[];
+                    parsed.activities = parsed.activities.map((act: ActivityData) => {
+                      const match = activityPhotos[act.name];
+                      if (match?.hasRealPhoto && (match?.thumbPhoto || match?.photo)) {
+                        return {
+                          ...act,
+                          realPhoto: match.thumbPhoto || match.photo,
+                          isReal: true,
+                          verified: true,
+                          verifiedAddress: match.address || null,
+                          verifiedRating: match.rating || null,
+                        };
+                      }
+                      return act;
+                    });
                   }
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
