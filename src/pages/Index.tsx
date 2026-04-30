@@ -121,13 +121,6 @@ const Index = () => {
 
       <footer className="border-t border-border">
         <div className="container mx-auto px-4 pt-16 pb-10 max-w-6xl">
-          {/* Oversized wordmark */}
-          <div className="pb-12 mb-12 border-b border-border">
-            <div className="text-[22vw] sm:text-[18vw] lg:text-[14rem] leading-[0.85] font-bold tracking-tighter text-foreground/90 select-none break-all">
-              Jolliday
-            </div>
-          </div>
-
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
             <div>
               <div className="flex items-center gap-2 mb-4">
