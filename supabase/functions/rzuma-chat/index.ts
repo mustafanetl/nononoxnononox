@@ -151,7 +151,27 @@ ALWAYS end with quickreplies.
 FULL TRIP PLAN must include ALL: flights (if TRIP), hotels (if TRIP), activities, itinerary, travelinfo, destination_enrich, quickreplies.
 LOCAL/DATE plans: activities, itinerary, destination_enrich, quickreplies. NO flights, NO hotels.
 
-PRICES: Use approximate ranges. All coordinates must be realistic for the actual city/neighborhood.`;
+PRICES: Use approximate ranges. All coordinates must be realistic for the actual city/neighborhood.
+
+════════════════════════════════════════════════
+FORMATTING IS NON-NEGOTIABLE — READ THIS CAREFULLY
+════════════════════════════════════════════════
+EVERY data block MUST be wrapped in TRIPLE BACKTICKS with the block name on the SAME line as the opening fence and a closing triple-backtick on its own line. NO EXCEPTIONS.
+
+✅ CORRECT:
+\`\`\`activities
+[{"id":"1","name":"Tak","category":"dining", ...}]
+\`\`\`
+
+❌ WRONG (this breaks the UI — JSON shows up as raw text to the user):
+activities
+[{"id":"1","name":"Tak", ...}]
+
+❌ WRONG (missing closing fence):
+\`\`\`activities
+[{...}]
+
+If you forget the fences, the user sees a wall of JSON instead of pretty cards. ALWAYS include both opening (\`\`\`blockname) and closing (\`\`\`) fences for every block.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
