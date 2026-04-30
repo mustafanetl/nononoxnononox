@@ -116,6 +116,23 @@ const parseMessageContent = (content: string) => {
       }
       text = text.replace(match[0], "");
     }
+    // FALLBACK: AI sometimes drops the triple-backtick fences and emits
+    //   activities
+    //   [{...}]
+    // Recover those so cards still render.
+    const unfencedRegex = new RegExp(
+      "(^|\\n)\\s*" + blockType + "\\s*\\n\\s*([\\[{][\\s\\S]*?[\\]}])\\s*(?=\\n\\s*\\n|\\n\\s*[a-z_]+\\s*\\n[\\[{]|\\n*$)",
+      "gi"
+    );
+    for (const match of Array.from(text.matchAll(unfencedRegex))) {
+      const raw = match[2].trim();
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) items.push(...parsed);
+        else items.push(parsed);
+        text = text.replace(match[0], "\n");
+      } catch { /* leave it; could be partial stream */ }
+    }
     return items;
   };
 
