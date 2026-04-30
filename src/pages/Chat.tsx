@@ -266,7 +266,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
-  const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData, replaceActivity } = useRzumaChat();
+  const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData, replaceActivity, replaceItinerarySlot } = useRzumaChat();
+  const [selectedSlotRef, setSelectedSlotRef] = useState<{ day: number; slotIdx: number } | null>(null);
   const { compareItems } = useTripContext();
 
   // Track whether assistant has started streaming content for current response
@@ -467,6 +468,36 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     setSelectedActivity(activity);
     setSelectedActivityMsgIdx(msgIdx);
     setSelectedActivityDest(destination);
+    setSelectedSlotRef(null);
+    setActivityModalOpen(true);
+  };
+
+  const handleItinerarySlotClick = (
+    slot: any,
+    slotIdx: number,
+    day: number,
+    msgIdx: number,
+    destination: string,
+  ) => {
+    const pseudo: ActivityData = {
+      id: `slot-${msgIdx}-${day}-${slotIdx}`,
+      name: slot.venue,
+      category: slot.activity || "activity",
+      duration: slot.duration || "~1 hour",
+      price: slot.cost || 0,
+      currency: "$",
+      image: "food",
+      occasion: "",
+      description: `${slot.activity || "Planned stop"} in ${slot.neighborhood || destination}`,
+      neighborhood: slot.neighborhood || "",
+      hours: slot.time || "",
+      bookAhead: !!slot.bookAhead,
+      why: "",
+    } as ActivityData;
+    setSelectedActivity(pseudo);
+    setSelectedActivityMsgIdx(msgIdx);
+    setSelectedActivityDest(destination);
+    setSelectedSlotRef({ day, slotIdx });
     setActivityModalOpen(true);
   };
 
@@ -916,7 +947,13 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                     {parsed.itinerary.length > 0 && (
                                       <HorizontalCarousel>
                                         {parsed.itinerary.map((item, idx) => (
-                                          <ItineraryCard key={idx} item={item} />
+                                          <ItineraryCard
+                                            key={idx}
+                                            item={item}
+                                            onSlotClick={(slot, slotIdx) =>
+                                              handleItinerarySlotClick(slot, slotIdx, item.day, i, enrichDest || "")
+                                            }
+                                          />
                                         ))}
                                       </HorizontalCarousel>
                                     )}
@@ -1101,7 +1138,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         onOpenChange={setActivityModalOpen}
         destination={selectedActivityDest}
         onReplace={selectedActivity && selectedActivityMsgIdx >= 0 ? (newAct) => {
-          replaceActivity(selectedActivityMsgIdx, selectedActivity.id, newAct);
+          if (selectedSlotRef) {
+            replaceItinerarySlot(selectedActivityMsgIdx, selectedSlotRef.day, selectedSlotRef.slotIdx, newAct);
+          } else {
+            replaceActivity(selectedActivityMsgIdx, selectedActivity.id, newAct);
+          }
         } : undefined}
       />
       <HotelDetailModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={setHotelModalOpen} />

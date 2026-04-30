@@ -495,6 +495,51 @@ export const useRzumaChat = () => {
     }));
   }, [activeId]);
 
+  // Replace a single slot inside a specific day of a message's `itinerary` JSON block.
+  // Used by the swap feature on day-by-day itinerary cards.
+  const replaceItinerarySlot = useCallback((messageIndex: number, dayNumber: number, slotIndex: number, newActivity: any) => {
+    setConversations(prev => prev.map(c => {
+      if (c.id !== activeId) return c;
+      const msgs = c.messages;
+      if (messageIndex < 0 || messageIndex >= msgs.length) return c;
+      const target = msgs[messageIndex];
+      if (!target || target.role !== "assistant") return c;
+
+      const blockRegex = /```itinerary\s*([\s\S]*?)```/;
+      const match = target.content.match(blockRegex);
+      if (!match) return c;
+      let arr: any[] = [];
+      try { arr = JSON.parse(match[1].trim()); } catch { return c; }
+      if (!Array.isArray(arr)) return c;
+
+      const dayIdx = arr.findIndex((d) => d?.day === dayNumber);
+      if (dayIdx === -1) return c;
+      const day = arr[dayIdx];
+      if (!day?.slots || !Array.isArray(day.slots) || slotIndex < 0 || slotIndex >= day.slots.length) return c;
+
+      const oldSlot = day.slots[slotIndex];
+      day.slots[slotIndex] = {
+        ...oldSlot,
+        venue: newActivity.name || oldSlot.venue,
+        activity: newActivity.category || oldSlot.activity,
+        neighborhood: newActivity.neighborhood || oldSlot.neighborhood,
+        duration: newActivity.duration || oldSlot.duration,
+        cost: typeof newActivity.price === "number" ? newActivity.price : oldSlot.cost,
+        bookAhead: typeof newActivity.bookAhead === "boolean" ? newActivity.bookAhead : oldSlot.bookAhead,
+      };
+      arr[dayIdx] = day;
+
+      const newBlock = "```itinerary\n" + JSON.stringify(arr) + "\n```";
+      const newContent = target.content.replace(blockRegex, newBlock);
+
+      return {
+        ...c,
+        messages: msgs.map((m, i) => i === messageIndex ? { ...m, content: newContent } : m),
+        updatedAt: Date.now(),
+      };
+    }));
+  }, [activeId]);
+
   return {
     messages,
     isLoading,
@@ -513,5 +558,6 @@ export const useRzumaChat = () => {
     syncPrefsToDb,
     exportLocalData,
     replaceActivity,
+    replaceItinerarySlot,
   };
 };

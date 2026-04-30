@@ -1,4 +1,4 @@
-import { Clock, MapPin, Ticket, ArrowRight } from "lucide-react";
+import { Clock, MapPin, Ticket, ArrowRight, Shuffle } from "lucide-react";
 
 export type ItinerarySlot = {
   time: string;
@@ -22,7 +22,13 @@ export type ItineraryData = {
   evening?: string;
 };
 
-const ItineraryCard = ({ item }: { item: ItineraryData }) => {
+const ItineraryCard = ({
+  item,
+  onSlotClick,
+}: {
+  item: ItineraryData;
+  onSlotClick?: (slot: ItinerarySlot, slotIdx: number) => void;
+}) => {
   const hasSlots = item.slots && item.slots.length > 0;
 
   if (!hasSlots) {
@@ -65,13 +71,21 @@ const ItineraryCard = ({ item }: { item: ItineraryData }) => {
       <div className="space-y-1">
         {item.slots!.map((slot, idx) => (
           <div key={idx}>
-            <div className="flex items-start gap-2 py-1.5">
+            <button
+              type="button"
+              onClick={onSlotClick ? () => onSlotClick(slot, idx) : undefined}
+              disabled={!onSlotClick}
+              className={`w-full text-left flex items-start gap-2 py-1.5 rounded-md -mx-1 px-1 group ${onSlotClick ? "hover:bg-muted/60 cursor-pointer transition-colors" : ""}`}
+            >
               <span className="text-[10px] font-mono text-muted-foreground w-10 shrink-0 pt-0.5">{slot.time}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-medium text-foreground truncate">{slot.venue}</p>
                   {slot.bookAhead && (
                     <Ticket className="h-3 w-3 text-amber-500 shrink-0" />
+                  )}
+                  {onSlotClick && (
+                    <Shuffle className="h-3 w-3 text-muted-foreground/0 group-hover:text-primary ml-auto shrink-0 transition-colors" />
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
@@ -86,7 +100,7 @@ const ItineraryCard = ({ item }: { item: ItineraryData }) => {
                   )}
                 </div>
               </div>
-            </div>
+            </button>
             {slot.transitNext && slot.transitNext !== "—" && idx < item.slots!.length - 1 && (
               <div className="flex items-center gap-1.5 ml-10 py-0.5">
                 <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
