@@ -283,10 +283,21 @@ async function searchAndValidateHotels(
       const data = await res.json();
       const places = data.places || [];
 
+      const destTokens = tokenize(destination);
+      const addressMatchesCity = (addr: string) => {
+        if (!addr) return false;
+        const aTokens = new Set(tokenize(addr));
+        return destTokens.some((t) => t.length >= 3 && aTokens.has(t));
+      };
       let bestPlace: any = null;
       for (const place of places) {
         const placeName = place.displayName?.text || "";
-        if (nameMatches(name, placeName) && place.photos?.length > 0) {
+        const addr = place.formattedAddress || "";
+        if (
+          nameMatches(name, placeName) &&
+          addressMatchesCity(addr) &&
+          place.photos?.length > 0
+        ) {
           bestPlace = place;
           break;
         }
