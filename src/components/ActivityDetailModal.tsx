@@ -25,7 +25,7 @@ const ActivityDetailModal = ({
   const photos = createDistinctPhotoGallery({
     primary: activity.realPhoto,
     sources: [activity.realPhotos],
-    limit: 8,
+    limit: 4,
   });
   const hasImage = photos.length > 0;
   const inTrip = isInTrip("activity", activity.id);
