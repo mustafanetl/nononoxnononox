@@ -798,7 +798,52 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
       <FlightDetailModal flight={selectedFlight} open={flightModalOpen} onOpenChange={setFlightModalOpen} />
       <HotelDetailModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={setHotelModalOpen} />
-      <ActivityDetailModal activity={selectedActivity} open={activityModalOpen} onOpenChange={setActivityModalOpen} />
+      <ActivityDetailModal
+        activity={selectedActivity}
+        open={activityModalOpen}
+        onOpenChange={setActivityModalOpen}
+        destination={destination}
+        onReplace={(newActivity) => {
+          if (!activitySource) return;
+          const next = JSON.parse(JSON.stringify(tripData)) as typeof tripData;
+          if (activitySource.kind === "activity") {
+            const idx = next!.data.activities.findIndex((a: any) => a.id === activitySource.activityId);
+            if (idx >= 0) next!.data.activities[idx] = { ...newActivity } as any;
+          } else {
+            const day = next!.data.itinerary.find((d: any) => d.day === activitySource.dayNum);
+            if (day && Array.isArray(day.slots) && day.slots[activitySource.slotIdx]) {
+              const prev = day.slots[activitySource.slotIdx];
+              day.slots[activitySource.slotIdx] = {
+                ...prev,
+                venue: newActivity.name,
+                activity: newActivity.description || prev.activity,
+                duration: newActivity.duration || prev.duration,
+                cost: typeof newActivity.price === "number" ? newActivity.price : prev.cost,
+                neighborhood: newActivity.neighborhood || prev.neighborhood,
+                bookAhead: newActivity.bookAhead ?? prev.bookAhead,
+              };
+            }
+            // Also stash the photo so the slot's hero updates immediately.
+            if (newActivity.realPhoto || (newActivity.realPhotos && newActivity.realPhotos.length > 0)) {
+              next!.itineraryVenuePhotos = {
+                ...(next!.itineraryVenuePhotos || {}),
+                [newActivity.name]: {
+                  photo: newActivity.realPhoto || newActivity.realPhotos?.[0] || null,
+                  thumbPhoto: newActivity.realPhoto || newActivity.realPhotos?.[0] || null,
+                  photos: newActivity.realPhotos || (newActivity.realPhoto ? [newActivity.realPhoto] : []),
+                  rating: newActivity.verifiedRating || null,
+                  address: newActivity.verifiedAddress || newActivity.neighborhood || null,
+                  verified: !!newActivity.verified,
+                  matchedName: newActivity.name,
+                  hasRealPhoto: !!(newActivity.realPhoto || newActivity.realPhotos?.length),
+                },
+              };
+            }
+          }
+          setTripData(next);
+          try { sessionStorage.setItem("jolliday-trip-detail", JSON.stringify(next)); } catch {}
+        }}
+      />
       <PhotoLightbox
         photos={lightboxPhotos}
         startIndex={lightboxIndex}
