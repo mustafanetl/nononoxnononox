@@ -192,13 +192,24 @@ async function searchAndValidateActivities(
       }
       const data = await res.json();
       const places = data.places || [];
-      
-      // Find best matching place using strict word-token match.
-      // No fallback: if nothing matches confidently, we return no photo.
+
+      // Strict match: name overlap AND the place address must contain the destination city.
+      // This prevents pulling a same-named venue from a different city.
+      const destTokens = tokenize(destination);
+      const addressMatchesCity = (addr: string) => {
+        if (!addr) return false;
+        const aTokens = new Set(tokenize(addr));
+        return destTokens.some((t) => t.length >= 3 && aTokens.has(t));
+      };
       let bestPlace: any = null;
       for (const place of places) {
         const placeName = place.displayName?.text || "";
-        if (nameMatches(actName, placeName) && place.photos?.length > 0) {
+        const addr = place.formattedAddress || "";
+        if (
+          nameMatches(actName, placeName) &&
+          addressMatchesCity(addr) &&
+          place.photos?.length > 0
+        ) {
           bestPlace = place;
           break;
         }
