@@ -500,6 +500,12 @@ const TripDetail = () => {
                                       {slot.time}
                                     </span>
                                   )}
+                                  {reels.length > 1 && (
+                                    <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-black/55 backdrop-blur text-[9px] font-semibold text-white inline-flex items-center gap-1">
+                                      <Camera className="h-2.5 w-2.5" />
+                                      {reels.length}
+                                    </span>
+                                  )}
                                 </button>
 
                                 {/* Text column */}
@@ -537,16 +543,33 @@ const TripDetail = () => {
                                       className="mt-3 flex gap-1.5 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
                                       style={{ scrollbarWidth: "none" }}
                                     >
-                                      {reels.map((src, ri) => (
-                                        <button
-                                          key={ri}
-                                          type="button"
-                                          onClick={openModal}
-                                          className="relative shrink-0 snap-start w-20 h-28 rounded-xl overflow-hidden ring-1 ring-border hover:ring-foreground/40 transition"
-                                        >
-                                          <img src={src} alt="" className="w-full h-full object-cover" />
-                                        </button>
-                                      ))}
+                                      {reels.slice(0, 6).map((src, ri) => {
+                                        const isLastVisible = ri === 5 && reels.length > 6;
+                                        const extra = reels.length - 6;
+                                        return (
+                                          <button
+                                            key={ri}
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setLightboxPhotos(reels);
+                                              setLightboxIndex(ri);
+                                              setLightboxVenue(slot.venue);
+                                              setLightboxOnDetails(matched ? () => openModal : undefined);
+                                              setLightboxOpen(true);
+                                            }}
+                                            className="relative shrink-0 snap-start w-20 h-28 rounded-xl overflow-hidden ring-1 ring-border hover:ring-foreground/60 hover:scale-[1.02] transition group/thumb"
+                                          >
+                                            <img src={src} alt="" className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/15 transition" />
+                                            {isLastVisible && (
+                                              <div className="absolute inset-0 bg-black/55 flex items-center justify-center text-white text-sm font-semibold">
+                                                +{extra}
+                                              </div>
+                                            )}
+                                          </button>
+                                        );
+                                      })}
                                     </div>
                                   )}
 
