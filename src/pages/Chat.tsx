@@ -260,11 +260,13 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [flightModalOpen, setFlightModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityData | null>(null);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [selectedActivityMsgIdx, setSelectedActivityMsgIdx] = useState<number>(-1);
+  const [selectedActivityDest, setSelectedActivityDest] = useState<string>("");
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
-  const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData } = useRzumaChat();
+  const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData, replaceActivity } = useRzumaChat();
   const { compareItems } = useTripContext();
 
   // Track whether assistant has started streaming content for current response
@@ -461,8 +463,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     setFlightModalOpen(true);
   };
 
-  const handleActivityClick = (activity: ActivityData) => {
+  const handleActivityClick = (activity: ActivityData, msgIdx: number, destination: string) => {
     setSelectedActivity(activity);
+    setSelectedActivityMsgIdx(msgIdx);
+    setSelectedActivityDest(destination);
     setActivityModalOpen(true);
   };
 
