@@ -247,7 +247,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
-  const { messages, isLoading, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData } = useRzumaChat();
+  const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData } = useRzumaChat();
   const { compareItems } = useTripContext();
 
   // Track whether assistant has started streaming content for current response
@@ -966,6 +966,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                       <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
                       <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
                       <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
+                    </div>
+                  </div>
+                )}
+                {qaStatus && !isCraftingPlan && (
+                  <div className="flex gap-3 animate-fade-in">
+                    <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0">
+                      <Compass className="h-4 w-4 text-background animate-spin" style={{ animationDuration: "2s" }} />
+                    </div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground">
+                      <span className="w-1.5 h-1.5 rounded-full bg-foreground/60 animate-pulse" />
+                      {qaStatus === "verifying" ? "Double-checking places…" : "Polishing a few details…"}
                     </div>
                   </div>
                 )}
