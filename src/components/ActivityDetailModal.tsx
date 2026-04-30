@@ -14,12 +14,14 @@ const ActivityDetailModal = ({
   onOpenChange,
   destination,
   onReplace,
+  excludeNames,
 }: {
   activity: ActivityData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   destination?: string;
   onReplace?: (newActivity: ActivityData) => void;
+  excludeNames?: string[];
 }) => {
   const { addItem, removeItem, isInTrip } = useTripContext();
 
@@ -58,7 +60,7 @@ const ActivityDetailModal = ({
     setShowAlternatives(true);
     try {
       const { data, error } = await supabase.functions.invoke("suggest-activity-alternatives", {
-        body: { activity, destination },
+        body: { activity, destination, excludeNames: excludeNames || [] },
       });
       if (error) throw error;
       const sugg = (data?.suggestions || []) as ActivityData[];
