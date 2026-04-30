@@ -1138,7 +1138,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         onOpenChange={setActivityModalOpen}
         destination={selectedActivityDest}
         onReplace={selectedActivity && selectedActivityMsgIdx >= 0 ? (newAct) => {
-          replaceActivity(selectedActivityMsgIdx, selectedActivity.id, newAct);
+          if (selectedSlotRef) {
+            replaceItinerarySlot(selectedActivityMsgIdx, selectedSlotRef.day, selectedSlotRef.slotIdx, newAct);
+          } else {
+            replaceActivity(selectedActivityMsgIdx, selectedActivity.id, newAct);
+          }
         } : undefined}
       />
       <HotelDetailModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={setHotelModalOpen} />
