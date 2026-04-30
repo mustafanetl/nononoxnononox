@@ -460,7 +460,7 @@ const TripDetail = () => {
                             const reels = createDistinctPhotoGallery({
                               primary: heroPhoto,
                               sources: [slotPhotoMatch?.photos, matched?.realPhotos],
-                              limit: 8,
+                              limit: 4,
                             });
                             const supportingReels = reels.slice(1);
                             const openModal = () => {
