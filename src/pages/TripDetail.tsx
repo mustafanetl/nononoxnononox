@@ -589,6 +589,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                             const openModal = () => {
                               if (matched) {
                                 setSelectedActivity(matched);
+                                setActivitySource({ kind: "slot", dayNum: day.day, slotIdx: sIdx });
                                 setActivityModalOpen(true);
                                 return;
                               }
@@ -611,6 +612,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                   verifiedAddress: slotPhotoMatch?.address || slot.neighborhood,
                                   verifiedRating: slotPhotoMatch?.rating || null,
                                 } as ActivityData);
+                                setActivitySource({ kind: "slot", dayNum: day.day, slotIdx: sIdx });
                                 setActivityModalOpen(true);
                               }
                             };
