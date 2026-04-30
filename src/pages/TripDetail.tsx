@@ -459,6 +459,7 @@ const TripDetail = () => {
                               sources: [slotPhotoMatch?.photos, matched?.realPhotos],
                               limit: 8,
                             });
+                            const supportingReels = reels.slice(1);
                             const openModal = () => {
                               if (matched) {
                                 setSelectedActivity(matched);
@@ -550,14 +551,14 @@ const TripDetail = () => {
                                   </div>
 
                                   {/* Reels-style strip */}
-                                  {reels.length >= 2 && (
+                                  {supportingReels.length >= 1 && (
                                     <div
                                       className="mt-3 flex gap-1.5 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden"
                                       style={{ scrollbarWidth: "none" }}
                                     >
-                                      {reels.slice(0, 6).map((src, ri) => {
-                                        const isLastVisible = ri === 5 && reels.length > 6;
-                                        const extra = reels.length - 6;
+                                      {supportingReels.slice(0, 6).map((src, ri) => {
+                                        const isLastVisible = ri === 5 && supportingReels.length > 6;
+                                        const extra = supportingReels.length - 6;
                                         return (
                                           <button
                                             key={ri}
@@ -565,7 +566,7 @@ const TripDetail = () => {
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               setLightboxPhotos(reels);
-                                              setLightboxIndex(ri);
+                                              setLightboxIndex(ri + 1);
                                               setLightboxVenue(slot.venue);
                                               setLightboxOnDetails(() => (matched ? openModal : undefined));
                                               setLightboxOpen(true);
