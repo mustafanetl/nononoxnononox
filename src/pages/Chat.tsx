@@ -1156,6 +1156,31 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         open={activityModalOpen}
         onOpenChange={setActivityModalOpen}
         destination={selectedActivityDest}
+        excludeNames={(() => {
+          const msg: any = selectedActivityMsgIdx >= 0 ? messages[selectedActivityMsgIdx] : null;
+          if (!msg) return [];
+          const names = new Set<string>();
+          const content: string = msg.content || "";
+          // Pull names from any ```activities``` and ```itinerary``` blocks in the message.
+          const grab = (re: RegExp) => {
+            const m = content.match(re);
+            if (!m) return;
+            try {
+              const arr = JSON.parse(m[1]);
+              if (Array.isArray(arr)) {
+                for (const item of arr) {
+                  if (item?.name) names.add(item.name);
+                  if (Array.isArray(item?.slots)) {
+                    for (const s of item.slots) if (s?.venue) names.add(s.venue);
+                  }
+                }
+              }
+            } catch {}
+          };
+          grab(/```activities\s*([\s\S]*?)```/);
+          grab(/```itinerary\s*([\s\S]*?)```/);
+          return Array.from(names);
+        })()}
         onReplace={selectedActivity && selectedActivityMsgIdx >= 0 ? (newAct) => {
           if (selectedSlotRef) {
             replaceItinerarySlot(selectedActivityMsgIdx, selectedSlotRef.day, selectedSlotRef.slotIdx, newAct);

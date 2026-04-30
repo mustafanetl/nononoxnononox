@@ -110,7 +110,20 @@ Rules: only famous, easy-to-verify venues. Realistic prices. Same currency as or
       if (m) { try { suggestions = JSON.parse(m[0]); } catch { suggestions = []; } }
     }
     if (!Array.isArray(suggestions)) suggestions = [];
-    suggestions = suggestions.slice(0, 3);
+
+    // Hard filter: drop anything that matches an excluded name (normalized).
+    const norm = (s: string) => (s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const excludeSet = new Set(exclusions.map(norm).filter(Boolean));
+    const isExcluded = (name: string) => {
+      const n = norm(name);
+      if (!n) return false;
+      if (excludeSet.has(n)) return true;
+      for (const ex of excludeSet) {
+        if (ex.length >= 4 && (n.includes(ex) || ex.includes(n))) return true;
+      }
+      return false;
+    };
+    suggestions = suggestions.filter((s: any) => s?.name && !isExcluded(s.name)).slice(0, 6);
 
     // Enrich each with Google Places (photo + coords)
     if (GOOGLE_KEY) {
@@ -139,14 +152,17 @@ Rules: only famous, easy-to-verify venues. Realistic prices. Same currency as or
           verifiedRating: lookup?.rating || null,
         };
       }));
-      // Filter out ones with no photo (so the user always sees pics)
-      const withPhotos = enriched.filter((e) => e.realPhoto);
-      return new Response(JSON.stringify({ suggestions: withPhotos.length > 0 ? withPhotos : enriched }), {
+      // Filter again post-enrichment (Google may resolve to the matched/excluded venue),
+      // then prefer ones with photos.
+      const cleaned = enriched.filter((e) => !isExcluded(e.name));
+      const withPhotos = cleaned.filter((e) => e.realPhoto);
+      const out = (withPhotos.length > 0 ? withPhotos : cleaned).slice(0, 3);
+      return new Response(JSON.stringify({ suggestions: out }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ suggestions }), {
+    return new Response(JSON.stringify({ suggestions: suggestions.slice(0, 3) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

@@ -803,6 +803,14 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         open={activityModalOpen}
         onOpenChange={setActivityModalOpen}
         destination={destination}
+        excludeNames={(() => {
+          const names = new Set<string>();
+          for (const a of (data.activities as any[])) if (a?.name) names.add(a.name);
+          for (const d of (data.itinerary as any[])) {
+            if (Array.isArray(d?.slots)) for (const s of d.slots) if (s?.venue) names.add(s.venue);
+          }
+          return Array.from(names);
+        })()}
         onReplace={(newActivity) => {
           if (!activitySource) return;
           const next = JSON.parse(JSON.stringify(tripData)) as typeof tripData;
