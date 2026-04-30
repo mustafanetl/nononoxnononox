@@ -1,87 +1,83 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Send, ChevronDown } from "lucide-react";
+import { ArrowRight, Star } from "lucide-react";
 
 const HeroSection = () => {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
 
-  const suggestions = [
-    "Romantic date night in Paris",
-    "Weekend things to do in Tokyo",
-    "Family adventure in Bali",
-  ];
+  const suggestions = ["Paris", "Tokyo", "Bali", "Lisbon"];
 
   const handleSubmit = (q: string) => {
     const trimmed = q.trim();
     if (trimmed) navigate(`/chat?q=${encodeURIComponent(trimmed)}`);
   };
 
-  const scrollToHowItWorks = () => {
-    document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
-  };
-
   return (
-    <section className="relative min-h-[60vh] flex items-center pt-28 pb-12 px-4">
-      <div className="container mx-auto max-w-3xl text-center">
-        <h1 className="font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl lg:text-6xl animate-fade-in">
-          Plan your next trip with AI
-        </h1>
+    <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 px-4">
+      <div className="container mx-auto max-w-6xl">
+        <div className="max-w-4xl">
+          <span className="inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground mb-6">
+            Your AI travel agent
+          </span>
 
-        <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          Flights, hotels, local experiences, date ideas, and more — all planned for you.
-        </p>
+          <h1 className="font-sans text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.95] text-foreground">
+            Trips, planned
+            <br />
+            in a conversation.
+          </h1>
 
-        {/* Search Input */}
-        <div className="mt-8 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+          <p className="mt-8 text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed">
+            Tell us where. We handle the flights, the hotels, what to eat, what to skip — in one quiet thread.
+          </p>
+
+          {/* Search */}
           <form
             onSubmit={(e) => { e.preventDefault(); handleSubmit(query); }}
-            className="relative bg-card border border-border rounded-2xl p-2 max-w-xl mx-auto shadow-lg"
+            className="mt-10 flex items-center gap-2 max-w-xl border border-border rounded-full pl-5 pr-2 py-2 bg-background hover:border-foreground/30 focus-within:border-foreground transition-colors"
           >
             <input
               type="text"
               placeholder="Where do you want to go?"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full bg-transparent px-4 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none text-base md:text-lg"
+              className="flex-1 bg-transparent py-2 text-base md:text-lg text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
-            <Button
-              type="submit"
-              variant="default"
-              size="lg"
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-            >
-              <Send className="h-5 w-5" />
-              <span className="hidden sm:inline">Plan Trip</span>
+            <Button type="submit" size="lg" className="rounded-full gap-1">
+              Plan
+              <ArrowRight className="h-4 w-4" />
             </Button>
           </form>
 
-          {/* Suggestions */}
-          <div className="mt-4 flex flex-wrap gap-2 justify-center">
-            <span className="text-sm text-muted-foreground">Try:</span>
-            {suggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => handleSubmit(suggestion)}
-                className="text-sm text-primary hover:text-primary/80 transition-colors underline underline-offset-4"
-              >
-                {suggestion}
-              </button>
+          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+            <span>Try</span>
+            {suggestions.map((s, i) => (
+              <span key={s} className="flex items-center gap-3">
+                <button
+                  onClick={() => handleSubmit(`Plan a trip to ${s}`)}
+                  className="text-foreground/80 hover:text-foreground underline underline-offset-4 decoration-border hover:decoration-foreground transition-colors"
+                >
+                  {s}
+                </button>
+                {i < suggestions.length - 1 && <span className="text-border">·</span>}
+              </span>
             ))}
           </div>
 
+          {/* Social proof strip */}
+          <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs uppercase tracking-[0.15em] text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <Star className="h-3.5 w-3.5 fill-foreground text-foreground" />
+              <span className="text-foreground font-medium normal-case tracking-normal">4.9</span>
+              <span>average rating</span>
+            </span>
+            <span className="hidden sm:inline text-border">/</span>
+            <span>Real places, real photos</span>
+            <span className="hidden sm:inline text-border">/</span>
+            <span>Plans in under 20 seconds</span>
+          </div>
         </div>
-
-        {/* See how it works */}
-        <button
-          onClick={scrollToHowItWorks}
-          className="mt-8 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors animate-fade-in"
-          style={{ animationDelay: "0.3s" }}
-        >
-          See how it works
-          <ChevronDown className="h-4 w-4" />
-        </button>
       </div>
     </section>
   );
