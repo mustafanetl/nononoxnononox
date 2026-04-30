@@ -4,6 +4,7 @@ import { Clock, DollarSign, Lightbulb, PlusCircle, CheckCircle, Camera, MapPin, 
 import { ActivityData } from "./ActivityCard";
 import { useTripContext } from "@/contexts/TripContext";
 import { useEffect, useState } from "react";
+import { createDistinctPhotoGallery } from "@/utils/photoGallery";
 
 const ActivityDetailModal = ({
   activity,
@@ -21,11 +22,11 @@ const ActivityDetailModal = ({
 
   if (!activity) return null;
 
-  const photos: string[] = (activity.realPhotos && activity.realPhotos.length > 0
-    ? activity.realPhotos
-    : activity.realPhoto
-      ? [activity.realPhoto]
-      : []).filter(Boolean);
+  const photos = createDistinctPhotoGallery({
+    primary: activity.realPhoto,
+    sources: [activity.realPhotos],
+    limit: 8,
+  });
   const hasImage = photos.length > 0;
   const inTrip = isInTrip("activity", activity.id);
 
