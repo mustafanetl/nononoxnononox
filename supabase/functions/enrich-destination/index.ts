@@ -333,6 +333,29 @@ async function searchAndValidateHotels(
         }
       }
 
+      // Fallback 1: name match with photo (handles cities with different
+      // local names, e.g. Gothenburg → Göteborg).
+      if (!bestPlace) {
+        for (const place of places) {
+          const placeName = place.displayName?.text || "";
+          if (nameMatches(name, placeName) && place.photos?.length > 0) {
+            bestPlace = place;
+            break;
+          }
+        }
+      }
+
+      // Fallback 2: any first lodging result with a photo (query was
+      // city-scoped + lodging type, so trust Google's ranking).
+      if (!bestPlace) {
+        for (const place of places) {
+          if (place.photos?.length > 0) {
+            bestPlace = place;
+            break;
+          }
+        }
+      }
+
       if (!bestPlace?.photos?.[0]?.name) {
         results[name] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null };
         return;
