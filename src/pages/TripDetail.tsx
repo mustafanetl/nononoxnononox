@@ -118,6 +118,14 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityData | null>(null);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
+  // Tracks WHERE the open activity came from, so Swap can replace the right item.
+  // - { kind: "activity", activityId } → replace in data.activities
+  // - { kind: "slot", dayNum, slotIdx } → replace in data.itinerary[day].slots[slot]
+  const [activitySource, setActivitySource] = useState<
+    | { kind: "activity"; activityId: string }
+    | { kind: "slot"; dayNum: number; slotIdx: number }
+    | null
+  >(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxPhotos, setLightboxPhotos] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -581,30 +589,32 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                             const openModal = () => {
                               if (matched) {
                                 setSelectedActivity(matched);
+                                setActivitySource({ kind: "slot", dayNum: day.day, slotIdx: sIdx });
                                 setActivityModalOpen(true);
                                 return;
                               }
-                              if (slotPhotoMatch?.hasRealPhoto || heroPhoto) {
-                                setSelectedActivity({
-                                  id: `${day.day}-${sIdx}-${slot.venue}`,
-                                  name: slot.venue,
-                                  category: "sightseeing",
-                                  duration: slot.duration || "",
-                                  price: slot.cost || 0,
-                                  currency,
-                                  image: heroPhoto || "",
-                                  occasion: "",
-                                  description: slot.activity || `A highlighted stop in your ${destination} plan.`,
-                                  neighborhood: slotPhotoMatch?.address || slot.neighborhood,
-                                  bookAhead: slot.bookAhead,
-                                  realPhoto: heroPhoto,
-                                  realPhotos: reels,
-                                  verified: !!slotPhotoMatch?.verified,
-                                  verifiedAddress: slotPhotoMatch?.address || slot.neighborhood,
-                                  verifiedRating: slotPhotoMatch?.rating || null,
-                                } as ActivityData);
-                                setActivityModalOpen(true);
-                              }
+                              // Always open the modal so every slot can be swapped,
+                              // even when we don't have a matching activity card or photo yet.
+                              setSelectedActivity({
+                                id: `${day.day}-${sIdx}-${slot.venue}`,
+                                name: slot.venue,
+                                category: "sightseeing",
+                                duration: slot.duration || "",
+                                price: slot.cost || 0,
+                                currency,
+                                image: heroPhoto || "",
+                                occasion: "",
+                                description: slot.activity || `A highlighted stop in your ${destination} plan.`,
+                                neighborhood: slotPhotoMatch?.address || slot.neighborhood,
+                                bookAhead: slot.bookAhead,
+                                realPhoto: heroPhoto,
+                                realPhotos: reels,
+                                verified: !!slotPhotoMatch?.verified,
+                                verifiedAddress: slotPhotoMatch?.address || slot.neighborhood,
+                                verifiedRating: slotPhotoMatch?.rating || null,
+                              } as ActivityData);
+                              setActivitySource({ kind: "slot", dayNum: day.day, slotIdx: sIdx });
+                              setActivityModalOpen(true);
                             };
                             return (
                               <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4">
@@ -612,8 +622,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                 <button
                                   type="button"
                                   onClick={openModal}
-                                  disabled={!matched}
-                                  className="relative h-44 sm:h-40 sm:w-40 rounded-2xl overflow-hidden group/photo bg-gradient-to-br from-primary/15 via-muted to-accent/15 disabled:cursor-default"
+                                  className="relative h-44 sm:h-40 sm:w-40 rounded-2xl overflow-hidden group/photo bg-gradient-to-br from-primary/15 via-muted to-accent/15"
                                 >
                                   {heroPhoto ? (
                                     <img
@@ -626,11 +635,9 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                       <MapPin className="h-7 w-7 text-muted-foreground/40" />
                                     </div>
                                   )}
-                                  {matched && (
-                                    <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-background/85 backdrop-blur text-[9px] font-semibold tracking-wide text-foreground">
-                                      {slot.time}
-                                    </span>
-                                  )}
+                                  <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-background/85 backdrop-blur text-[9px] font-semibold tracking-wide text-foreground">
+                                    {slot.time}
+                                  </span>
                                   {reels.length > 1 && (
                                     <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-black/55 backdrop-blur text-[9px] font-semibold text-white inline-flex items-center gap-1">
                                       <Camera className="h-2.5 w-2.5" />
@@ -650,7 +657,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                     )}
                                   </div>
                                   <h4
-                                    className={`text-base sm:text-lg font-semibold text-foreground leading-snug ${matched ? "cursor-pointer hover:underline underline-offset-4" : ""}`}
+                                    className="text-base sm:text-lg font-semibold text-foreground leading-snug cursor-pointer hover:underline underline-offset-4"
                                     onClick={openModal}
                                   >
                                     {slot.venue}
@@ -736,7 +743,11 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {data.activities.map((a, i) => (
               <ActivityTile key={a.id || i} activity={a}
-                onClick={() => { setSelectedActivity(a); setActivityModalOpen(true); }} />
+                onClick={() => {
+                  setSelectedActivity(a);
+                  setActivitySource({ kind: "activity", activityId: a.id });
+                  setActivityModalOpen(true);
+                }} />
             ))}
           </div>
         </Section>
@@ -787,7 +798,52 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
       <FlightDetailModal flight={selectedFlight} open={flightModalOpen} onOpenChange={setFlightModalOpen} />
       <HotelDetailModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={setHotelModalOpen} />
-      <ActivityDetailModal activity={selectedActivity} open={activityModalOpen} onOpenChange={setActivityModalOpen} />
+      <ActivityDetailModal
+        activity={selectedActivity}
+        open={activityModalOpen}
+        onOpenChange={setActivityModalOpen}
+        destination={destination}
+        onReplace={(newActivity) => {
+          if (!activitySource) return;
+          const next = JSON.parse(JSON.stringify(tripData)) as typeof tripData;
+          if (activitySource.kind === "activity") {
+            const idx = next!.data.activities.findIndex((a: any) => a.id === activitySource.activityId);
+            if (idx >= 0) next!.data.activities[idx] = { ...newActivity } as any;
+          } else {
+            const day = next!.data.itinerary.find((d: any) => d.day === activitySource.dayNum);
+            if (day && Array.isArray(day.slots) && day.slots[activitySource.slotIdx]) {
+              const prev = day.slots[activitySource.slotIdx];
+              day.slots[activitySource.slotIdx] = {
+                ...prev,
+                venue: newActivity.name,
+                activity: newActivity.description || prev.activity,
+                duration: newActivity.duration || prev.duration,
+                cost: typeof newActivity.price === "number" ? newActivity.price : prev.cost,
+                neighborhood: newActivity.neighborhood || prev.neighborhood,
+                bookAhead: newActivity.bookAhead ?? prev.bookAhead,
+              };
+            }
+            // Also stash the photo so the slot's hero updates immediately.
+            if (newActivity.realPhoto || (newActivity.realPhotos && newActivity.realPhotos.length > 0)) {
+              next!.itineraryVenuePhotos = {
+                ...(next!.itineraryVenuePhotos || {}),
+                [newActivity.name]: {
+                  photo: newActivity.realPhoto || newActivity.realPhotos?.[0] || null,
+                  thumbPhoto: newActivity.realPhoto || newActivity.realPhotos?.[0] || null,
+                  photos: newActivity.realPhotos || (newActivity.realPhoto ? [newActivity.realPhoto] : []),
+                  rating: newActivity.verifiedRating || null,
+                  address: newActivity.verifiedAddress || newActivity.neighborhood || null,
+                  verified: !!newActivity.verified,
+                  matchedName: newActivity.name,
+                  hasRealPhoto: !!(newActivity.realPhoto || newActivity.realPhotos?.length),
+                },
+              };
+            }
+          }
+          setTripData(next);
+          try { sessionStorage.setItem("jolliday-trip-detail", JSON.stringify(next)); } catch {}
+        }}
+      />
       <PhotoLightbox
         photos={lightboxPhotos}
         startIndex={lightboxIndex}
