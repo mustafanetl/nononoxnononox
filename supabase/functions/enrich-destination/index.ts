@@ -160,7 +160,7 @@ function nameMatches(query: string, candidate: string): boolean {
 async function searchAndValidateActivities(
   activities: string[],
   destination: string
-): Promise<Record<string, { photo: string | null; thumbPhoto: string | null; rating: number | null; address: string | null; verified: boolean; matchedName: string | null }>> {
+): Promise<Record<string, { photo: string | null; thumbPhoto: string | null; photos: string[]; rating: number | null; address: string | null; verified: boolean; matchedName: string | null }>> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey || activities.length === 0) return {};
 
@@ -184,7 +184,7 @@ async function searchAndValidateActivities(
         }
       );
       if (!res.ok) {
-        results[actName] = { photo: null, thumbPhoto: null, rating: null, address: null, verified: false, matchedName: null };
+        results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, matchedName: null };
         return;
       }
       const data = await res.json();
@@ -202,15 +202,21 @@ async function searchAndValidateActivities(
       }
 
       if (!bestPlace) {
-        results[actName] = { photo: null, thumbPhoto: null, rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null };
+        results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null };
         return;
       }
 
       const photoRef = bestPlace.photos?.[0]?.name;
       const hasRealPhoto = !!photoRef;
+      const allPhotoUrls: string[] = hasRealPhoto
+        ? bestPlace.photos.slice(0, 4).map((p: any) =>
+            `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=600&key=${apiKey}`
+          )
+        : [];
       results[actName] = {
         photo: hasRealPhoto ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=800&key=${apiKey}` : null,
         thumbPhoto: hasRealPhoto ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}` : null,
+        photos: allPhotoUrls,
         rating: bestPlace.rating || null,
         address: bestPlace.formattedAddress || null,
         verified: hasRealPhoto,
@@ -219,7 +225,7 @@ async function searchAndValidateActivities(
       };
     } catch (e) {
       console.error(`Activity validation error for "${actName}":`, e);
-      results[actName] = { photo: null, thumbPhoto: null, rating: null, address: null, verified: false, matchedName: null };
+      results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, matchedName: null };
     }
   });
 
