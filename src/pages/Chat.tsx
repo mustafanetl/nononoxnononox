@@ -767,17 +767,37 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     // Keep activities without a photo match — they still have name,
                     // description, etc. Card shows a gradient placeholder.
                     const activityPhotos = enrichData.activityPhotos || {};
+                    // Build a case-insensitive lookup so renamed venues still match
+                    const photoLookup: Record<string, any> = {};
+                    for (const [k, v] of Object.entries(activityPhotos)) {
+                      photoLookup[k.toLowerCase().trim()] = v;
+                    }
                     parsed.activities = parsed.activities.map((act: ActivityData) => {
-                      const match = activityPhotos[act.name];
+                      const key = (act.name || "").toLowerCase().trim();
+                      let match: any = activityPhotos[act.name] || photoLookup[key];
+                      // Loose contains-match for renamed venues
+                      if (!match?.hasRealPhoto) {
+                        for (const [k, v] of Object.entries(photoLookup)) {
+                          if (!key) break;
+                          if (k.includes(key) || key.includes(k)) { match = v; break; }
+                        }
+                      }
                       if (match?.hasRealPhoto && (match?.thumbPhoto || match?.photo)) {
                         return {
                           ...act,
                           realPhoto: match.thumbPhoto || match.photo,
+                          realPhotos: Array.isArray(match.photos) ? match.photos : undefined,
                           isReal: true,
                           verified: true,
                           verifiedAddress: match.address || null,
                           verifiedRating: match.rating || null,
                         };
+                      }
+                      // Fallback: assign a destination hero image so the card isn't empty
+                      if (images.length > 0) {
+                        const idx = parsed.activities.indexOf(act) % images.length;
+                        const img = images[idx];
+                        return { ...act, realPhoto: img.thumbUrl || img.url };
                       }
                       return act;
                     });
