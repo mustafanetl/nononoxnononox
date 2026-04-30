@@ -118,6 +118,14 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityData | null>(null);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
+  // Tracks WHERE the open activity came from, so Swap can replace the right item.
+  // - { kind: "activity", activityId } → replace in data.activities
+  // - { kind: "slot", dayNum, slotIdx } → replace in data.itinerary[day].slots[slot]
+  const [activitySource, setActivitySource] = useState<
+    | { kind: "activity"; activityId: string }
+    | { kind: "slot"; dayNum: number; slotIdx: number }
+    | null
+  >(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxPhotos, setLightboxPhotos] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
