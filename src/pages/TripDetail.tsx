@@ -188,12 +188,15 @@ const TripDetail = () => {
             if (!next.realPhoto) next.realPhoto = m.photo || m.thumbPhoto;
             next.verified = true;
           }
+          // Keep up to 4 real place photos; never mix in unrelated destination images.
           next.realPhotos = createDistinctPhotoGallery({
             primary: next.realPhoto,
             sources: [m?.photos, next.realPhotos],
-            limit: 8,
+            limit: 4,
           });
-          if (!next.realPhoto) next.realPhoto = next.realPhotos[0];
+          if (!next.realPhoto && next.realPhotos.length > 0) {
+            next.realPhoto = next.realPhotos[0];
+          }
           return next;
         });
         const newHotels = data.hotels.map((h: any) => {
