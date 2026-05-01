@@ -1,32 +1,50 @@
-## Goal
-Make the trip map pins feel calm, consistent and "right-sized". Fix the hotel marker so it always shows something nice (image when we have one, otherwise a clean bed icon — never a broken/empty circle).
+## What's actually wrong (from the screenshot)
 
-## Problems today
-1. **Hotel circle has no image** — when `h.realPhoto` / `h.image` are missing, the marker still goes through the photo path with an empty url, leaving a blank white disc.
-2. **Pin sizes feel off** — pins are large (48–56px), the focused state inflates them by ~17%, and the white ring + outer 1px shadow ring + number badge makes them look noisy and inconsistent next to each other (especially hotel vs activity).
-3. **Visual hierarchy is unclear** — every pin competes for attention; nothing reads as "primary" vs "secondary" at a glance.
+Looking at the Stockholm map you sent, three real problems stack up:
 
-## Fix
+1. **Hotel pin is an empty white circle.** The image URL is set but the photo never loads (broken/blocked Google Places URL → CSS background renders nothing). There's no fallback bed icon visible inside.
+2. **Day 1 is missing entirely.** Filter chips show "All days · Day 2 · Day 3 · Hotel" — Day 1 has zero pins. Same reason most other slots are missing: only **3 stops total for a 3-day trip**.
+3. **Pins look inconsistent in size.** Hotel reads as bigger and emptier than the activity pins.
 
-### 1. Robust hotel pin (TripDetail.tsx)
-Tighten the photo source so we never pass an empty string into the map:
-- Try `realPhoto` → first `realPhotos[]` → `image` → `thumbPhoto` → `undefined` (not `""`).
-- Pass `undefined` instead of falsy strings so the map cleanly falls back to the icon variant.
+## Root cause of missing pins
 
-### 2. Calmer, smaller, consistent pins (TripMap.tsx)
-- **Sizes**: activity = 36px, hotel = 40px, focused activity = 42px. (Down from 48/56.)
-- **One ring, not two**: drop the `box-shadow: 0 0 0 1px accent` outer ring. Keep a single 2px white inner ring + soft drop shadow. The day color shows on the number badge / icon background, not as a second halo.
-- **Number badge**: smaller (16px), bottom-right instead of top-right so it doesn't collide with the tooltip arrow, only shown for activities with a photo.
-- **Hotel pin**: when no photo, render a solid `--primary` circle with a white `Bed` icon (already in code) — but at the new 40px size and without the double ring. When a photo exists, show the photo with a small bed badge in the corner so users still recognize it as a hotel.
-- **Dimmed (non-active day)**: lower opacity to 0.4 and remove drop shadow so focused day truly pops.
-- **Hover**: subtle `transform: scale(1.08)` via existing transition; no size jump on "focused" day selection beyond +6px to avoid jitter.
+`slotCoords()` in `TripDetail.tsx` only looks up coordinates from `data.activities` (the AI-generated activity cards). When the AI's `itinerary.slots` reference a venue that *isn't* in the small `activities` list — which is most of the time — we drop the pin.
 
-### 3. Tooltip offset
-Recompute tooltip `offset` from the new sizes so it sits just above the pin, not floating in space.
+Meanwhile, the `enrich-destination` edge function already calls Google Places Text Search for every venue, but its FieldMask **doesn't request `places.location`**, so we throw away the real lat/lng Google would have given us. Same for hotels.
+
+Result: the map only ever shows the 3-4 venues that happen to also be in the activities list, instead of all itinerary stops.
+
+## The fix
+
+### 1. Get real coordinates from Google Places (backend)
+In `supabase/functions/enrich-destination/index.ts`:
+- Add `places.location` to the FieldMask in both `searchAndValidateActivities` and `searchAndValidateHotels`.
+- Store `lat: bestPlace.location?.latitude` and `lng: bestPlace.location?.longitude` in the result objects (alongside `photo`, `address`, etc.).
+
+### 2. Use those coordinates everywhere (frontend)
+In `src/pages/TripDetail.tsx`:
+- Extend the `VenuePhotoMatch` type to include optional `lat`/`lng`.
+- Update `slotCoords()` to try the photo-match first, then fall back to the `activities` list, then return null.
+- For hotels, when a hotel object lacks `lat`/`lng`, look it up in the photo-match collection too.
+
+This unlocks pins for **every** itinerary stop and the hotel, not just the handful that appear in the activities array.
+
+### 3. Hotel pin: bulletproof fallback (frontend)
+In `src/components/TripMap.tsx`:
+- Replace the CSS `background-image` photo path with a real `<img>` tag. If the image fails to load, swap it for the colored bed-icon fallback via an `onerror` handler.
+- Same for activity photos — broken photo URLs should reveal the day-color number, not a white void.
+
+### 4. Visual consistency
+- Make hotel and activity base size identical (44px) — drop the special 46px for hotels. Keep focused activity at 50px.
+- Keep the day-color outline ring and corner badge as they are now.
+
+### 5. Re-enrich existing trips (optional, low risk)
+Since current trips were enriched before the FieldMask change, their cached `itineraryVenuePhotos` won't have `lat`/`lng` until re-enriched. The map will simply work for new trips immediately and progressively improve as old trips get re-opened (each open triggers enrichment of any venues missing from the cache, but only if they were already missing photos). For best results, the user can re-generate the trip — but no migration is required.
 
 ## Files to edit
-- `src/pages/TripDetail.tsx` — harden hotel `photo` resolution (lines ~407-415).
-- `src/components/TripMap.tsx` — pin size constants, single-ring style, badge position, hotel-with-photo bed badge, tooltip offset.
+- `supabase/functions/enrich-destination/index.ts` — add `places.location` to both FieldMasks; store `lat`/`lng` in results.
+- `src/pages/TripDetail.tsx` — extend `VenuePhotoMatch` type; update `slotCoords` and `hotelPins` to use Places coordinates.
+- `src/components/TripMap.tsx` — `<img>` with `onerror` fallback; unified pin size.
 
 ## Out of scope
-No changes to itinerary data, day filter UI, polylines, or click/modal behavior — those are working well.
+No changes to the AI prompt, the click/modal logic, the day-filter chips, or polylines.
