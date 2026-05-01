@@ -180,7 +180,7 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
       // Solid fallback used both as initial bg AND when <img> errors out
       const fallbackHtml = isHotel
         ? `<div style="width:100%;height:100%;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;">${hotelIconSvg}</div>`
-        : `<div style="width:100%;height:100%;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;line-height:1;">${p.order ?? ""}</div>`;
+        : `<div style="width:100%;height:100%;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;"><div style="width:8px;height:8px;border-radius:9999px;background:white;"></div></div>`;
 
       // When we have a photo: render an <img> on top of the fallback. If the
       // image fails to load, hide it and the fallback shows through.
@@ -189,13 +189,11 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
         : "";
       const inner = photoUrl ? photoInner : fallbackHtml;
 
-      // Corner badge: number for activity-with-photo, bed icon for hotel-with-photo
+      // Corner badge: bed icon for hotel-with-photo. Activities have no badge.
       let badge = "";
       if (photoUrl) {
         if (isHotel) {
           badge = `<div style="position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.25);"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg></div>`;
-        } else if (p.order != null) {
-          badge = `<div style="position:absolute;bottom:-3px;right:-3px;min-width:18px;height:18px;padding:0 5px;border-radius:9999px;background:${accent};color:white;font-size:11px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.25);">${p.order}</div>`;
         }
       }
 
@@ -236,7 +234,7 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
 
       // Tooltip — Leaflet's built-in, no flicker
       marker.bindTooltip(
-        `<div style="font-family:'DM Sans',Inter,sans-serif;font-weight:600;font-size:12px;color:#111;">${escapeHtml(p.name)}<div style="font-weight:400;font-size:10px;color:#666;margin-top:2px;">${isHotel ? "Hotel" : `Day ${p.day ?? "—"}${p.order ? ` · Stop ${p.order}` : ""}`}</div></div>`,
+        `<div style="font-family:'DM Sans',Inter,sans-serif;font-weight:600;font-size:12px;color:#111;">${escapeHtml(p.name)}<div style="font-weight:400;font-size:10px;color:#666;margin-top:2px;">${isHotel ? "Hotel" : `Day ${p.day ?? "—"}`}</div></div>`,
         { direction: "top", offset: [0, -size / 2 + 4], opacity: 1, sticky: false }
       );
 
