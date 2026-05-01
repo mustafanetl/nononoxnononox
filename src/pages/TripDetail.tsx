@@ -136,6 +136,14 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [importing, setImporting] = useState(false);
+  // Show a slim sticky action bar on desktop after the user scrolls past the hero.
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowStickyBar(window.scrollY > 360);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     if (isShared) {
