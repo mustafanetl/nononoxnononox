@@ -376,6 +376,8 @@ async function searchAndValidateHotels(
         verified: true,
         hasRealPhoto: true,
         matchedName: bestPlace.displayName?.text || null,
+        lat: typeof bestPlace.location?.latitude === "number" ? bestPlace.location.latitude : null,
+        lng: typeof bestPlace.location?.longitude === "number" ? bestPlace.location.longitude : null,
       };
     } catch (e) {
       console.error(`Hotel validation error for "${name}":`, e);
