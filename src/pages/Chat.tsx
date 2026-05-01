@@ -1043,7 +1043,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             </Button>
             <div className="flex items-center gap-2">
               <Compass className="h-5 w-5" />
-              <span className="font-semibold">Jolliday</span>
+              <span className="font-semibold hidden xs:inline sm:inline">Jolliday</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
