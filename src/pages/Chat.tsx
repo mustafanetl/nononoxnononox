@@ -438,7 +438,9 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
     craftingIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - craftingStartTimeRef.current;
-      const minDuration = 12000;
+      // Adaptive min duration: feels intentional but never holds too long.
+      // 9s baseline, but if streaming is already done we settle in 6s.
+      const minDuration = streamingDoneRef.current ? 6000 : 9000;
 
       if (craftingProgressRef.current < 90) {
         craftingProgressRef.current = Math.min(90, craftingProgressRef.current + (90 - craftingProgressRef.current) * 0.04);
@@ -459,7 +461,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           setCraftingActive(false);
           setCraftingPlan(null);
           setCraftingOriginCity("");
-        }, 600);
+        }, 350);
       }
     }, 300);
   }, []);
