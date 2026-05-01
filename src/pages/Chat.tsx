@@ -536,6 +536,18 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     const photoFor = (name: string): string | undefined => {
       if (!enrich) return undefined;
       const lower = name.toLowerCase();
+      // 1) activityPhotos is keyed by activity name from enrich-destination
+      const ap = enrich?.activityPhotos || {};
+      const direct = ap[name] || ap[lower];
+      if (direct?.thumbPhoto || direct?.photo) return direct.thumbPhoto || direct.photo;
+      for (const [k, v] of Object.entries(ap)) {
+        const kl = k.toLowerCase();
+        if (kl === lower || kl.includes(lower) || lower.includes(kl)) {
+          const photo = (v as any)?.thumbPhoto || (v as any)?.photo;
+          if (photo) return photo;
+        }
+      }
+      // 2) Legacy places array fallback
       const place =
         enrich?.places?.find?.((p: any) => p?.name?.toLowerCase() === lower) ||
         enrich?.places?.find?.((p: any) => p?.name?.toLowerCase()?.includes(lower)) ||
