@@ -627,7 +627,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       <div className="relative h-[62vh] min-h-[460px] max-h-[680px] overflow-hidden">
         {heroImgFinal ? (
           <img src={heroImgFinal} alt={destination}
-            className="w-full h-full object-cover animate-ken-burns" />
+            className="w-full h-full object-cover animate-ken-burns animate-punch-in" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30 flex items-center justify-center">
             <MapPin className="h-20 w-20 text-muted-foreground/30" />
@@ -679,10 +679,18 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               <Compass className="h-3.5 w-3.5" /> {t.yourJolliday}
             </p>
             <h1
-              className="text-5xl sm:text-7xl lg:text-[88px] font-bold text-white tracking-tight leading-[0.95] drop-shadow-2xl animate-hero-rise"
-              style={{ animationDelay: "0.18s" }}
+              className="text-5xl sm:text-7xl lg:text-[88px] font-bold text-white tracking-tight leading-[0.95] drop-shadow-2xl"
+              aria-label={destination}
             >
-              {destination}
+              {destination.split("").map((ch, i) => (
+                <span
+                  key={i}
+                  className="letter-rise"
+                  style={{ animationDelay: `${0.18 + i * 0.045}s` }}
+                >
+                  {ch === " " ? "\u00A0" : ch}
+                </span>
+              ))}
             </h1>
             <p
               className="mt-5 max-w-xl text-white/85 text-base sm:text-lg leading-relaxed animate-hero-rise"
@@ -1207,13 +1215,17 @@ const useCountUp = (target: number, durationMs = 900) => {
 const StatTile: React.FC<{ label: string; value: number | string; icon?: React.ReactNode }> = ({ label, value, icon }) => {
   const isNumeric = typeof value === "number";
   const counted = useCountUp(isNumeric ? value : 0);
+  const landed = isNumeric ? counted === value : false;
   return (
     <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-2">
         {icon}
         {label}
       </div>
-      <p className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground tabular-nums">
+      <p
+        key={landed ? "landed" : "counting"}
+        className={`text-3xl sm:text-4xl font-bold tracking-tight text-foreground tabular-nums ${landed ? "animate-tile-pop" : ""}`}
+      >
         {isNumeric ? counted : value}
       </p>
     </div>
@@ -1305,7 +1317,7 @@ const ClosingCard: React.FC<{
   t: TripStrings;
 }> = ({ destination, days, backgroundImage, isShared, onShare, onExportPDF, onSave, saving, sharing, t }) => (
   <div className="max-w-5xl mx-auto px-4 sm:px-8 mt-20 mb-12">
-    <div className="relative overflow-hidden rounded-3xl border border-border min-h-[280px]">
+    <div className="relative overflow-hidden rounded-3xl border border-border min-h-[320px] animate-share-breathe">
       {backgroundImage ? (
         <img src={backgroundImage} alt="" className="absolute inset-0 w-full h-full object-cover animate-ken-burns" />
       ) : (
@@ -1316,27 +1328,27 @@ const ClosingCard: React.FC<{
         <div className="inline-flex items-center gap-2 text-white/80 text-[10px] uppercase tracking-[0.35em] mb-4">
           <Compass className="h-3.5 w-3.5" /> {t.craftedBy}
         </div>
-        <h3 className="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight max-w-2xl">
+        <h3 className="text-3xl sm:text-6xl font-bold text-white tracking-tight leading-[1.05] max-w-3xl">
           {t.closingHeadline(days, destination)}
         </h3>
         <p className="mt-3 text-sm text-white/70 max-w-md">
           {t.closingSub}
         </p>
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
           {!isShared && (
             <Button onClick={onSave} disabled={saving} size="lg"
-              className="gap-2 bg-white text-black hover:bg-white/90 h-11 px-6">
+              className="press-bounce gap-2 bg-white text-black hover:bg-white/90 h-12 px-7 text-base">
               <Bookmark className="h-4 w-4" /> {saving ? t.saving : t.saveTrip}
             </Button>
           )}
           <Button onClick={onShare} disabled={sharing} size="lg" variant="outline"
-            className="gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-11 px-6">
+            className="press-bounce gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-12 px-7 text-base">
             {isShared ? <Link2 className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
             {isShared ? t.copyLink : sharing ? t.sharing : t.shareTrip}
           </Button>
           {!isShared && (
             <Button onClick={onExportPDF} size="lg" variant="outline"
-              className="gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-11 px-6">
+              className="press-bounce gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-12 px-7 text-base">
               <Download className="h-4 w-4" /> {t.downloadPdf}
             </Button>
           )}

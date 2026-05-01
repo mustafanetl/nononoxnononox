@@ -17,6 +17,8 @@ import TravelInfoCard, { TravelInfoData } from "@/components/TravelInfoCard";
 import QuickReplies from "@/components/QuickReplies";
 import ComparisonModal from "@/components/ComparisonModal";
 import VoiceInput from "@/components/VoiceInput";
+import StreamingText from "@/components/StreamingText";
+import CraftStagesPill from "@/components/CraftStagesPill";
 import CurrencyConverter from "@/components/CurrencyConverter";
 import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
@@ -1288,8 +1290,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                           </div>
                           <div className="flex-1 min-w-0">
                             {parsed.text && !hideLatestResponse && (
-                              <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">
-                                <ReactMarkdown>{parsed.text}</ReactMarkdown>
+                              <div className={isLastAssistant && isLoading ? "streaming-spotlight" : ""}>
+                                <StreamingText
+                                  text={parsed.text}
+                                  isStreaming={isLastAssistant && isLoading}
+                                />
                               </div>
                             )}
 
@@ -1415,16 +1420,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 )}
 
                 {isLoading && !isCraftingPlan && !hasStreamedContent && (
-                  <div className="flex gap-3 animate-fade-in">
-                    <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0 animate-pulse">
-                      <Compass className="h-4 w-4 text-background" />
-                    </div>
-                    <div className="flex gap-1 py-2">
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
-                    </div>
-                  </div>
+                  <CraftStagesPill active />
                 )}
                 {qaStatus && !isCraftingPlan && (
                   <div className="flex gap-3 animate-fade-in">
