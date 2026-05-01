@@ -542,7 +542,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             setCraftingPlan(null);
             setCraftingOriginCity("");
             craftingFinalizeTimeoutRef.current = null;
-          }, 950);
+          }, 450);
         }
       }
     }
