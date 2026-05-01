@@ -1064,8 +1064,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   }
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
-                  // Hide the latest assistant response entirely while streaming or crafting (free users only)
-                  const hideLatestResponse = isLastAssistant && !isPremium && (isLoading || isCraftingPlan);
+                  // Hide the latest assistant response entirely while streaming or crafting so only the map loader is visible.
+                  const hideLatestResponse = isLastAssistant && (isLoading || isCraftingPlan);
 
                   // Determine if this is a "full trip plan" (has multiple card types)
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
@@ -1216,7 +1216,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   />
                 )}
 
-                {isLoading && !isCraftingPlan && (!isPremium || !hasStreamedContent) && (
+                {isLoading && !isCraftingPlan && !hasStreamedContent && (
                   <div className="flex gap-3 animate-fade-in">
                     <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0 animate-pulse">
                       <Compass className="h-4 w-4 text-background" />
