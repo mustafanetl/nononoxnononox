@@ -141,6 +141,12 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
   const displayedProgressRef = useRef(0);
   const targetProgressRef = useRef(0);
   const currentViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  // Precomputed view targets so the rAF loop never recomputes bounds per frame
+  const flightViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const cityViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  // Track which phase we're in so we only kick off flyTo once per transition
+  const phaseRef = useRef<0 | 1 | 2 | 3>(0);
+  const flyStartedRef = useRef(false);
 
   // Accumulate activity slots so the count never shrinks (prevents flicker)
   const [activitySlots, setActivitySlots] = useState<CraftActivity[]>([]);
