@@ -169,20 +169,25 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
       const focused = activeDay != null && p.day === activeDay;
       const dim = activeDay != null && !isHotel && p.day !== activeDay;
       const accent = isHotel ? "hsl(var(--primary))" : colorForDay(p.day);
-      // Balanced sizing — readable, not bulky
-      const baseSize = isHotel ? 46 : 44;
+      // Unified, readable sizing
+      const baseSize = 44;
       const size = focused && !isHotel ? 50 : baseSize;
       const opacity = dim ? 0.45 : 1;
       const photoUrl = typeof p.photo === "string" && p.photo.trim() ? escapeHtml(p.photo) : "";
 
       const hotelIconSvg = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>`;
 
-      // Inner content: photo if available, otherwise solid accent + icon/number
-      const fallbackInner = isHotel
+      // Solid fallback used both as initial bg AND when <img> errors out
+      const fallbackHtml = isHotel
         ? `<div style="width:100%;height:100%;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;">${hotelIconSvg}</div>`
         : `<div style="width:100%;height:100%;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;line-height:1;">${p.order ?? ""}</div>`;
-      const photoInner = `<div style="width:100%;height:100%;border-radius:9999px;background:#eee url('${photoUrl}') center/cover no-repeat;"></div>`;
-      const inner = photoUrl ? photoInner : fallbackInner;
+
+      // When we have a photo: render an <img> on top of the fallback. If the
+      // image fails to load, hide it and the fallback shows through.
+      const photoInner = photoUrl
+        ? `<div style="position:relative;width:100%;height:100%;border-radius:9999px;overflow:hidden;">${fallbackHtml}<img src="${photoUrl}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;" /></div>`
+        : "";
+      const inner = photoUrl ? photoInner : fallbackHtml;
 
       // Corner badge: number for activity-with-photo, bed icon for hotel-with-photo
       let badge = "";
