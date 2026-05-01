@@ -578,12 +578,12 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       {isShared && (
         <div className="sticky top-0 z-50 bg-foreground text-background px-4 py-2.5 text-sm flex items-center justify-between gap-3">
           <span className="truncate">
-            <span className="font-semibold">Shared trip</span>
-            <span className="opacity-70 hidden sm:inline"> · Sign up to import & customize this plan</span>
+            <span className="font-semibold">{t.sharedTrip}</span>
+            <span className="opacity-70 hidden sm:inline"> · {t.sharedTripSubtitle}</span>
           </span>
           <Button size="sm" variant="secondary" onClick={handleImport} disabled={importing}
             className="h-7 gap-1.5 shrink-0">
-            <LogIn className="h-3.5 w-3.5" /> {importing ? "Importing..." : "Import this trip"}
+            <LogIn className="h-3.5 w-3.5" /> {importing ? t.importing : t.importTrip}
           </Button>
         </div>
       )}
@@ -604,20 +604,20 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
             {!isShared && (
               <>
                 <Button size="sm" variant="default" onClick={handleSave} disabled={saving} className="h-8 gap-1.5">
-                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save"}
+                  <Bookmark className="h-3.5 w-3.5" /> {saving ? t.saving : t.saveTrip}
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleExportPDF} className="h-8 gap-1.5">
-                  <Download className="h-3.5 w-3.5" /> PDF
+                  <Download className="h-3.5 w-3.5" /> {t.downloadPdf}
                 </Button>
               </>
             )}
             <Button size="sm" variant="outline" onClick={handleShare} disabled={sharing} className="h-8 gap-1.5">
               {isShared ? <Link2 className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-              {isShared ? "Copy link" : sharing ? "Creating..." : "Share"}
+              {isShared ? t.copyLink : sharing ? t.sharing : t.shareTrip}
             </Button>
             {isShared && (
               <Button size="sm" onClick={handleImport} disabled={importing} className="h-8 gap-1.5">
-                <LogIn className="h-3.5 w-3.5" /> {importing ? "..." : "Import"}
+                <LogIn className="h-3.5 w-3.5" /> {importing ? "..." : t.importTrip}
               </Button>
             )}
           </div>
