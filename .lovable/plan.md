@@ -1,64 +1,92 @@
-## Plan: Public shareable trip links with import-to-account
+## Goal
 
-Let users share a trip via a public link. Anyone can view it without logging in. To import, edit, or customize it, they must create an account.
+Replace the current "Crafting your plan…" progress-bar/spinner with a cinematic animated map that:
+1. Shows a flight line drawing itself from the user's origin city to the destination.
+2. Then drops circular photo "pins" of the destination + each planned activity, one by one, connected by drawn lines.
 
-### 1. Database: a separate `shared_trips` table
-Add a public, read-only snapshot table (kept separate from private `saved_trips`).
+This plays during the ~12s plan-crafting window (and stays in sync with streaming end), in the same spot the current crafting card occupies.
 
-Columns:
-- `id uuid primary key default gen_random_uuid()`
-- `slug text unique not null` (short token used in the share URL)
-- `owner_user_id uuid` (nullable — guests can also share)
-- `title text not null`
-- `destination text`
-- `data_json jsonb not null` (full trip snapshot)
-- `view_count int default 0`
-- `created_at timestamptz default now()`
+## Visual sequence (~12s)
 
-RLS:
-- SELECT: public (no auth required) — this is the whole point of a share link.
-- INSERT: only authenticated users; they must set `owner_user_id = auth.uid()`.
-- UPDATE/DELETE: only the owner.
+```text
+phase 1 (0–4s)  flight leg
+  origin ●———————————————✈———————————————→ ● destination
+  (animated dashed line drawing left→right, plane glyph traveling along it,
+   destination circle pops in with city photo)
 
-A small SECURITY DEFINER function increments `view_count` so anonymous viewers can bump the counter without write access to the row.
+phase 2 (4–11s)  activities
+  destination ●——→ ◯ activity 1 (photo)
+                 \
+                  ——→ ◯ activity 2 (photo)
+                       \
+                        ——→ ◯ activity 3 ...
+  (each new circle fades+scales in with its Google Places photo, line draws
+   from the previous point to it, count "1 of 5… 2 of 5…" updates below)
 
-### 2. Share button generates a public link
-On the trip detail page:
-- Replace the current "Share" (text summary) action with a real "Share link" flow.
-- On click: insert into `shared_trips`, get back the `slug`, copy `https://<host>/p/<slug>` to clipboard, toast "Link copied".
-- If the user is a guest, allow it but mark `owner_user_id = null`.
-- Cache the slug on the in-memory trip so repeated clicks reuse the same link.
+phase 3 (11–12s)  settle
+  full route visible, soft pulse on destination, then fade out as the real
+  plan content reveals.
+```
 
-### 3. New public viewer route `/p/:slug`
-- Loads the snapshot from `shared_trips` by slug, no auth required.
-- Renders the same `TripDetail` UI (read-only mode).
-- Adds a clear top banner: "Shared trip · Sign up to import & customize".
-- Disables: Save, Edit, PDF export-as-mine, Add-to-trip in modals.
-- Keeps: scroll, map, photos, lightbox, booking links — all read-only.
-- Calls the increment-view function once per session.
+Photos are circular thumbnails (`rounded-full`, 56–72px) with a thin white ring + soft shadow, matching the existing minimalist B/W aesthetic.
 
-### 4. Import flow (account required)
-A prominent "Import this trip" button:
-- If logged in: copies the snapshot into the user's `saved_trips` (with their `user_id`), then redirects to `/trip/view` with the cloned trip in sessionStorage so they can edit/continue.
-- If logged out: redirects to `/auth?next=/p/<slug>?import=1`. After signup/login, returns to the share page and triggers the import automatically.
+## What replaces what
 
-### 5. UX touches
-- Footer/disclaimer on `/p/:slug`: "This is a shared plan. Create a free account to make it yours."
-- Show the original creator's display name if `owner_user_id` is set and a profile exists (otherwise "Shared by a Jolliday traveler").
-- "Continue planning" CTA after import lands on `/chat` with the imported plan as context.
+In `src/pages/Chat.tsx` (lines ~1006–1057), the entire "Plan crafting animation" block (Compass icon + label + progress bar) is replaced by a new component `<PlanCraftingMap />`.
 
-### 6. Out of scope
-- No edit-in-place on the public page.
-- No public list of shared trips.
-- No comments/likes.
+Caption underneath stays minimal:
+- Phase 1: `Plotting your route to {destination}…`
+- Phase 2: `Pinning {activity name}… (2 of 5)`
+- Phase 3: `Almost ready…`
 
-## Technical details
-- Migration creates `shared_trips`, RLS, and `increment_shared_trip_views(slug text)` SECURITY DEFINER function.
-- Slug generated with `gen_random_bytes` → base32, ~10 chars, retried on collision.
-- New route in `src/App.tsx`: `/p/:slug` → `SharedTrip.tsx` page.
-- `SharedTrip.tsx` reuses `TripDetail` rendering by passing `readOnly` and `onImport`.
-- `TripDetail.tsx` accepts a new `mode: "owner" | "shared"` prop to hide owner-only actions.
-- Import handler: `supabase.from("saved_trips").insert({...snapshot, user_id: auth.uid()})` then `navigate("/trip/view")`.
-- Auth redirect: `Auth.tsx` already supports redirect; pass `next` query param and resume after sign-in.
+No percentage number, no progress bar.
 
-If this matches what you want, I'll implement it.
+## New component: `src/components/PlanCraftingMap.tsx`
+
+Props:
+- `originCity: string` (e.g. "Stockholm")
+- `destinationCity: string` (e.g. "Linköping")
+- `activities: { name: string; photo?: string }[]` — derived from the streamed `activities` / `itinerary` blocks as they arrive
+- `progress: number` (0–100, drives which phase to show)
+
+Implementation:
+- An SVG canvas (~100% width × 280px) draws a stylised world/region backdrop using a single subtle SVG path (no real map tiles — keeps it lightweight and on-brand).
+- A `<path>` for the flight leg uses `stroke-dasharray` + animated `stroke-dashoffset` to "draw" itself (~3.5s).
+- A small ✈ glyph (`<animateMotion>` along the same path) flies from origin to destination.
+- Circular photo nodes are absolutely positioned `<div>`s overlaid on the SVG using percentage coords; each one mounts in sequence using staggered timeouts driven by `progress` thresholds.
+- Lines between activity pins are additional SVG `<path>`s that animate their dash-offset on mount.
+- Photos come from `enrichedData[activity.name]?.photo` if available, otherwise a B/W initials placeholder circle (consistent with existing "no stock images" rule).
+
+Everything scales down gracefully on mobile (height 220px, smaller circles).
+
+## Wiring in `Chat.tsx`
+
+1. Build a memo `craftingActivities` that, whenever `messages[last].content` updates during crafting, parses the streamed ` ```activities` and ` ```itinerary` blocks and extracts up to ~6 activity names (deduped, in order).
+2. Pull `originCity` from user profile / settings (already used elsewhere as "home city"); fall back to `"Home"`.
+3. Replace the existing crafting JSX with:
+   ```tsx
+   <PlanCraftingMap
+     originCity={originCity}
+     destinationCity={craftingPlan.destination || "your destination"}
+     activities={craftingActivities}
+     progress={craftingPlan.progress}
+   />
+   ```
+4. Keep all existing timing / `craftingActive` / streaming-done logic untouched — only the visual is swapped.
+
+## Photo source
+
+Reuses the existing `enrichedData` map already populated by `enrich-destination` for the streaming message. No new API calls. If a photo isn't ready when a circle appears, we render the initials placeholder and swap to the real photo when it arrives (simple `useEffect` on `enrichedData`).
+
+## Files touched
+
+- **new** `src/components/PlanCraftingMap.tsx` — the animated SVG map component
+- **edit** `src/pages/Chat.tsx` — swap the crafting block, add `craftingActivities` memo, pass props
+
+No backend, edge function, or schema changes.
+
+## Out of scope
+
+- Real interactive Leaflet map (kept for the actual trip view; this is pure animation).
+- Changing the 12s timing or the streaming/QA controller.
+- Adding new images — only photos already enriched via Google Places are used.
