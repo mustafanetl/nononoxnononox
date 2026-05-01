@@ -393,12 +393,16 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
     const map = mapRef.current;
 
     const tick = () => {
-      // Smoothly chase the target progress (~10% of remaining distance per frame).
-      // Soft easing so the first frames are buttery, never stuck at zero.
+      // Smoothly chase the target progress. Use a stronger pull when far behind
+      // (so the very first frames don't crawl), softer when close (so it settles
+      // gracefully without overshoot or jitter).
       const target = targetProgressRef.current;
       const current = displayedProgressRef.current;
       const diff = target - current;
-      const next = Math.abs(diff) < 0.005 ? target : current + diff * 0.10;
+      const absDiff = Math.abs(diff);
+      // Adaptive easing: 0.18 when >5pts behind, 0.10 otherwise
+      const k = absDiff > 5 ? 0.18 : 0.10;
+      const next = absDiff < 0.005 ? target : current + diff * k;
       displayedProgressRef.current = next;
 
       const p = next;
