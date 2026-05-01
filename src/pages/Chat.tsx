@@ -456,12 +456,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           craftingIntervalRef.current = null;
         }
 
-        setTimeout(() => {
-          pendingCraftSeedRef.current = "";
-          setCraftingActive(false);
-          setCraftingPlan(null);
-          setCraftingOriginCity("");
-        }, 350);
+        // Wait two animation frames so React can mount + paint the plan card
+        // BEFORE we tear the crafting map down. Eliminates the white flicker
+        // between the two states.
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            pendingCraftSeedRef.current = "";
+            setCraftingActive(false);
+            setCraftingPlan(null);
+            setCraftingOriginCity("");
+          });
+        });
       }
     }, 300);
   }, []);
