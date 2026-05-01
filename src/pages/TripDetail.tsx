@@ -275,6 +275,11 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   if (!tripData) return null;
   const { data, destination } = tripData;
 
+  // Detect the language the user planned this trip in (from AI-generated text/itinerary)
+  // and pull the localized UI string bundle. Falls back to English when uncertain.
+  const tripLang = detectLang(extractTripLangSample(data));
+  const t = getTripStrings(tripLang);
+
   // Prefer the first landscape image so the hero banner doesn't get a portrait/macro shot.
   const enrichedImgs = tripData.enrichedImages || [];
   const heroPick =
