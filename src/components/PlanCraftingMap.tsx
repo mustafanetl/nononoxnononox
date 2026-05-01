@@ -392,77 +392,79 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
       return;
     }
 
-    // === PHASE 2: zoom into destination ===
-    if (progress < P_ZOOM_END) {
-      const t = easeInOut(clamp((progress - P_FLIGHT_END) / (P_ZOOM_END - P_FLIGHT_END), 0, 1));
-      flightRouteRef.current.setLatLngs(flightArc as any);
-      planeMarkerRef.current.setLatLng(flightArc[flightArc.length - 1]);
-      planeMarkerRef.current.setOpacity(1 - t);
-      if (destinationMarkerRef.current) destinationMarkerRef.current.setOpacity(1);
-      pointMarkersRef.current.forEach((m) => m.setOpacity(0));
-      tourRouteRef.current.setLatLngs([] as any);
+    // === PHASE 2: zoom into city (fit destination + all activities) ===
+    // Compute the city-level target view ONCE per geometry — this is the static
+    // frame we settle on for the rest of the animation. No follow / no chasing.
+    import("leaflet").then((L) => {
+      const acts = geometryPoints.activities;
+      const cityPts: [number, number][] = [
+        [geometryPoints.destination.lat, geometryPoints.destination.lng],
+        ...acts.map((p) => [p.lat, p.lng] as [number, number]),
+      ];
+      const cityBounds = L.latLngBounds(cityPts as any);
+      // Pad a bit so all pins (and their photo circles) fit comfortably
+      const targetCenterLL = cityBounds.getCenter();
+      const targetCenter: [number, number] = [targetCenterLL.lat, targetCenterLL.lng];
+      // Use Leaflet's bounds-zoom math, then clamp so we don't go ridiculously close
+      const fitZoom = (map as any)._getBoundsCenterZoom
+        ? (map as any)._getBoundsCenterZoom(cityBounds, { padding: [60, 60], maxZoom: 14 }).zoom
+        : 13;
+      const targetZoom = clamp(fitZoom, 11, 14);
+      targetViewRef.current = { center: targetCenter, zoom: targetZoom };
 
-      // Smoothly fly into the destination
-      import("leaflet").then((L) => {
+      if (progress < P_ZOOM_END) {
+        // PHASE 2: smooth interpolation from current view to city view
+        const t = easeInOut(clamp((progress - P_FLIGHT_END) / (P_ZOOM_END - P_FLIGHT_END), 0, 1));
+        flightRouteRef.current.setLatLngs(flightArc as any);
+        planeMarkerRef.current.setLatLng(flightArc[flightArc.length - 1]);
+        planeMarkerRef.current.setOpacity(1 - t);
+        if (destinationMarkerRef.current) destinationMarkerRef.current.setOpacity(1);
+        pointMarkersRef.current.forEach((m) => m.setOpacity(0));
+        tourRouteRef.current.setLatLngs([] as any);
+
+        const startCenter = currentViewRef.current?.center ?? [geometryPoints.destination.lat, geometryPoints.destination.lng];
         const startZoom = currentViewRef.current?.zoom ?? map.getZoom();
-        const targetZoom = 13;
-        const zoom = startZoom + (targetZoom - startZoom) * t;
-        map.setView([geometryPoints.destination.lat, geometryPoints.destination.lng], zoom, { animate: false });
-        currentViewRef.current = { center: [geometryPoints.destination.lat, geometryPoints.destination.lng], zoom };
-      });
-      return;
-    }
-
-    // === PHASE 3: tour activities ===
-    flightRouteRef.current.setLatLngs([] as any); // hide long flight line at city zoom
-    if (destinationMarkerRef.current) destinationMarkerRef.current.setOpacity(1);
-    planeMarkerRef.current.setOpacity(0);
-
-    const tourT = clamp((progress - P_ZOOM_END) / (P_TOUR_END - P_ZOOM_END), 0, 1);
-    const acts = geometryPoints.activities;
-    const totalActsLocal = acts.length;
-
-    if (totalActsLocal === 0) {
-      // Just hold on destination
-      import("leaflet").then(() => {
-        map.setView([geometryPoints.destination.lat, geometryPoints.destination.lng], 13, { animate: false });
-      });
-      return;
-    }
-
-    // Reveal markers progressively
-    const revealCount = Math.min(totalActsLocal, Math.ceil(easeInOut(tourT) * totalActsLocal));
-    pointMarkersRef.current.forEach((m, i) => m.setOpacity(i < revealCount ? 1 : 0));
-
-    // Draw tour line through revealed activities (starting from destination)
-    const tourPts: [number, number][] = [
-      [geometryPoints.destination.lat, geometryPoints.destination.lng],
-      ...acts.slice(0, revealCount).map((p) => [p.lat, p.lng] as [number, number]),
-    ];
-    tourRouteRef.current.setLatLngs(tourPts as any);
-
-    // Smoothly pan to the latest revealed activity (or destination if none yet)
-    const focus: [number, number] = revealCount > 0
-      ? [acts[revealCount - 1].lat, acts[revealCount - 1].lng]
-      : [geometryPoints.destination.lat, geometryPoints.destination.lng];
-
-    import("leaflet").then(() => {
-      const cur = currentViewRef.current;
-      const targetZoom = 14;
-      if (!cur) {
-        map.setView(focus, targetZoom, { animate: false });
-        currentViewRef.current = { center: focus, zoom: targetZoom };
+        const newCenter: [number, number] = [
+          startCenter[0] + (targetCenter[0] - startCenter[0]) * t,
+          startCenter[1] + (targetCenter[1] - startCenter[1]) * t,
+        ];
+        const newZoom = startZoom + (targetZoom - startZoom) * t;
+        map.setView(newCenter, newZoom, { animate: false });
+        // Don't overwrite currentViewRef during interpolation — keep start anchor
+        // until we finish phase 2, otherwise the lerp drifts.
+        if (t >= 1) currentViewRef.current = { center: targetCenter, zoom: targetZoom };
         return;
       }
-      // Lerp center smoothly between renders
-      const lerp = 0.18;
-      const newCenter: [number, number] = [
-        cur.center[0] + (focus[0] - cur.center[0]) * lerp,
-        cur.center[1] + (focus[1] - cur.center[1]) * lerp,
+
+      // === PHASE 3: stay locked on city view, just reveal pins ===
+      flightRouteRef.current.setLatLngs([] as any);
+      if (destinationMarkerRef.current) destinationMarkerRef.current.setOpacity(1);
+      planeMarkerRef.current.setOpacity(0);
+
+      // Lock the view to the precomputed city frame (no follow, no jitter)
+      const cur = currentViewRef.current;
+      if (!cur || Math.abs(cur.zoom - targetZoom) > 0.01 ||
+          Math.abs(cur.center[0] - targetCenter[0]) > 0.0001 ||
+          Math.abs(cur.center[1] - targetCenter[1]) > 0.0001) {
+        map.setView(targetCenter, targetZoom, { animate: false });
+        currentViewRef.current = { center: targetCenter, zoom: targetZoom };
+      }
+
+      const tourT = clamp((progress - P_ZOOM_END) / (P_TOUR_END - P_ZOOM_END), 0, 1);
+      const totalActsLocal = acts.length;
+      if (totalActsLocal === 0) {
+        tourRouteRef.current.setLatLngs([] as any);
+        return;
+      }
+
+      const revealCount = Math.min(totalActsLocal, Math.ceil(easeInOut(tourT) * totalActsLocal));
+      pointMarkersRef.current.forEach((m, i) => m.setOpacity(i < revealCount ? 1 : 0));
+
+      const tourPts: [number, number][] = [
+        [geometryPoints.destination.lat, geometryPoints.destination.lng],
+        ...acts.slice(0, revealCount).map((p) => [p.lat, p.lng] as [number, number]),
       ];
-      const newZoom = cur.zoom + (targetZoom - cur.zoom) * lerp;
-      map.setView(newCenter, newZoom, { animate: false });
-      currentViewRef.current = { center: newCenter, zoom: newZoom };
+      tourRouteRef.current.setLatLngs(tourPts as any);
     });
   }, [mapReady, progress, flightArc, geometryPoints.destination.lat, geometryPoints.destination.lng, activityNamesKey]);
 
