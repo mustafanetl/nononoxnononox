@@ -375,6 +375,80 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const prevActiveId = useRef(activeId);
   const prefsSynced = useRef(false);
 
+  // Origin city for the crafting map — read from local prefs (synced with Settings)
+  const originCity = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("jolliday-preferences");
+      const p = raw ? JSON.parse(raw) : {};
+      return (p?.homeCity as string) || "Home";
+    } catch {
+      return "Home";
+    }
+  }, [craftingActive]);
+
+  // Activities being streamed for the current crafting message — fed to PlanCraftingMap.
+  const craftingActivities = useMemo<CraftActivity[]>(() => {
+    if (!craftingActive) return [];
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant") return [];
+    const c = last.content;
+    const names: string[] = [];
+    const seen = new Set<string>();
+
+    // Extract from ```activities blocks
+    const actBlocks = c.match(/```activities\s*([\s\S]*?)(```|$)/g) || [];
+    for (const block of actBlocks) {
+      const inner = block.replace(/```activities\s*/, "").replace(/```$/, "");
+      const matches = inner.match(/"name"\s*:\s*"([^"]+)"/g) || [];
+      for (const m of matches) {
+        const n = m.replace(/"name"\s*:\s*"/, "").replace(/"$/, "").trim();
+        if (n && !seen.has(n.toLowerCase())) {
+          seen.add(n.toLowerCase());
+          names.push(n);
+        }
+      }
+    }
+    // Extract from ```itinerary blocks (venues)
+    const itinBlocks = c.match(/```itinerary\s*([\s\S]*?)(```|$)/g) || [];
+    for (const block of itinBlocks) {
+      const inner = block.replace(/```itinerary\s*/, "").replace(/```$/, "");
+      const matches = inner.match(/"venue"\s*:\s*"([^"]+)"/g) || [];
+      for (const m of matches) {
+        const n = m.replace(/"venue"\s*:\s*"/, "").replace(/"$/, "").trim();
+        if (n && !seen.has(n.toLowerCase())) {
+          seen.add(n.toLowerCase());
+          names.push(n);
+        }
+      }
+    }
+
+    const dest = craftingPlan?.destination || "";
+    const enrich = dest ? enrichedData[dest] : null;
+    const photoFor = (name: string): string | undefined => {
+      if (!enrich) return undefined;
+      const lower = name.toLowerCase();
+      const place =
+        enrich?.places?.find?.((p: any) => p?.name?.toLowerCase() === lower) ||
+        enrich?.places?.find?.((p: any) => p?.name?.toLowerCase()?.includes(lower)) ||
+        null;
+      return place?.photo || place?.image || place?.thumbUrl || undefined;
+    };
+
+    return names.slice(0, 5).map((n) => ({ name: n, photo: photoFor(n) }));
+  }, [craftingActive, messages, enrichedData, craftingPlan?.destination]);
+
+  // Destination photo for the crafting map (uses cached city image if present)
+  const craftingDestinationPhoto = useMemo<string | undefined>(() => {
+    const dest = craftingPlan?.destination || "";
+    if (!dest) return undefined;
+    const enrich = enrichedData[dest];
+    return (
+      enrich?.images?.[0]?.thumbUrl ||
+      enrich?.images?.[0]?.url ||
+      undefined
+    );
+  }, [craftingPlan?.destination, enrichedData]);
+
   // Memoize parsed messages to avoid re-parsing on every render
   const parsedMessages = useMemo(() => {
     return messages.map((msg) => ({
