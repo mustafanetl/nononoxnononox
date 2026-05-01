@@ -897,32 +897,44 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                               setActivityModalOpen(true);
                             };
                             return (
-                              <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-4 sm:gap-5 transition-transform duration-300 hover:-translate-y-0.5">
+                              <div className="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-5 sm:gap-6 transition-transform duration-300 hover:-translate-y-0.5">
                                 {/* Hero photo column */}
                                 <button
                                   type="button"
                                   onClick={openModal}
-                                  className="relative h-44 sm:h-44 sm:w-[180px] rounded-2xl overflow-hidden group/photo bg-gradient-to-br from-primary/15 via-muted to-accent/15 ring-1 ring-border hover:ring-foreground/30 transition"
+                                  className="relative h-52 sm:h-56 sm:w-[220px] rounded-3xl overflow-hidden group/photo bg-gradient-to-br from-muted via-muted to-secondary shadow-sm hover:shadow-xl transition-all duration-500"
                                 >
                                   {heroPhoto ? (
-                                    <img
-                                      src={heroPhoto}
-                                      alt={slot.venue}
-                                      className="w-full h-full object-cover transition-transform duration-700 group-hover/photo:scale-110"
-                                    />
+                                    <>
+                                      <img
+                                        src={heroPhoto}
+                                        alt={slot.venue}
+                                        className="w-full h-full object-cover transition-transform duration-[1100ms] ease-out group-hover/photo:scale-[1.08]"
+                                      />
+                                      {/* Soft gradient that only darkens the very bottom — keeps photo bright */}
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+                                    </>
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      <MapPin className="h-7 w-7 text-muted-foreground/40" />
+                                    <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                                      <MapPin className="h-7 w-7 text-muted-foreground/50" />
+                                      <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60">No photo yet</span>
                                     </div>
                                   )}
-                                  <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-background/85 backdrop-blur text-[9px] font-semibold tracking-wide text-foreground">
+                                  <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur text-[10px] font-bold tabular-nums tracking-wide text-foreground shadow-sm">
                                     {slot.time}
                                   </span>
                                   {reels.length > 1 && (
-                                    <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-black/55 backdrop-blur text-[9px] font-semibold text-white inline-flex items-center gap-1">
-                                      <Camera className="h-2.5 w-2.5" />
+                                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-[10px] font-semibold text-white inline-flex items-center gap-1">
+                                      <Camera className="h-3 w-3" />
                                       {reels.length}
                                     </span>
+                                  )}
+                                  {heroPhoto && (
+                                    <div className="absolute inset-x-0 bottom-0 p-3 text-left">
+                                      <p className="text-[10px] uppercase tracking-[0.2em] text-white/80 font-semibold opacity-0 group-hover/photo:opacity-100 transition-opacity duration-300">
+                                        Tap to open
+                                      </p>
+                                    </div>
                                   )}
                                 </button>
 
