@@ -627,7 +627,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       <div className="relative h-[62vh] min-h-[460px] max-h-[680px] overflow-hidden">
         {heroImgFinal ? (
           <img src={heroImgFinal} alt={destination}
-            className="w-full h-full object-cover animate-ken-burns" />
+            className="w-full h-full object-cover animate-ken-burns animate-punch-in" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30 flex items-center justify-center">
             <MapPin className="h-20 w-20 text-muted-foreground/30" />
@@ -679,10 +679,18 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               <Compass className="h-3.5 w-3.5" /> {t.yourJolliday}
             </p>
             <h1
-              className="text-5xl sm:text-7xl lg:text-[88px] font-bold text-white tracking-tight leading-[0.95] drop-shadow-2xl animate-hero-rise"
-              style={{ animationDelay: "0.18s" }}
+              className="text-5xl sm:text-7xl lg:text-[88px] font-bold text-white tracking-tight leading-[0.95] drop-shadow-2xl"
+              aria-label={destination}
             >
-              {destination}
+              {destination.split("").map((ch, i) => (
+                <span
+                  key={i}
+                  className="letter-rise"
+                  style={{ animationDelay: `${0.18 + i * 0.045}s` }}
+                >
+                  {ch === " " ? "\u00A0" : ch}
+                </span>
+              ))}
             </h1>
             <p
               className="mt-5 max-w-xl text-white/85 text-base sm:text-lg leading-relaxed animate-hero-rise"
