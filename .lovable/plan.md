@@ -1,70 +1,32 @@
-## Why the current map feels messy
+## Goal
+Make the trip map pins feel calm, consistent and "right-sized". Fix the hotel marker so it always shows something nice (image when we have one, otherwise a clean bed icon — never a broken/empty circle).
 
-Reading `src/pages/TripDetail.tsx` and `src/components/TripMap.tsx`:
+## Problems today
+1. **Hotel circle has no image** — when `h.realPhoto` / `h.image` are missing, the marker still goes through the photo path with an empty url, leaving a blank white disc.
+2. **Pin sizes feel off** — pins are large (48–56px), the focused state inflates them by ~17%, and the white ring + outer 1px shadow ring + number badge makes them look noisy and inconsistent next to each other (especially hotel vs activity).
+3. **Visual hierarchy is unclear** — every pin competes for attention; nothing reads as "primary" vs "secondary" at a glance.
 
-1. **Wrong day assignment.** Activity pins get a day via `(i % itinerary.length) + 1` — pure round-robin, not based on the actual itinerary slots. Day badges and per-day filtering are lying.
-2. **Pins don't reflect the real plan.** Map points come from `data.activities` (3–5 generic cards), not from the itinerary slots the user actually sees on the page (6–8 stops × N days). So the map and the day-by-day timeline disagree.
-3. **Click handler is unreliable.** `data.activities.find(a => a.name === name)` only matches a small slice; itinerary slot venues mostly fall through and nothing opens. When it does open it's the wrong activity.
-4. **Visual mess.** 40px photo bubbles overlap heavily in dense city centers, with thick white rings + day badges + photos all fighting. No way to focus on a single day.
-5. **Polyline is wrong.** It connects everything in insertion order (hotels then activities), zig-zagging across the city instead of tracing each day's route.
+## Fix
 
-## What we'll build
+### 1. Robust hotel pin (TripDetail.tsx)
+Tighten the photo source so we never pass an empty string into the map:
+- Try `realPhoto` → first `realPhotos[]` → `image` → `thumbPhoto` → `undefined` (not `""`).
+- Pass `undefined` instead of falsy strings so the map cleanly falls back to the icon variant.
 
-A clean, itinerary-driven map that mirrors the day-by-day section, with a day filter, ordered route, smaller numbered chips, and a click that always opens the matching activity card.
+### 2. Calmer, smaller, consistent pins (TripMap.tsx)
+- **Sizes**: activity = 36px, hotel = 40px, focused activity = 42px. (Down from 48/56.)
+- **One ring, not two**: drop the `box-shadow: 0 0 0 1px accent` outer ring. Keep a single 2px white inner ring + soft drop shadow. The day color shows on the number badge / icon background, not as a second halo.
+- **Number badge**: smaller (16px), bottom-right instead of top-right so it doesn't collide with the tooltip arrow, only shown for activities with a photo.
+- **Hotel pin**: when no photo, render a solid `--primary` circle with a white `Bed` icon (already in code) — but at the new 40px size and without the double ring. When a photo exists, show the photo with a small bed badge in the corner so users still recognize it as a hotel.
+- **Dimmed (non-active day)**: lower opacity to 0.4 and remove drop shadow so focused day truly pops.
+- **Hover**: subtle `transform: scale(1.08)` via existing transition; no size jump on "focused" day selection beyond +6px to avoid jitter.
 
-### 1. Rebuild map points from the itinerary (`src/pages/TripDetail.tsx`)
+### 3. Tooltip offset
+Recompute tooltip `offset` from the new sizes so it sits just above the pin, not floating in space.
 
-Replace the current `mapPoints` derivation. New logic:
+## Files to edit
+- `src/pages/TripDetail.tsx` — harden hotel `photo` resolution (lines ~407-415).
+- `src/components/TripMap.tsx` — pin size constants, single-ring style, badge position, hotel-with-photo bed badge, tooltip offset.
 
-- For each `day.slots[i]` with resolvable lat/lng (via the matched activity from `matchActivity` or from `resolveVenuePhotoMatch` address fallback): emit one point with `{ name: slot.venue, lat, lng, day: day.day, order: i+1, photo, type: "activity" }`.
-- Skip slots without coords instead of inventing them.
-- Add hotel(s) once with `type: "hotel"`, no day, no order number.
-- Drop the round-robin `(i % itinerary.length) + 1` assignment entirely.
-
-This makes the map match what's shown in the day-by-day section exactly.
-
-### 2. Add per-day filter UI in the map header
-
-In `TripMap.tsx`, render a small pill row above the map (or in the header bar): `All · Day 1 · Day 2 · …` derived from the unique days in `points`. Selecting one filters markers + polyline and refits bounds. "All" shows everything.
-
-State for `activeDay` lives inside `TripMap` (so other parts of the page don't need to change), default `null` = All.
-
-### 3. Cleaner marker design
-
-Smaller, calmer chips that don't fight each other:
-
-- 28×28 numbered chip (white bg, 1px border, day-tinted). Number = slot order within its day (1, 2, 3 …).
-- Hotel = small bed-icon chip in primary color, no number.
-- When the user hovers, the chip scales to 36×36 and shows a tiny tooltip with the venue name.
-- When a single day is selected, that day's chips get a subtle ring + the connecting polyline becomes solid (currently dashed) and tinted.
-- Drop the photo-as-marker (caused the "messy" look). Photos still appear in the popup tooltip and the modal.
-
-### 4. Per-day route polyline
-
-Instead of one polyline through all points, draw one polyline per day connecting that day's slots in `order` (1 → 2 → 3 …). When `activeDay` is set, only that day's line shows; otherwise show all days dimmed.
-
-### 5. Reliable click → modal (`TripDetail.tsx`)
-
-Replace the brittle `name`-equality lookup. The map's `onMarkerClick` will pass `{ name, day, slotIdx, type }`. Then:
-
-- `type === "hotel"` → open `HotelDetailModal` with the matched hotel.
-- `type === "activity"` → reuse the same `openModal` logic the day-by-day section uses (matchActivity + resolveVenuePhotoMatch + fallback synthetic activity), so every pin opens the same rich card the user already sees in the timeline.
-
-Refactor the `openModal` body from inside the slot `.map` into a reusable `openSlotModal(day, slotIdx)` helper at component scope so both the map and the timeline call the same code path.
-
-### 6. Smooth UX details
-
-- Default zoom: fit bounds with `padding: [60,60]`, `maxZoom: 15`, `animate: true`.
-- Day-pill changes use `flyToBounds` with a 0.6s ease for smoothness.
-- Marker hover uses CSS transform (GPU), no re-render.
-- Cleanup: keep existing dispose guards; nothing to add.
-
-### Files to edit
-
-- `src/components/TripMap.tsx` — new marker style, per-day filter, per-day polylines, richer click payload.
-- `src/pages/TripDetail.tsx` — rebuild `mapPoints` from itinerary slots; extract `openSlotModal` helper; wire it to `onMarkerClick`.
-
-### Out of scope
-
-- No backend changes, no new dependencies.
-- Plan-crafting map (`PlanCraftingMap.tsx`) is untouched.
+## Out of scope
+No changes to itinerary data, day filter UI, polylines, or click/modal behavior — those are working well.

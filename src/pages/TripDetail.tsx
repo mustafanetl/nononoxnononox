@@ -406,13 +406,21 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   }
   const hotelPins: MapPoint[] = data.hotels
     .filter((h: any) => typeof h.lat === "number" && typeof h.lng === "number")
-    .map((h: any) => ({
-      name: h.name,
-      lat: h.lat,
-      lng: h.lng,
-      type: "hotel" as const,
-      photo: (h as any).realPhoto || (h as any).image,
-    }));
+    .map((h: any) => {
+      const photo =
+        (typeof h.realPhoto === "string" && h.realPhoto) ||
+        (Array.isArray(h.realPhotos) && h.realPhotos.find((p: any) => typeof p === "string" && p)) ||
+        (typeof h.image === "string" && h.image) ||
+        (typeof h.thumbPhoto === "string" && h.thumbPhoto) ||
+        undefined;
+      return {
+        name: h.name,
+        lat: h.lat,
+        lng: h.lng,
+        type: "hotel" as const,
+        photo: photo || undefined,
+      };
+    });
   const mapPoints: MapPoint[] = [...slotPins, ...hotelPins];
 
   const handleShare = async () => {
