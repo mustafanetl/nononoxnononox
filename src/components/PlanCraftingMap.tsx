@@ -241,7 +241,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
       planeMarkerRef.current = L.marker([DEFAULT_ORIGIN.lat, DEFAULT_ORIGIN.lng], {
         icon: L.divIcon({
           className: "",
-          html: `<div style="width:36px;height:36px;border-radius:9999px;background:hsl(var(--foreground));color:hsl(var(--background));display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,0.25);border:2px solid hsl(var(--background));will-change:transform;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9 22 2z"/></svg></div>`,
+          html: `<div class="plan-plane-icon" style="width:40px;height:40px;border-radius:9999px;background:hsl(var(--foreground));color:hsl(var(--background));display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,0.28);border:2px solid hsl(var(--background));will-change:transform;transition:transform 120ms linear;"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" stroke="none" style="transform:rotate(-45deg);"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16z"/></svg></div>`,
           iconSize: [36, 36],
           iconAnchor: [18, 18],
         }),
