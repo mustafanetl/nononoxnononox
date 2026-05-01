@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, X, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -79,6 +79,8 @@ const PhotoLightbox = ({
       <DialogContent
         className="max-w-none w-screen h-[100dvh] p-0 bg-black border-0 rounded-none [&>button]:hidden"
       >
+        <DialogTitle className="sr-only">{venueName ? `Photos of ${venueName}` : "Photo gallery"}</DialogTitle>
+        <DialogDescription className="sr-only">Swipe or use arrow keys to navigate photos.</DialogDescription>
         <div
           className="relative w-full h-full flex flex-col"
           onTouchStart={onTouchStart}

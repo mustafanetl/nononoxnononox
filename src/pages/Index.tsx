@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Compass, ArrowRight, User, Settings } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -7,18 +6,11 @@ import HeroSection from "@/components/HeroSection";
 import ProductPreview from "@/components/landing/ProductPreview";
 import ValueRows from "@/components/landing/ValueRows";
 import DestinationsMosaic from "@/components/landing/DestinationsMosaic";
+import HeroSearch from "@/components/landing/HeroSearch";
 import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [ctaQuery, setCtaQuery] = useState("");
-
-  const handleCtaSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = ctaQuery.trim();
-    if (trimmed) navigate(`/chat?q=${encodeURIComponent(trimmed)}`);
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -99,22 +91,9 @@ const Index = () => {
             <h2 className="text-5xl md:text-7xl font-bold tracking-tight leading-[0.95]">
               Where to next?
             </h2>
-            <form
-              onSubmit={handleCtaSubmit}
-              className="mt-10 flex items-center gap-2 max-w-xl mx-auto border border-border rounded-full pl-5 pr-2 py-2 bg-background hover:border-foreground/30 focus-within:border-foreground transition-colors"
-            >
-              <input
-                type="text"
-                value={ctaQuery}
-                onChange={(e) => setCtaQuery(e.target.value)}
-                placeholder="A weekend in Rome…"
-                className="flex-1 bg-transparent py-2 text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
-              />
-              <Button type="submit" size="lg" className="rounded-full gap-1">
-                Plan
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </form>
+            <div className="mt-10 mx-auto max-w-xl">
+              <HeroSearch placeholder="A weekend in Rome…" />
+            </div>
           </div>
         </section>
       </main>
