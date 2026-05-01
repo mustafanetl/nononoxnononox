@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
@@ -195,7 +195,59 @@ const parseMessageContent = (content: string) => {
   return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich, placeImages, places };
 };
 
-const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
+const inferCitiesFromPrompt = (text: string) => {
+  const source = text || "";
+  const destinationMatch =
+    source.match(/\btrip to\s+([^,.\n]+?)(?:\s+from\s+|\s+for\s+|\s+on\s+|\s+leaving\s+|\.|,|$)/i) ||
+    source.match(/\bto\s+([^,.\n]+?)(?:\s+from\s+|\s+for\s+|\s+on\s+|\s+leaving\s+|\.|,|$)/i);
+  const originMatch =
+    source.match(/\bfrom\s+([^,.\n]+?)(?:\s+for\s+|\s+on\s+|\s+to\s+|\.|,|$)/i) ||
+    source.match(/\bdeparting from\s+([^,.\n]+?)(?:\s+for\s+|\s+on\s+|\s+to\s+|\.|,|$)/i);
+
+  return {
+    destination: destinationMatch?.[1]?.trim() || "",
+    origin: originMatch?.[1]?.trim() || "",
+  };
+};
+
+const extractStructuredDestination = (content: string) => {
+  const destinationEnrichMatch = content.match(/```destination_enrich\s*([\s\S]*?)(```|$)/i);
+  if (destinationEnrichMatch) {
+    try {
+      const parsed = JSON.parse(destinationEnrichMatch[1].trim());
+      if (typeof parsed?.destination === "string") return parsed.destination.trim();
+    } catch {
+      // ignore partial streamed JSON
+    }
+  }
+
+  const travelInfoMatch = content.match(/```travelinfo\s*([\s\S]*?)(```|$)/i);
+  if (travelInfoMatch) {
+    try {
+      const parsed = JSON.parse(travelInfoMatch[1].trim());
+      if (typeof parsed?.destination === "string") return parsed.destination.trim();
+    } catch {
+      // ignore partial streamed JSON
+    }
+  }
+
+  const plainMatch = content.match(/"destination"\s*:\s*"([^"]+)"/i);
+  return plainMatch?.[1]?.trim() || "";
+};
+
+const isPlanConfirmationMessage = (text: string) => {
+  const normalized = text.trim().toLowerCase();
+  return (
+    normalized === "yes, prepare the plan" ||
+    normalized === "prepare the plan" ||
+    normalized === "yes prepare the plan" ||
+    /\b(prepare|create|make|build)\b.{0,24}\bplan\b/i.test(text)
+  );
+};
+
+const hasCraftingSignals = (content: string) => /(?:```)?(activities|itinerary|hotels|flights|travelinfo|destination_enrich)\b/i.test(content);
+
+const HorizontalCarousel = forwardRef<HTMLDivElement, { children: React.ReactNode }>(({ children }, ref) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -218,7 +270,7 @@ const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="relative mt-4">
+    <div ref={ref} className="relative mt-4">
       {canScrollLeft && (
         <button onClick={() => scroll("left")} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-background border border-border rounded-full flex items-center justify-center shadow-lg hover:bg-muted transition-colors">
           <ChevronLeft className="h-4 w-4" />
@@ -234,7 +286,9 @@ const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
       </div>
     </div>
   );
-};
+});
+
+HorizontalCarousel.displayName = "HorizontalCarousel";
 
 const Chat = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -270,6 +324,20 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData, replaceActivity, replaceItinerarySlot } = useRzumaChat();
   const [selectedSlotRef, setSelectedSlotRef] = useState<{ day: number; slotIdx: number } | null>(null);
   const { compareItems } = useTripContext();
+  const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
+  const [craftingPlan, setCraftingPlan] = useState<{ destination: string; progress: number } | null>(null);
+  const prevActiveId = useRef(activeId);
+  const prefsSynced = useRef(false);
+
+  const originCity = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("jolliday-preferences");
+      const p = raw ? JSON.parse(raw) : {};
+      return (p?.homeCity as string) || "Home";
+    } catch {
+      return "Home";
+    }
+  }, []);
 
   // Track whether assistant has started streaming content for current response
   const hasStreamedContent = useMemo(() => {
@@ -281,66 +349,105 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   // Crafting active state — fully decoupled from isLoading
   const [craftingActive, setCraftingActive] = useState(false);
   const [craftingPlanType, setCraftingPlanType] = useState<"full" | "local">("full");
+  const [craftingOriginCity, setCraftingOriginCity] = useState<string>("");
   const lastCraftedMsgIndex = useRef(-1);
   const craftingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const craftingProgressRef = useRef(0);
   const streamingDoneRef = useRef(false);
   const craftingStartTimeRef = useRef(0);
+  const pendingCraftSeedRef = useRef<string>("");
 
-  // Unified crafting controller: detect plan blocks → start animation → finish when ready
+  const startCrafting = useCallback((destination: string, origin: string, content = "") => {
+    const cleanedDestination = destination.trim();
+    if (!cleanedDestination || craftingIntervalRef.current) return;
+
+    craftingProgressRef.current = 0;
+    streamingDoneRef.current = false;
+    craftingStartTimeRef.current = Date.now();
+    setCraftingPlanType(/```(flights|hotels)/s.test(content) ? "full" : "local");
+    setCraftingOriginCity(origin.trim());
+    setCraftingPlan({ destination: cleanedDestination, progress: 0 });
+    setCraftingActive(true);
+
+    craftingIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - craftingStartTimeRef.current;
+      const minDuration = 12000;
+
+      if (craftingProgressRef.current < 90) {
+        craftingProgressRef.current = Math.min(90, craftingProgressRef.current + (90 - craftingProgressRef.current) * 0.04);
+        setCraftingPlan(prev => prev ? { ...prev, progress: craftingProgressRef.current } : null);
+      }
+
+      if (streamingDoneRef.current && elapsed >= minDuration && craftingProgressRef.current >= 88) {
+        craftingProgressRef.current = 100;
+        setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
+
+        if (craftingIntervalRef.current) {
+          clearInterval(craftingIntervalRef.current);
+          craftingIntervalRef.current = null;
+        }
+
+        setTimeout(() => {
+          pendingCraftSeedRef.current = "";
+          setCraftingActive(false);
+          setCraftingPlan(null);
+          setCraftingOriginCity("");
+        }, 600);
+      }
+    }, 300);
+  }, []);
+
+  // Start crafting as soon as a full-plan request is in flight, even before blocks stream back.
   useEffect(() => {
-    // Premium users also see the crafting animation
+    if (!isLoading || craftingIntervalRef.current) return;
+
+    const userMessages = messages.filter((msg) => msg.role === "user");
+    const latestUser = userMessages[userMessages.length - 1];
+    const previousUser = userMessages[userMessages.length - 2];
+    if (!latestUser) return;
+
+    const latestCities = inferCitiesFromPrompt(latestUser.content);
+    const previousCities = inferCitiesFromPrompt(previousUser?.content || "");
+    const destination = latestCities.destination || previousCities.destination;
+    const origin = latestCities.origin || previousCities.origin || originCity;
+
+    if (!destination) return;
+
+    const seed = `${latestUser.content}|${destination}|${origin}`;
+    const shouldStart = latestCities.destination || isPlanConfirmationMessage(latestUser.content);
+    if (shouldStart && pendingCraftSeedRef.current !== seed) {
+      pendingCraftSeedRef.current = seed;
+      startCrafting(destination, origin);
+    }
+  }, [isLoading, messages, originCity, startCrafting]);
+
+  // Upgrade the in-flight loader once the assistant starts streaming structured plan data.
+  useEffect(() => {
     const lastIdx = messages.length - 1;
     if (lastIdx < 0) return;
     const lastMsg = messages[lastIdx];
     if (!lastMsg || lastMsg.role !== "assistant") return;
-    const c = lastMsg.content;
-    const hasPlanBlocks = /```(activities|itinerary)/s.test(c);
 
-    // Start crafting if plan blocks detected and not already started for this message
-    if (hasPlanBlocks && isLoading && lastIdx !== lastCraftedMsgIndex.current && !craftingIntervalRef.current) {
+    const content = lastMsg.content;
+    if (!hasCraftingSignals(content)) return;
+
+    const structuredDestination = extractStructuredDestination(content);
+    const fallback = craftingPlan?.destination || inferCitiesFromPrompt(messages.filter((msg) => msg.role === "user").slice(-1)[0]?.content || "").destination;
+    const nextDestination = structuredDestination || fallback;
+    if (!nextDestination) return;
+
+    if (isLoading && !craftingIntervalRef.current && lastIdx !== lastCraftedMsgIndex.current) {
       lastCraftedMsgIndex.current = lastIdx;
-      craftingProgressRef.current = 0;
-      streamingDoneRef.current = false;
-      craftingStartTimeRef.current = Date.now();
-
-      const hasFlightsOrHotels = /```(flights|hotels)/s.test(c);
-      setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
-
-      const destMatch = c.match(/```travelinfo\s*\{[^}]*"destination"\s*:\s*"([^"]+)"/);
-      const dest = destMatch?.[1] || "";
-      setCraftingPlan({ destination: dest, progress: 0 });
-      setCraftingActive(true);
-
-      // Single interval drives everything
-      craftingIntervalRef.current = setInterval(() => {
-        const elapsed = Date.now() - craftingStartTimeRef.current;
-        const minDuration = 12000;
-
-        // Smooth ease-out curve: 0 → ~90 over 12 seconds
-        if (craftingProgressRef.current < 90) {
-          craftingProgressRef.current = Math.min(90, craftingProgressRef.current + (90 - craftingProgressRef.current) * 0.04);
-          setCraftingPlan(prev => prev ? { ...prev, progress: craftingProgressRef.current } : null);
-        }
-
-        // Finish: streaming done AND minimum time passed AND progress >= 88
-        if (streamingDoneRef.current && elapsed >= minDuration && craftingProgressRef.current >= 88) {
-          craftingProgressRef.current = 100;
-          setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
-
-          if (craftingIntervalRef.current) {
-            clearInterval(craftingIntervalRef.current);
-            craftingIntervalRef.current = null;
-          }
-
-          setTimeout(() => {
-            setCraftingActive(false);
-            setCraftingPlan(null);
-          }, 600);
-        }
-      }, 300);
+      startCrafting(nextDestination, craftingOriginCity || originCity, content);
+      return;
     }
-  }, [messages, isPremium]);
+
+    setCraftingPlan((prev) => prev ? {
+      ...prev,
+      destination: structuredDestination || prev.destination,
+    } : prev);
+    setCraftingPlanType(/```(flights|hotels)/s.test(content) ? "full" : "local");
+  }, [messages, isLoading, craftingPlan?.destination, craftingOriginCity, originCity, startCrafting]);
 
   // When streaming ends, mark it and update plan type from final content
   useEffect(() => {
@@ -370,21 +477,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [searchParams] = useSearchParams();
   const initialQuerySent = useRef(false);
-  const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
-  const [craftingPlan, setCraftingPlan] = useState<{ destination: string; progress: number } | null>(null);
-  const prevActiveId = useRef(activeId);
-  const prefsSynced = useRef(false);
-
-  // Origin city for the crafting map — read from local prefs (synced with Settings)
-  const originCity = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("jolliday-preferences");
-      const p = raw ? JSON.parse(raw) : {};
-      return (p?.homeCity as string) || "Home";
-    } catch {
-      return "Home";
-    }
-  }, [craftingActive]);
 
   // Activities being streamed for the current crafting message — fed to PlanCraftingMap.
   const craftingActivities = useMemo<CraftActivity[]>(() => {
@@ -1105,7 +1197,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 {/* Plan crafting animation — full width, prominent */}
                 {isCraftingPlan && craftingPlan && (
                   <PlanCraftingMap
-                    originCity={originCity}
+                    originCity={craftingOriginCity || originCity}
                     destinationCity={craftingPlan.destination || "your destination"}
                     activities={craftingActivities}
                     destinationPhoto={craftingDestinationPhoto}
