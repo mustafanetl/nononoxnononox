@@ -261,8 +261,15 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   if (!tripData) return null;
   const { data, destination } = tripData;
 
-  const heroImg = tripData.enrichedImages?.[0]?.url || tripData.enrichedImages?.[0]?.thumbUrl;
-  const secondaryImg = tripData.enrichedImages?.[1]?.url || tripData.enrichedImages?.[1]?.thumbUrl;
+  // Prefer the first landscape image so the hero banner doesn't get a portrait/macro shot.
+  const enrichedImgs = tripData.enrichedImages || [];
+  const heroPick =
+    enrichedImgs.find((i: any) => (i?.width || 0) >= (i?.height || 0) * 1.2) ||
+    enrichedImgs[0];
+  const heroImg = heroPick?.url || heroPick?.thumbUrl;
+  const secondaryImg =
+    enrichedImgs.find((i: any) => i && i !== heroPick)?.url ||
+    enrichedImgs.find((i: any) => i && i !== heroPick)?.thumbUrl;
 
   const days = data.itinerary.length || 1;
   const flightsCost = data.flights.reduce((s, f) => s + f.price, 0);
