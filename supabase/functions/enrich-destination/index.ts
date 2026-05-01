@@ -141,7 +141,10 @@ async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any
       if (!photo) continue;
       const w = photo.widthPx || 800;
       const h = photo.heightPx || 600;
-      if (landscapeOnly && (w < h * 1.25 || w < 1200)) continue;
+      // Loosened: any landscape (w > h) photo at least 900px wide.
+      // The previous threshold (w >= h*1.25 AND w >= 1200) was rejecting
+      // perfectly good cityscape shots, falling back to interior fillers.
+      if (landscapeOnly && (w <= h || w < 900)) continue;
       out.push({
         url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=1920&key=${apiKey}`,
         thumbUrl: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=400&key=${apiKey}`,
