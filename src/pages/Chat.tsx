@@ -1458,7 +1458,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
         <div className="p-4 pb-6">
           <div className="max-w-3xl mx-auto">
-            {planGenerated && !isPremium ? (
+            {planGenerated && !isPremium && !subLoading ? (
               <div className="chat-input-container p-4 text-center">
                 <p className="text-sm font-medium text-foreground mb-1">
                   ✨ Your plan is ready — don't miss out
