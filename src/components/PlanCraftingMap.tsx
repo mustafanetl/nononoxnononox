@@ -121,8 +121,8 @@ const sliceArc = (arc: [number, number][], progress: number) => {
 };
 
 // Phase boundaries (out of 100)
-const P_FLIGHT_END = 40;
-const P_ZOOM_END = 55;
+const P_FLIGHT_END = 38;
+const P_ZOOM_END = 58; // wider window so the flyTo glide has room to breathe
 const P_TOUR_END = 92;
 
 const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationPhoto, destinationGeo, progress }: Props) => {
