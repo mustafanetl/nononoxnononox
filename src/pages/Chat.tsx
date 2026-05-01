@@ -37,6 +37,45 @@ import { toast } from "sonner";
 
 // Enrichment cache to avoid re-fetching
 const enrichmentCache: Record<string, any> = {};
+const warmedImageUrls = new Set<string>();
+
+const warmImage = (url?: string) => {
+  if (typeof window === "undefined" || !url || warmedImageUrls.has(url)) return;
+  warmedImageUrls.add(url);
+  const img = new Image();
+  img.decoding = "async";
+  img.src = url;
+};
+
+const warmEnrichmentAssets = (data: any) => {
+  data?.images?.slice?.(0, 4)?.forEach?.((img: any) => warmImage(img?.thumbUrl || img?.url));
+  Object.values(data?.activityPhotos || {}).forEach((photo: any) => {
+    warmImage(photo?.thumbPhoto || photo?.photo);
+    if (Array.isArray(photo?.photos)) {
+      photo.photos.slice(0, 3).forEach((url: string) => warmImage(url));
+    }
+  });
+};
+
+const mergeEnrichmentData = (prev: any, next: any) => {
+  if (!prev) return next;
+  if (!next) return prev;
+
+  const mergedActivityPhotos = {
+    ...(prev.activityPhotos || {}),
+    ...(next.activityPhotos || {}),
+  };
+
+  return {
+    ...prev,
+    ...next,
+    geo: next.geo ?? prev.geo,
+    images: Array.isArray(next.images) && next.images.length > 0 ? next.images : prev.images,
+    places: Array.isArray(next.places) && next.places.length > 0 ? next.places : prev.places,
+    hotels: Array.isArray(next.hotels) && next.hotels.length > 0 ? next.hotels : prev.hotels,
+    activityPhotos: mergedActivityPhotos,
+  };
+};
 
 const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[], imageOnly?: boolean, hotelNames?: string[]) => {
   // Cache key includes activity/hotel names to avoid stale photo reuse
@@ -263,6 +302,12 @@ const isPlanConfirmationMessage = (text: string) => {
 };
 
 const hasCraftingSignals = (content: string) => /(?:```)?(activities|itinerary|hotels|flights|travelinfo|destination_enrich)\b/i.test(content);
+
+const hasRenderableFullPlan = (content: string) => {
+  const parsed = parseMessageContent(content);
+  const blockTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
+  return blockTypeCount >= 2;
+};
 
 const HorizontalCarousel = forwardRef<HTMLDivElement, { children: React.ReactNode }>(({ children }, ref) => {
   const scrollRef = useRef<HTMLDivElement>(null);
