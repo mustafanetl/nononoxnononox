@@ -541,13 +541,18 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           if (craftingFinalizeTimeoutRef.current) {
             clearTimeout(craftingFinalizeTimeoutRef.current);
           }
+          // Quick handoff: rAF-chain so the plan paints before crafting tears down.
           craftingFinalizeTimeoutRef.current = setTimeout(() => {
-            pendingCraftSeedRef.current = "";
-            setCraftingActive(false);
-            setCraftingPlan(null);
-            setCraftingOriginCity("");
-            craftingFinalizeTimeoutRef.current = null;
-          }, 450);
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                pendingCraftSeedRef.current = "";
+                setCraftingActive(false);
+                setCraftingPlan(null);
+                setCraftingOriginCity("");
+                craftingFinalizeTimeoutRef.current = null;
+              });
+            });
+          }, 200);
         }
       }
     }
