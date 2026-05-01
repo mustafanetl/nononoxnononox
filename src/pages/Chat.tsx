@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
@@ -195,7 +195,59 @@ const parseMessageContent = (content: string) => {
   return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich, placeImages, places };
 };
 
-const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
+const inferCitiesFromPrompt = (text: string) => {
+  const source = text || "";
+  const destinationMatch =
+    source.match(/\btrip to\s+([^,.\n]+?)(?:\s+from\s+|\s+for\s+|\s+on\s+|\s+leaving\s+|\.|,|$)/i) ||
+    source.match(/\bto\s+([^,.\n]+?)(?:\s+from\s+|\s+for\s+|\s+on\s+|\s+leaving\s+|\.|,|$)/i);
+  const originMatch =
+    source.match(/\bfrom\s+([^,.\n]+?)(?:\s+for\s+|\s+on\s+|\s+to\s+|\.|,|$)/i) ||
+    source.match(/\bdeparting from\s+([^,.\n]+?)(?:\s+for\s+|\s+on\s+|\s+to\s+|\.|,|$)/i);
+
+  return {
+    destination: destinationMatch?.[1]?.trim() || "",
+    origin: originMatch?.[1]?.trim() || "",
+  };
+};
+
+const extractStructuredDestination = (content: string) => {
+  const destinationEnrichMatch = content.match(/```destination_enrich\s*([\s\S]*?)(```|$)/i);
+  if (destinationEnrichMatch) {
+    try {
+      const parsed = JSON.parse(destinationEnrichMatch[1].trim());
+      if (typeof parsed?.destination === "string") return parsed.destination.trim();
+    } catch {
+      // ignore partial streamed JSON
+    }
+  }
+
+  const travelInfoMatch = content.match(/```travelinfo\s*([\s\S]*?)(```|$)/i);
+  if (travelInfoMatch) {
+    try {
+      const parsed = JSON.parse(travelInfoMatch[1].trim());
+      if (typeof parsed?.destination === "string") return parsed.destination.trim();
+    } catch {
+      // ignore partial streamed JSON
+    }
+  }
+
+  const plainMatch = content.match(/"destination"\s*:\s*"([^"]+)"/i);
+  return plainMatch?.[1]?.trim() || "";
+};
+
+const isPlanConfirmationMessage = (text: string) => {
+  const normalized = text.trim().toLowerCase();
+  return (
+    normalized === "yes, prepare the plan" ||
+    normalized === "prepare the plan" ||
+    normalized === "yes prepare the plan" ||
+    /\b(prepare|create|make|build)\b.{0,24}\bplan\b/i.test(text)
+  );
+};
+
+const hasCraftingSignals = (content: string) => /(?:```)?(activities|itinerary|hotels|flights|travelinfo|destination_enrich)\b/i.test(content);
+
+const HorizontalCarousel = forwardRef<HTMLDivElement, { children: React.ReactNode }>(({ children }, ref) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -218,7 +270,7 @@ const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="relative mt-4">
+    <div ref={ref} className="relative mt-4">
       {canScrollLeft && (
         <button onClick={() => scroll("left")} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-background border border-border rounded-full flex items-center justify-center shadow-lg hover:bg-muted transition-colors">
           <ChevronLeft className="h-4 w-4" />
@@ -234,7 +286,9 @@ const HorizontalCarousel = ({ children }: { children: React.ReactNode }) => {
       </div>
     </div>
   );
-};
+});
+
+HorizontalCarousel.displayName = "HorizontalCarousel";
 
 const Chat = () => {
   const { user, loading: authLoading, signOut } = useAuth();
