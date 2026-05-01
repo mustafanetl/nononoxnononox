@@ -7,6 +7,7 @@ type MapPoint = {
   lng: number;
   type: "hotel" | "activity";
   day?: number;
+  photo?: string;
 };
 
 type Props = {
@@ -47,8 +48,8 @@ const TripMap = ({ points, activeDay, onMarkerClick }: Props) => {
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-        { attribution: '© OpenStreetMap © CARTO' }
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        { attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 20 }
       ).addTo(map);
 
       mapInstanceRef.current = map;
@@ -101,30 +102,26 @@ const TripMap = ({ points, activeDay, onMarkerClick }: Props) => {
 
     filtered.forEach((p, idx) => {
       const isActive = activeDay != null;
-      const size = isActive ? 34 : 28;
+      const size = isActive ? 48 : 40;
+      const ringColor = p.type === "hotel" ? "hsl(var(--primary))" : "hsl(var(--foreground))";
+      const safePhoto = (p.photo || "").replace(/"/g, "&quot;");
+      const inner = safePhoto
+        ? `<div style="width:100%;height:100%;border-radius:9999px;background-image:url('${safePhoto}');background-size:cover;background-position:center;"></div>`
+        : `<div style="width:100%;height:100%;border-radius:9999px;background:${
+            p.type === "hotel" ? "hsl(var(--primary))" : "hsl(var(--foreground))"
+          };color:hsl(var(--background));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">${p.type === "hotel" ? "H" : (p.day ?? idx + 1)}</div>`;
+      const badge = p.day != null
+        ? `<div style="position:absolute;bottom:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9999px;background:hsl(var(--foreground));color:hsl(var(--background));font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid hsl(var(--background));box-shadow:0 2px 6px rgba(0,0,0,0.2);">${p.day}</div>`
+        : "";
       const icon = L.divIcon({
         className: "",
-        html: `<div class="${isActive ? "animate-pin-bounce" : ""}" style="background:${
-          p.type === "hotel"
-            ? "hsl(var(--primary))"
-            : "hsl(var(--destructive))"
-        };color:white;width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${isActive ? 13 : 11}px;font-weight:700;border:2.5px solid white;box-shadow:0 3px 12px rgba(0,0,0,0.25);transition:all 0.3s ease">${
-          p.type === "hotel" ? "H" : "A"
-        }</div>`,
-
+        html: `<div class="${isActive ? "animate-pin-bounce" : ""}" style="position:relative;width:${size}px;height:${size}px;cursor:pointer;"><div style="width:100%;height:100%;border-radius:9999px;padding:2px;background:hsl(var(--background));border:2px solid ${ringColor};box-shadow:0 6px 18px rgba(0,0,0,0.22);overflow:hidden;transition:transform 0.2s ease;">${inner}</div>${badge}</div>`,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
       });
 
-      const marker = L.marker([p.lat, p.lng], { icon })
-        .addTo(map)
-        .bindPopup(
-          `<div style="font-family:Inter,sans-serif;padding:2px 0"><b style="font-size:13px">${p.name}</b><br/><span style="font-size:11px;opacity:0.7">${p.type}${p.day ? ` • Day ${p.day}` : ""}</span></div>`
-        );
-
-      marker.on("click", () => {
-        onMarkerClick?.(p.name);
-      });
+      const marker = L.marker([p.lat, p.lng], { icon, riseOnHover: true }).addTo(map);
+      marker.on("click", () => { onMarkerClick?.(p.name); });
 
       markersRef.current.push(marker);
       bounds.extend([p.lat, p.lng]);
