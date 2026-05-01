@@ -456,12 +456,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           craftingIntervalRef.current = null;
         }
 
-        setTimeout(() => {
-          pendingCraftSeedRef.current = "";
-          setCraftingActive(false);
-          setCraftingPlan(null);
-          setCraftingOriginCity("");
-        }, 350);
+        // Wait two animation frames so React can mount + paint the plan card
+        // BEFORE we tear the crafting map down. Eliminates the white flicker
+        // between the two states.
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            pendingCraftSeedRef.current = "";
+            setCraftingActive(false);
+            setCraftingPlan(null);
+            setCraftingOriginCity("");
+          });
+        });
       }
     }, 300);
   }, []);
@@ -536,13 +541,18 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           if (craftingFinalizeTimeoutRef.current) {
             clearTimeout(craftingFinalizeTimeoutRef.current);
           }
+          // Quick handoff: rAF-chain so the plan paints before crafting tears down.
           craftingFinalizeTimeoutRef.current = setTimeout(() => {
-            pendingCraftSeedRef.current = "";
-            setCraftingActive(false);
-            setCraftingPlan(null);
-            setCraftingOriginCity("");
-            craftingFinalizeTimeoutRef.current = null;
-          }, 450);
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                pendingCraftSeedRef.current = "";
+                setCraftingActive(false);
+                setCraftingPlan(null);
+                setCraftingOriginCity("");
+                craftingFinalizeTimeoutRef.current = null;
+              });
+            });
+          }, 200);
         }
       }
     }
@@ -1043,7 +1053,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             </Button>
             <div className="flex items-center gap-2">
               <Compass className="h-5 w-5" />
-              <span className="font-semibold">Jolliday</span>
+              <span className="font-semibold hidden min-[400px]:inline">Jolliday</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
