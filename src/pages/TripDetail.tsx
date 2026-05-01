@@ -1215,13 +1215,17 @@ const useCountUp = (target: number, durationMs = 900) => {
 const StatTile: React.FC<{ label: string; value: number | string; icon?: React.ReactNode }> = ({ label, value, icon }) => {
   const isNumeric = typeof value === "number";
   const counted = useCountUp(isNumeric ? value : 0);
+  const landed = isNumeric ? counted === value : false;
   return (
     <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-2">
         {icon}
         {label}
       </div>
-      <p className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground tabular-nums">
+      <p
+        key={landed ? "landed" : "counting"}
+        className={`text-3xl sm:text-4xl font-bold tracking-tight text-foreground tabular-nums ${landed ? "animate-tile-pop" : ""}`}
+      >
         {isNumeric ? counted : value}
       </p>
     </div>
