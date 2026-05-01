@@ -349,8 +349,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
   // intercontinental flight phase — otherwise the plane appears to launch
   // from a random/default spot (looked like "always starts from UK").
   const hasOrigin = useMemo(() => !!lookupCityCoords(originCity || ""), [originCity]);
-  const effectiveFlightEnd = hasOrigin ? P_FLIGHT_END : 0;
-  const effectiveZoomEnd = hasOrigin ? P_ZOOM_END : 8; // tiny intro fade-in
+  const effectiveZoomEnd = hasOrigin ? P_ZOOM_END : 8; // tiny intro fade-in when no origin
 
   const flightArc = useMemo(
     () => buildArc(
