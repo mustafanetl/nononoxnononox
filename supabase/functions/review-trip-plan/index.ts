@@ -218,6 +218,10 @@ serve(async (req) => {
     const uniqueNames = Array.from(new Set(venues.map(v => v.name)));
     console.log(`Verifying ${uniqueNames.length} unique venues for "${destination}"`);
 
+    // Resolve destination country once so we can reject out-of-country venues.
+    const destGeo = await geocodeCountry(destination);
+    const destCountry = destGeo?.countryCode || "";
+
     const verifications: Record<string, Awaited<ReturnType<typeof verifyVenue>>> = {};
     const CONCURRENCY = 6;
     for (let i = 0; i < uniqueNames.length; i += CONCURRENCY) {
@@ -231,6 +235,29 @@ serve(async (req) => {
     for (const v of venues) {
       const r = verifications[v.name];
       if (r?.matched) {
+        // Country enforcement: reject venues that resolve outside the
+        // destination country. Use ISO country code first, fall back to
+        // a 300km radius check from the city center if Google didn't
+        // return address components.
+        let outsideCountry = false;
+        if (destCountry && r.countryCode && r.countryCode !== destCountry) {
+          outsideCountry = true;
+        } else if (
+          destGeo &&
+          typeof r.lat === "number" &&
+          typeof r.lng === "number" &&
+          haversineKm(destGeo.lat, destGeo.lng, r.lat, r.lng) > 300
+        ) {
+          outsideCountry = true;
+        }
+
+        if (outsideCountry) {
+          issues.push(
+            `${v.kind === "hotel" ? "Hotel" : v.kind === "activity" ? "Activity" : "Itinerary venue"} "${v.name}" is OUTSIDE ${destination}${destCountry ? ` (${destCountry})` : ""} — Google placed it in ${r.countryCode || "another region"}. Replace with a real venue physically located IN ${destination}.`
+          );
+          continue;
+        }
+
         // Use real coords + matched display name
         if (typeof r.lat === "number" && typeof r.lng === "number") {
           v.ref.lat = r.lat;
