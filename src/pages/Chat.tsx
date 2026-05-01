@@ -337,7 +337,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     } catch {
       return "Home";
     }
-  }, [craftingActive]);
+  }, []);
 
   // Track whether assistant has started streaming content for current response
   const hasStreamedContent = useMemo(() => {
