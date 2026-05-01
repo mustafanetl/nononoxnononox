@@ -529,12 +529,23 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
         if (hasRenderableFullPlan(lastMsg.content)) {
           setCraftingCompleted(true);
-          craftingProgressRef.current = 100;
-          setCraftingPlan((prev) => prev ? { ...prev, progress: 100 } : prev);
+          craftingProgressRef.current = Math.max(craftingProgressRef.current, 58);
+          setCraftingPlan((prev) => prev ? { ...prev, progress: Math.max(prev.progress, 58) } : prev);
           if (craftingIntervalRef.current) {
             clearInterval(craftingIntervalRef.current);
             craftingIntervalRef.current = null;
           }
+          if (craftingFinalizeTimeoutRef.current) {
+            clearTimeout(craftingFinalizeTimeoutRef.current);
+          }
+          craftingFinalizeTimeoutRef.current = setTimeout(() => {
+            pendingCraftSeedRef.current = "";
+            setCraftingActive(false);
+            setCraftingCompleted(false);
+            setCraftingPlan(null);
+            setCraftingOriginCity("");
+            craftingFinalizeTimeoutRef.current = null;
+          }, 950);
         }
       }
     }
@@ -546,6 +557,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       if (craftingIntervalRef.current) {
         clearInterval(craftingIntervalRef.current);
         craftingIntervalRef.current = null;
+      }
+      if (craftingFinalizeTimeoutRef.current) {
+        clearTimeout(craftingFinalizeTimeoutRef.current);
+        craftingFinalizeTimeoutRef.current = null;
       }
     };
   }, []);
