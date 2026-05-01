@@ -605,7 +605,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
       const acts = geometryPoints.activities;
 
       // === PHASE 1: Flight (0 -> P_FLIGHT_END) ===
-      if (p < P_FLIGHT_END) {
+      if (hasOrigin && p < P_FLIGHT_END) {
         if (phaseRef.current !== 1) {
           phaseRef.current = 1;
           flyStartedRef.current = false;
@@ -640,11 +640,16 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
         setCaptionThrottled(`Plotting your route to ${destinationCity || "your destination"}…`);
       }
       // === PHASE 2: Cinematic flyTo into the city ===
-      else if (p < P_ZOOM_END) {
+      else if (p < effectiveZoomEnd) {
         const t = clamp((p - P_FLIGHT_END) / (P_ZOOM_END - P_FLIGHT_END), 0, 1);
-        flightRouteRef.current.setLatLngs(flightArc as any);
-        planeMarkerRef.current.setLatLng(flightArc[flightArc.length - 1]);
-        planeMarkerRef.current.setOpacity(clamp(1 - t * 1.5, 0, 1));
+        if (hasOrigin) {
+          flightRouteRef.current.setLatLngs(flightArc as any);
+          planeMarkerRef.current.setLatLng(flightArc[flightArc.length - 1]);
+          planeMarkerRef.current.setOpacity(clamp(1 - t * 1.5, 0, 1));
+        } else {
+          flightRouteRef.current.setLatLngs([] as any);
+          planeMarkerRef.current.setOpacity(0);
+        }
         if (destinationMarkerRef.current) destinationMarkerRef.current.setOpacity(1);
         pointMarkersRef.current.forEach((m) => m.setOpacity(0));
         tourRouteRef.current.setLatLngs([] as any);
@@ -691,7 +696,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
           }
         }
 
-        const tourT = clamp((p - P_ZOOM_END) / (P_TOUR_END - P_ZOOM_END), 0, 1);
+        const tourT = clamp((p - effectiveZoomEnd) / (P_TOUR_END - effectiveZoomEnd), 0, 1);
         const totalActsLocal = acts.length;
         if (totalActsLocal === 0) {
           tourRouteRef.current.setLatLngs([] as any);
