@@ -95,11 +95,37 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
       mapInstanceRef.current = map;
       fittedRef.current = false;
       renderLayers(true);
+
+      // Ensure Leaflet recalculates size once the container has been laid out.
+      // Without this, the initial fit happens against a stale/zero-sized
+      // container and pins/lines appear off until the user interacts.
+      const invalidateAndRefit = () => {
+        if (disposedRef.current || !mapInstanceRef.current) return;
+        try { mapInstanceRef.current.invalidateSize(false); } catch {}
+        fittedRef.current = false;
+        renderLayers(true);
+      };
+      // Run a few times across frames to catch async layout (fonts, images, hero).
+      requestAnimationFrame(invalidateAndRefit);
+      setTimeout(invalidateAndRefit, 150);
+      setTimeout(invalidateAndRefit, 600);
+
+      // Watch container size — first real resize after mount triggers a refit.
+      if (typeof ResizeObserver !== "undefined" && mapRef.current) {
+        const ro = new ResizeObserver(() => {
+          if (disposedRef.current || !mapInstanceRef.current) return;
+          try { mapInstanceRef.current.invalidateSize(false); } catch {}
+        });
+        ro.observe(mapRef.current);
+        roRef.current = ro;
+      }
     };
 
     load();
     cleanup = () => {
       disposedRef.current = true;
+      try { roRef.current?.disconnect(); } catch {}
+      roRef.current = null;
       try { mapInstanceRef.current?.off(); } catch {}
       try { mapInstanceRef.current?.remove(); } catch {}
       mapInstanceRef.current = null;
