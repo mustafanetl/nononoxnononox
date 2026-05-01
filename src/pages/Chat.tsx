@@ -665,7 +665,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     return undefined;
   }, [craftingPlan?.destination, enrichedData]);
 
-  const shouldShowCraftingMap = isCraftingPlan && craftingPlan && !craftingCompleted;
+  const shouldShowCraftingMap = isCraftingPlan && !!craftingPlan;
 
   // Eager enrichment during crafting so the map shows real photos in real time.
   // Fires whenever we have a destination + at least one activity name and we haven't
