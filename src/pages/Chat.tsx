@@ -1079,56 +1079,13 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
                 {/* Plan crafting animation — full width, prominent */}
                 {isCraftingPlan && craftingPlan && (
-                  <div className="flex flex-col items-center justify-center py-12 animate-fade-in">
-                    <div className="w-full max-w-md mx-auto text-center">
-                      <div className="relative mb-6">
-                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto animate-pulse">
-                          <Compass className="h-8 w-8 text-primary" />
-                        </div>
-                      </div>
-                      <p className="text-lg font-semibold text-foreground mb-1">
-                        {craftingPlan.destination
-                          ? `Crafting your ${craftingPlan.destination} plan...`
-                          : "Crafting your perfect plan..."}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-6">
-                        {craftingPlanType === "local" ? (
-                          craftingPlan.progress < 20
-                            ? "Finding the best spots nearby..."
-                            : craftingPlan.progress < 40
-                            ? "Curating must-see experiences..."
-                            : craftingPlan.progress < 60
-                            ? "Building your day-by-day plan..."
-                            : craftingPlan.progress < 80
-                            ? "Adding insider tips & hidden gems..."
-                            : "Polishing final details ✨"
-                        ) : (
-                          craftingPlan.progress < 15
-                            ? "Searching flights and routes..."
-                            : craftingPlan.progress < 30
-                            ? "Scouting the best hotels..."
-                            : craftingPlan.progress < 50
-                            ? "Curating must-see experiences..."
-                            : craftingPlan.progress < 65
-                            ? "Building your day-by-day itinerary..."
-                            : craftingPlan.progress < 80
-                            ? "Adding insider recommendations..."
-                            : "Polishing final details ✨"
-                        )}
-                      </p>
-                      <div className="flex items-center gap-3 max-w-xs mx-auto">
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
-                            style={{ width: `${craftingPlan.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium text-foreground tabular-nums w-10">
-                          {Math.round(craftingPlan.progress)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <PlanCraftingMap
+                    originCity={originCity}
+                    destinationCity={craftingPlan.destination || "your destination"}
+                    activities={craftingActivities}
+                    destinationPhoto={craftingDestinationPhoto}
+                    progress={craftingPlan.progress}
+                  />
                 )}
 
                 {isLoading && !isCraftingPlan && (!isPremium || !hasStreamedContent) && (
