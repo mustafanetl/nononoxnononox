@@ -1317,7 +1317,7 @@ const ClosingCard: React.FC<{
   t: TripStrings;
 }> = ({ destination, days, backgroundImage, isShared, onShare, onExportPDF, onSave, saving, sharing, t }) => (
   <div className="max-w-5xl mx-auto px-4 sm:px-8 mt-20 mb-12">
-    <div className="relative overflow-hidden rounded-3xl border border-border min-h-[280px]">
+    <div className="relative overflow-hidden rounded-3xl border border-border min-h-[320px] animate-share-breathe">
       {backgroundImage ? (
         <img src={backgroundImage} alt="" className="absolute inset-0 w-full h-full object-cover animate-ken-burns" />
       ) : (
@@ -1328,27 +1328,27 @@ const ClosingCard: React.FC<{
         <div className="inline-flex items-center gap-2 text-white/80 text-[10px] uppercase tracking-[0.35em] mb-4">
           <Compass className="h-3.5 w-3.5" /> {t.craftedBy}
         </div>
-        <h3 className="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight max-w-2xl">
+        <h3 className="text-3xl sm:text-6xl font-bold text-white tracking-tight leading-[1.05] max-w-3xl">
           {t.closingHeadline(days, destination)}
         </h3>
         <p className="mt-3 text-sm text-white/70 max-w-md">
           {t.closingSub}
         </p>
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
           {!isShared && (
             <Button onClick={onSave} disabled={saving} size="lg"
-              className="gap-2 bg-white text-black hover:bg-white/90 h-11 px-6">
+              className="press-bounce gap-2 bg-white text-black hover:bg-white/90 h-12 px-7 text-base">
               <Bookmark className="h-4 w-4" /> {saving ? t.saving : t.saveTrip}
             </Button>
           )}
           <Button onClick={onShare} disabled={sharing} size="lg" variant="outline"
-            className="gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-11 px-6">
+            className="press-bounce gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-12 px-7 text-base">
             {isShared ? <Link2 className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
             {isShared ? t.copyLink : sharing ? t.sharing : t.shareTrip}
           </Button>
           {!isShared && (
             <Button onClick={onExportPDF} size="lg" variant="outline"
-              className="gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-11 px-6">
+              className="press-bounce gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-12 px-7 text-base">
               <Download className="h-4 w-4" /> {t.downloadPdf}
             </Button>
           )}
