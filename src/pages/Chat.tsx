@@ -21,6 +21,7 @@ import CurrencyConverter from "@/components/CurrencyConverter";
 import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
 import PlanPreviewGate from "@/components/PlanPreviewGate";
+import PlanCraftingMap, { type CraftActivity } from "@/components/PlanCraftingMap";
 import PlaceShowcase from "@/components/PlaceShowcase";
 import PlacesGallery, { PlaceItem } from "@/components/PlacesGallery";
 import PaywallModal from "@/components/PaywallModal";
