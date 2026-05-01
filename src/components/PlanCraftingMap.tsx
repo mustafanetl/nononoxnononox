@@ -408,16 +408,19 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
     const map = mapRef.current;
 
     const tick = () => {
-      // Smoothly chase the target progress. Use a stronger pull when far behind
-      // (so the very first frames don't crawl), softer when close (so it settles
-      // gracefully without overshoot or jitter).
+      // Time-based exponential smoothing — frame-rate independent, no jitter
+      const now = performance.now();
+      const lastT = (lastTickRef.current ?? now);
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastT) / 1000)); // clamp dt to 1–50ms
+      lastTickRef.current = now;
       const target = targetProgressRef.current;
       const current = displayedProgressRef.current;
       const diff = target - current;
       const absDiff = Math.abs(diff);
-      // Adaptive easing: 0.18 when >5pts behind, 0.10 otherwise
-      const k = absDiff > 5 ? 0.18 : 0.10;
-      const next = absDiff < 0.005 ? target : current + diff * k;
+      // Half-life smoothing: ~180ms when far, ~320ms when close
+      const halfLife = absDiff > 5 ? 0.18 : 0.32;
+      const alpha = 1 - Math.pow(0.5, dt / halfLife);
+      const next = absDiff < 0.01 ? target : current + diff * alpha;
       displayedProgressRef.current = next;
 
       const p = next;
