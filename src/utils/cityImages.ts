@@ -170,3 +170,81 @@ export const getStockCityImage = (city: string): string => {
   // 3) Deterministic fallback from the curated generic pool
   return GENERIC_HERO_POOL[hashCity(flat || city.toLowerCase()) % GENERIC_HERO_POOL.length];
 };
+
+// Returns true when a curated, hand-picked hero exists for this city.
+// Used to decide whether to bother hitting Wikipedia.
+export const hasCuratedHero = (city: string): boolean => {
+  if (!city) return false;
+  const flat = normalizeCityKey(city);
+  if (STOCK_CITY_HEROES[flat]) return true;
+  const tokens = city.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  return tokens.some((t) => !!STOCK_CITY_HEROES[t]);
+};
+
+// In-memory + sessionStorage cache for Wikipedia lead images so we only ever
+// hit the network once per city per session.
+const wikiCache: Record<string, string | null> = {};
+const WIKI_STORAGE_PREFIX = "jolliday-wiki-img:";
+
+const readWikiCache = (key: string): string | null | undefined => {
+  if (key in wikiCache) return wikiCache[key];
+  try {
+    const raw = sessionStorage.getItem(WIKI_STORAGE_PREFIX + key);
+    if (raw === null) return undefined;
+    const parsed = raw === "__none__" ? null : raw;
+    wikiCache[key] = parsed;
+    return parsed;
+  } catch {
+    return undefined;
+  }
+};
+
+const writeWikiCache = (key: string, value: string | null) => {
+  wikiCache[key] = value;
+  try {
+    sessionStorage.setItem(WIKI_STORAGE_PREFIX + key, value === null ? "__none__" : value);
+  } catch {
+    // Storage may be full or disabled — ignore, in-memory cache still works.
+  }
+};
+
+// Strip "Paris, France" -> "Paris" so we hit the right Wikipedia article.
+const cleanCityForWiki = (city: string) => city.split(/[,;|]/)[0].trim();
+
+// Fetches the lead image of the city's Wikipedia article. Free, no API key,
+// any city in any language, always actually the right city.
+export const fetchWikipediaCityImage = async (city: string): Promise<string | null> => {
+  if (!city) return null;
+  const key = normalizeCityKey(city);
+  const cached = readWikiCache(key);
+  if (cached !== undefined) return cached;
+
+  const title = cleanCityForWiki(city);
+  if (!title) {
+    writeWikiCache(key, null);
+    return null;
+  }
+  try {
+    const res = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}?redirect=true`,
+      { headers: { Accept: "application/json" } }
+    );
+    if (!res.ok) {
+      writeWikiCache(key, null);
+      return null;
+    }
+    const data = await res.json();
+    // Prefer the high-res `originalimage`; fall back to `thumbnail`.
+    const url: string | undefined =
+      data?.originalimage?.source || data?.thumbnail?.source;
+    if (!url) {
+      writeWikiCache(key, null);
+      return null;
+    }
+    writeWikiCache(key, url);
+    return url;
+  } catch {
+    writeWikiCache(key, null);
+    return null;
+  }
+};
