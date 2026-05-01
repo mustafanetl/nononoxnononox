@@ -269,17 +269,59 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   const totalBudget = flightsCost + hotelsCost + activitiesCost;
   const currency = data.flights[0]?.currency || data.hotels[0]?.currency || data.activities[0]?.currency || "$";
 
-  const mapPoints: MapPoint[] = [
-    ...data.hotels.filter((h: any) => h.lat && h.lng).map((h: any) => ({
-      name: h.name, lat: h.lat, lng: h.lng, type: "hotel" as const,
+  // Build map pins from the actual itinerary slots (the source of truth the user sees).
+  // Each slot becomes one numbered pin on its real day, in slot order.
+  const slotPins: MapPoint[] = [];
+  for (const day of data.itinerary as any[]) {
+    const slots = day?.slots || [];
+    let order = 0;
+    slots.forEach((slot: any, slotIdx: number) => {
+      const coords = slotCoords(slot);
+      if (!coords) return;
+      order += 1;
+      const matched = matchActivity(slot?.venue);
+      const slotPhotoMatch = resolveVenuePhotoMatch(slot?.venue, tripData.itineraryVenuePhotos);
+      const photo =
+        slotPhotoMatch?.thumbPhoto ||
+        slotPhotoMatch?.photo ||
+        matched?.realPhoto;
+      slotPins.push({
+        name: slot.venue,
+        lat: coords.lat,
+        lng: coords.lng,
+        type: "activity",
+        day: day.day,
+        order,
+        slotIdx,
+        photo,
+      });
+    });
+  }
+  // Fallback: if itinerary has no resolvable coords, fall back to top-level activities.
+  if (slotPins.length === 0) {
+    data.activities
+      .filter((a: any) => typeof a.lat === "number" && typeof a.lng === "number")
+      .forEach((a: any, i: number) => {
+        slotPins.push({
+          name: a.name,
+          lat: a.lat,
+          lng: a.lng,
+          type: "activity",
+          order: i + 1,
+          photo: a.realPhoto || (Array.isArray(a.realPhotos) ? a.realPhotos[0] : undefined),
+        });
+      });
+  }
+  const hotelPins: MapPoint[] = data.hotels
+    .filter((h: any) => typeof h.lat === "number" && typeof h.lng === "number")
+    .map((h: any) => ({
+      name: h.name,
+      lat: h.lat,
+      lng: h.lng,
+      type: "hotel" as const,
       photo: (h as any).realPhoto || (h as any).image,
-    })),
-    ...data.activities.filter((a: any) => a.lat && a.lng).map((a: any, i: number) => ({
-      name: a.name, lat: a.lat, lng: a.lng, type: "activity" as const,
-      day: data.itinerary.length > 0 ? ((i % data.itinerary.length) + 1) : undefined,
-      photo: (a as any).realPhoto || (Array.isArray((a as any).realPhotos) ? (a as any).realPhotos[0] : undefined),
-    })),
-  ];
+    }));
+  const mapPoints: MapPoint[] = [...slotPins, ...hotelPins];
 
   // pick a photo for each day from venues actually scheduled on that day
   const photoForDay = (dayNum: number): string | undefined => {
