@@ -35,6 +35,18 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
 const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
+// Bearing in degrees from point A to point B (0 = north, 90 = east)
+const bearingDeg = (a: [number, number], b: [number, number]) => {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const lat1 = toRad(a[0]);
+  const lat2 = toRad(b[0]);
+  const dLng = toRad(b[1] - a[1]);
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+};
+
 const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "•";
 
@@ -142,6 +154,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
   // rAF state
   const rafRef = useRef<number | null>(null);
   const displayedProgressRef = useRef(0);
+  const lastTickRef = useRef<number | null>(null);
   const targetProgressRef = useRef(0);
   const currentViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   // Precomputed view targets so the rAF loop never recomputes bounds per frame
@@ -244,7 +257,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
       planeMarkerRef.current = L.marker([DEFAULT_ORIGIN.lat, DEFAULT_ORIGIN.lng], {
         icon: L.divIcon({
           className: "",
-          html: `<div class="plan-plane-icon" style="width:40px;height:40px;border-radius:9999px;background:hsl(var(--foreground));color:hsl(var(--background));display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,0.28);border:2px solid hsl(var(--background));will-change:transform;transition:transform 120ms linear;"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" stroke="none" style="transform:rotate(-45deg);"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16z"/></svg></div>`,
+          html: `<div class="plan-plane-icon" style="width:40px;height:40px;border-radius:9999px;background:hsl(var(--foreground));color:hsl(var(--background));display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,0.28);border:2px solid hsl(var(--background));will-change:transform;"><div class="plan-plane-rot" style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;transform:rotate(0deg);transition:transform 180ms linear;will-change:transform;"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" stroke="none"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16z" transform="rotate(-45 12 12)"/></svg></div></div>`,
           iconSize: [36, 36],
           iconAnchor: [18, 18],
         }),
@@ -396,16 +409,19 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
     const map = mapRef.current;
 
     const tick = () => {
-      // Smoothly chase the target progress. Use a stronger pull when far behind
-      // (so the very first frames don't crawl), softer when close (so it settles
-      // gracefully without overshoot or jitter).
+      // Time-based exponential smoothing — frame-rate independent, no jitter
+      const now = performance.now();
+      const lastT = (lastTickRef.current ?? now);
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastT) / 1000)); // clamp dt to 1–50ms
+      lastTickRef.current = now;
       const target = targetProgressRef.current;
       const current = displayedProgressRef.current;
       const diff = target - current;
       const absDiff = Math.abs(diff);
-      // Adaptive easing: 0.18 when >5pts behind, 0.10 otherwise
-      const k = absDiff > 5 ? 0.18 : 0.10;
-      const next = absDiff < 0.005 ? target : current + diff * k;
+      // Half-life smoothing: ~180ms when far, ~320ms when close
+      const halfLife = absDiff > 5 ? 0.18 : 0.32;
+      const alpha = 1 - Math.pow(0.5, dt / halfLife);
+      const next = absDiff < 0.01 ? target : current + diff * alpha;
       displayedProgressRef.current = next;
 
       const p = next;
@@ -431,6 +447,16 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
         tourRouteRef.current.setLatLngs([] as any);
         planeMarkerRef.current.setLatLng(position);
         planeMarkerRef.current.setOpacity(1);
+        // Rotate plane to face flight direction
+        {
+          const scaled = clamp(t, 0, 1) * (flightArc.length - 1);
+          const i = Math.min(Math.floor(scaled), flightArc.length - 2);
+          const ahead = flightArc[Math.min(i + 2, flightArc.length - 1)];
+          const bearing = bearingDeg(position, ahead);
+          const el = (planeMarkerRef.current as any)?.getElement?.();
+          const rot = el?.querySelector?.(".plan-plane-rot") as HTMLElement | null;
+          if (rot) rot.style.transform = `rotate(${bearing}deg)`;
+        }
         if (destinationMarkerRef.current) {
           const fadeIn = clamp((t - 0.85) / 0.15, 0, 1);
           destinationMarkerRef.current.setOpacity(fadeIn);
