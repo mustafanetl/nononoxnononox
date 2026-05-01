@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
+import { useCityImage } from "@/hooks/useCityImages";
 
 type Dest = { name: string; country: string; tagline: string };
 
@@ -12,27 +13,42 @@ const destinations: Dest[] = [
   { name: "Dubai", country: "UAE", tagline: "For skylines and desert nights." },
 ];
 
-const Card = ({ d, className = "" }: { d: Dest; className?: string }) => (
-  <Link
-    to={`/chat?q=Plan a trip to ${d.name}`}
-    className={`group relative block overflow-hidden rounded-lg border border-border bg-gradient-to-br from-muted/30 via-card to-card hover:from-muted/60 hover:via-card hover:to-card transition-colors ${className}`}
-  >
-    <div className="absolute top-4 right-4 sm:top-5 sm:right-5 opacity-40 group-hover:opacity-100 transition-opacity">
-      <ArrowUpRight className="h-5 w-5 text-foreground" />
-    </div>
-    <div className="absolute inset-x-5 sm:inset-x-6 bottom-5 sm:bottom-6">
-      <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        {d.country}
+const Card = ({ d, className = "" }: { d: Dest; className?: string }) => {
+  const image = useCityImage(d.name);
+  return (
+    <Link
+      to={`/chat?q=Plan a trip to ${d.name}`}
+      className={`group relative block overflow-hidden rounded-lg border border-border bg-gradient-to-br from-muted/30 via-card to-card transition-colors ${className}`}
+    >
+      {image && (
+        <img
+          src={image}
+          alt={`${d.name}, ${d.country}`}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover opacity-70 group-hover:opacity-90 group-hover:scale-105 transition-all duration-700"
+        />
+      )}
+      {/* Readability gradient over photo */}
+      {image && (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+      )}
+      <div className="absolute top-4 right-4 sm:top-5 sm:right-5 opacity-60 group-hover:opacity-100 transition-opacity">
+        <ArrowUpRight className={`h-5 w-5 ${image ? "text-white" : "text-foreground"}`} />
       </div>
-      <div className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mt-1 text-foreground group-hover:underline underline-offset-[6px] decoration-2">
-        {d.name}
+      <div className="absolute inset-x-5 sm:inset-x-6 bottom-5 sm:bottom-6">
+        <div className={`text-[9px] sm:text-[10px] uppercase tracking-[0.2em] ${image ? "text-white/70" : "text-muted-foreground"}`}>
+          {d.country}
+        </div>
+        <div className={`text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mt-1 group-hover:underline underline-offset-[6px] decoration-2 ${image ? "text-white" : "text-foreground"}`}>
+          {d.name}
+        </div>
+        <div className={`mt-2 text-xs sm:text-sm max-w-[18rem] ${image ? "text-white/80" : "text-muted-foreground"}`}>
+          {d.tagline}
+        </div>
       </div>
-      <div className="mt-2 text-xs sm:text-sm text-muted-foreground max-w-[18rem]">
-        {d.tagline}
-      </div>
-    </div>
-  </Link>
-);
+    </Link>
+  );
+};
 
 const DestinationsMosaic = () => {
   return (
