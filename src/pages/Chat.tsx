@@ -21,6 +21,7 @@ import CurrencyConverter from "@/components/CurrencyConverter";
 import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
 import PlanPreviewGate from "@/components/PlanPreviewGate";
+import PlanCraftingMap, { type CraftActivity } from "@/components/PlanCraftingMap";
 import PlaceShowcase from "@/components/PlaceShowcase";
 import PlacesGallery, { PlaceItem } from "@/components/PlacesGallery";
 import PaywallModal from "@/components/PaywallModal";
@@ -373,6 +374,80 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [craftingPlan, setCraftingPlan] = useState<{ destination: string; progress: number } | null>(null);
   const prevActiveId = useRef(activeId);
   const prefsSynced = useRef(false);
+
+  // Origin city for the crafting map — read from local prefs (synced with Settings)
+  const originCity = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("jolliday-preferences");
+      const p = raw ? JSON.parse(raw) : {};
+      return (p?.homeCity as string) || "Home";
+    } catch {
+      return "Home";
+    }
+  }, [craftingActive]);
+
+  // Activities being streamed for the current crafting message — fed to PlanCraftingMap.
+  const craftingActivities = useMemo<CraftActivity[]>(() => {
+    if (!craftingActive) return [];
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant") return [];
+    const c = last.content;
+    const names: string[] = [];
+    const seen = new Set<string>();
+
+    // Extract from ```activities blocks
+    const actBlocks = c.match(/```activities\s*([\s\S]*?)(```|$)/g) || [];
+    for (const block of actBlocks) {
+      const inner = block.replace(/```activities\s*/, "").replace(/```$/, "");
+      const matches = inner.match(/"name"\s*:\s*"([^"]+)"/g) || [];
+      for (const m of matches) {
+        const n = m.replace(/"name"\s*:\s*"/, "").replace(/"$/, "").trim();
+        if (n && !seen.has(n.toLowerCase())) {
+          seen.add(n.toLowerCase());
+          names.push(n);
+        }
+      }
+    }
+    // Extract from ```itinerary blocks (venues)
+    const itinBlocks = c.match(/```itinerary\s*([\s\S]*?)(```|$)/g) || [];
+    for (const block of itinBlocks) {
+      const inner = block.replace(/```itinerary\s*/, "").replace(/```$/, "");
+      const matches = inner.match(/"venue"\s*:\s*"([^"]+)"/g) || [];
+      for (const m of matches) {
+        const n = m.replace(/"venue"\s*:\s*"/, "").replace(/"$/, "").trim();
+        if (n && !seen.has(n.toLowerCase())) {
+          seen.add(n.toLowerCase());
+          names.push(n);
+        }
+      }
+    }
+
+    const dest = craftingPlan?.destination || "";
+    const enrich = dest ? enrichedData[dest] : null;
+    const photoFor = (name: string): string | undefined => {
+      if (!enrich) return undefined;
+      const lower = name.toLowerCase();
+      const place =
+        enrich?.places?.find?.((p: any) => p?.name?.toLowerCase() === lower) ||
+        enrich?.places?.find?.((p: any) => p?.name?.toLowerCase()?.includes(lower)) ||
+        null;
+      return place?.photo || place?.image || place?.thumbUrl || undefined;
+    };
+
+    return names.slice(0, 5).map((n) => ({ name: n, photo: photoFor(n) }));
+  }, [craftingActive, messages, enrichedData, craftingPlan?.destination]);
+
+  // Destination photo for the crafting map (uses cached city image if present)
+  const craftingDestinationPhoto = useMemo<string | undefined>(() => {
+    const dest = craftingPlan?.destination || "";
+    if (!dest) return undefined;
+    const enrich = enrichedData[dest];
+    return (
+      enrich?.images?.[0]?.thumbUrl ||
+      enrich?.images?.[0]?.url ||
+      undefined
+    );
+  }, [craftingPlan?.destination, enrichedData]);
 
   // Memoize parsed messages to avoid re-parsing on every render
   const parsedMessages = useMemo(() => {
@@ -1004,56 +1079,13 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
                 {/* Plan crafting animation — full width, prominent */}
                 {isCraftingPlan && craftingPlan && (
-                  <div className="flex flex-col items-center justify-center py-12 animate-fade-in">
-                    <div className="w-full max-w-md mx-auto text-center">
-                      <div className="relative mb-6">
-                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto animate-pulse">
-                          <Compass className="h-8 w-8 text-primary" />
-                        </div>
-                      </div>
-                      <p className="text-lg font-semibold text-foreground mb-1">
-                        {craftingPlan.destination
-                          ? `Crafting your ${craftingPlan.destination} plan...`
-                          : "Crafting your perfect plan..."}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-6">
-                        {craftingPlanType === "local" ? (
-                          craftingPlan.progress < 20
-                            ? "Finding the best spots nearby..."
-                            : craftingPlan.progress < 40
-                            ? "Curating must-see experiences..."
-                            : craftingPlan.progress < 60
-                            ? "Building your day-by-day plan..."
-                            : craftingPlan.progress < 80
-                            ? "Adding insider tips & hidden gems..."
-                            : "Polishing final details ✨"
-                        ) : (
-                          craftingPlan.progress < 15
-                            ? "Searching flights and routes..."
-                            : craftingPlan.progress < 30
-                            ? "Scouting the best hotels..."
-                            : craftingPlan.progress < 50
-                            ? "Curating must-see experiences..."
-                            : craftingPlan.progress < 65
-                            ? "Building your day-by-day itinerary..."
-                            : craftingPlan.progress < 80
-                            ? "Adding insider recommendations..."
-                            : "Polishing final details ✨"
-                        )}
-                      </p>
-                      <div className="flex items-center gap-3 max-w-xs mx-auto">
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
-                            style={{ width: `${craftingPlan.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium text-foreground tabular-nums w-10">
-                          {Math.round(craftingPlan.progress)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <PlanCraftingMap
+                    originCity={originCity}
+                    destinationCity={craftingPlan.destination || "your destination"}
+                    activities={craftingActivities}
+                    destinationPhoto={craftingDestinationPhoto}
+                    progress={craftingPlan.progress}
+                  />
                 )}
 
                 {isLoading && !isCraftingPlan && (!isPremium || !hasStreamedContent) && (
