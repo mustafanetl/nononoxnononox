@@ -1,92 +1,70 @@
-## Goal
+## Why the current map feels messy
 
-Replace the current "Crafting your plan…" progress-bar/spinner with a cinematic animated map that:
-1. Shows a flight line drawing itself from the user's origin city to the destination.
-2. Then drops circular photo "pins" of the destination + each planned activity, one by one, connected by drawn lines.
+Reading `src/pages/TripDetail.tsx` and `src/components/TripMap.tsx`:
 
-This plays during the ~12s plan-crafting window (and stays in sync with streaming end), in the same spot the current crafting card occupies.
+1. **Wrong day assignment.** Activity pins get a day via `(i % itinerary.length) + 1` — pure round-robin, not based on the actual itinerary slots. Day badges and per-day filtering are lying.
+2. **Pins don't reflect the real plan.** Map points come from `data.activities` (3–5 generic cards), not from the itinerary slots the user actually sees on the page (6–8 stops × N days). So the map and the day-by-day timeline disagree.
+3. **Click handler is unreliable.** `data.activities.find(a => a.name === name)` only matches a small slice; itinerary slot venues mostly fall through and nothing opens. When it does open it's the wrong activity.
+4. **Visual mess.** 40px photo bubbles overlap heavily in dense city centers, with thick white rings + day badges + photos all fighting. No way to focus on a single day.
+5. **Polyline is wrong.** It connects everything in insertion order (hotels then activities), zig-zagging across the city instead of tracing each day's route.
 
-## Visual sequence (~12s)
+## What we'll build
 
-```text
-phase 1 (0–4s)  flight leg
-  origin ●———————————————✈———————————————→ ● destination
-  (animated dashed line drawing left→right, plane glyph traveling along it,
-   destination circle pops in with city photo)
+A clean, itinerary-driven map that mirrors the day-by-day section, with a day filter, ordered route, smaller numbered chips, and a click that always opens the matching activity card.
 
-phase 2 (4–11s)  activities
-  destination ●——→ ◯ activity 1 (photo)
-                 \
-                  ——→ ◯ activity 2 (photo)
-                       \
-                        ——→ ◯ activity 3 ...
-  (each new circle fades+scales in with its Google Places photo, line draws
-   from the previous point to it, count "1 of 5… 2 of 5…" updates below)
+### 1. Rebuild map points from the itinerary (`src/pages/TripDetail.tsx`)
 
-phase 3 (11–12s)  settle
-  full route visible, soft pulse on destination, then fade out as the real
-  plan content reveals.
-```
+Replace the current `mapPoints` derivation. New logic:
 
-Photos are circular thumbnails (`rounded-full`, 56–72px) with a thin white ring + soft shadow, matching the existing minimalist B/W aesthetic.
+- For each `day.slots[i]` with resolvable lat/lng (via the matched activity from `matchActivity` or from `resolveVenuePhotoMatch` address fallback): emit one point with `{ name: slot.venue, lat, lng, day: day.day, order: i+1, photo, type: "activity" }`.
+- Skip slots without coords instead of inventing them.
+- Add hotel(s) once with `type: "hotel"`, no day, no order number.
+- Drop the round-robin `(i % itinerary.length) + 1` assignment entirely.
 
-## What replaces what
+This makes the map match what's shown in the day-by-day section exactly.
 
-In `src/pages/Chat.tsx` (lines ~1006–1057), the entire "Plan crafting animation" block (Compass icon + label + progress bar) is replaced by a new component `<PlanCraftingMap />`.
+### 2. Add per-day filter UI in the map header
 
-Caption underneath stays minimal:
-- Phase 1: `Plotting your route to {destination}…`
-- Phase 2: `Pinning {activity name}… (2 of 5)`
-- Phase 3: `Almost ready…`
+In `TripMap.tsx`, render a small pill row above the map (or in the header bar): `All · Day 1 · Day 2 · …` derived from the unique days in `points`. Selecting one filters markers + polyline and refits bounds. "All" shows everything.
 
-No percentage number, no progress bar.
+State for `activeDay` lives inside `TripMap` (so other parts of the page don't need to change), default `null` = All.
 
-## New component: `src/components/PlanCraftingMap.tsx`
+### 3. Cleaner marker design
 
-Props:
-- `originCity: string` (e.g. "Stockholm")
-- `destinationCity: string` (e.g. "Linköping")
-- `activities: { name: string; photo?: string }[]` — derived from the streamed `activities` / `itinerary` blocks as they arrive
-- `progress: number` (0–100, drives which phase to show)
+Smaller, calmer chips that don't fight each other:
 
-Implementation:
-- An SVG canvas (~100% width × 280px) draws a stylised world/region backdrop using a single subtle SVG path (no real map tiles — keeps it lightweight and on-brand).
-- A `<path>` for the flight leg uses `stroke-dasharray` + animated `stroke-dashoffset` to "draw" itself (~3.5s).
-- A small ✈ glyph (`<animateMotion>` along the same path) flies from origin to destination.
-- Circular photo nodes are absolutely positioned `<div>`s overlaid on the SVG using percentage coords; each one mounts in sequence using staggered timeouts driven by `progress` thresholds.
-- Lines between activity pins are additional SVG `<path>`s that animate their dash-offset on mount.
-- Photos come from `enrichedData[activity.name]?.photo` if available, otherwise a B/W initials placeholder circle (consistent with existing "no stock images" rule).
+- 28×28 numbered chip (white bg, 1px border, day-tinted). Number = slot order within its day (1, 2, 3 …).
+- Hotel = small bed-icon chip in primary color, no number.
+- When the user hovers, the chip scales to 36×36 and shows a tiny tooltip with the venue name.
+- When a single day is selected, that day's chips get a subtle ring + the connecting polyline becomes solid (currently dashed) and tinted.
+- Drop the photo-as-marker (caused the "messy" look). Photos still appear in the popup tooltip and the modal.
 
-Everything scales down gracefully on mobile (height 220px, smaller circles).
+### 4. Per-day route polyline
 
-## Wiring in `Chat.tsx`
+Instead of one polyline through all points, draw one polyline per day connecting that day's slots in `order` (1 → 2 → 3 …). When `activeDay` is set, only that day's line shows; otherwise show all days dimmed.
 
-1. Build a memo `craftingActivities` that, whenever `messages[last].content` updates during crafting, parses the streamed ` ```activities` and ` ```itinerary` blocks and extracts up to ~6 activity names (deduped, in order).
-2. Pull `originCity` from user profile / settings (already used elsewhere as "home city"); fall back to `"Home"`.
-3. Replace the existing crafting JSX with:
-   ```tsx
-   <PlanCraftingMap
-     originCity={originCity}
-     destinationCity={craftingPlan.destination || "your destination"}
-     activities={craftingActivities}
-     progress={craftingPlan.progress}
-   />
-   ```
-4. Keep all existing timing / `craftingActive` / streaming-done logic untouched — only the visual is swapped.
+### 5. Reliable click → modal (`TripDetail.tsx`)
 
-## Photo source
+Replace the brittle `name`-equality lookup. The map's `onMarkerClick` will pass `{ name, day, slotIdx, type }`. Then:
 
-Reuses the existing `enrichedData` map already populated by `enrich-destination` for the streaming message. No new API calls. If a photo isn't ready when a circle appears, we render the initials placeholder and swap to the real photo when it arrives (simple `useEffect` on `enrichedData`).
+- `type === "hotel"` → open `HotelDetailModal` with the matched hotel.
+- `type === "activity"` → reuse the same `openModal` logic the day-by-day section uses (matchActivity + resolveVenuePhotoMatch + fallback synthetic activity), so every pin opens the same rich card the user already sees in the timeline.
 
-## Files touched
+Refactor the `openModal` body from inside the slot `.map` into a reusable `openSlotModal(day, slotIdx)` helper at component scope so both the map and the timeline call the same code path.
 
-- **new** `src/components/PlanCraftingMap.tsx` — the animated SVG map component
-- **edit** `src/pages/Chat.tsx` — swap the crafting block, add `craftingActivities` memo, pass props
+### 6. Smooth UX details
 
-No backend, edge function, or schema changes.
+- Default zoom: fit bounds with `padding: [60,60]`, `maxZoom: 15`, `animate: true`.
+- Day-pill changes use `flyToBounds` with a 0.6s ease for smoothness.
+- Marker hover uses CSS transform (GPU), no re-render.
+- Cleanup: keep existing dispose guards; nothing to add.
 
-## Out of scope
+### Files to edit
 
-- Real interactive Leaflet map (kept for the actual trip view; this is pure animation).
-- Changing the 12s timing or the streaming/QA controller.
-- Adding new images — only photos already enriched via Google Places are used.
+- `src/components/TripMap.tsx` — new marker style, per-day filter, per-day polylines, richer click payload.
+- `src/pages/TripDetail.tsx` — rebuild `mapPoints` from itinerary slots; extract `openSlotModal` helper; wire it to `onMarkerClick`.
+
+### Out of scope
+
+- No backend changes, no new dependencies.
+- Plan-crafting map (`PlanCraftingMap.tsx`) is untouched.
