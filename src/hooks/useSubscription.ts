@@ -12,7 +12,7 @@ interface SubscriptionState {
 }
 
 export function useSubscription() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState<SubscriptionState>({
     plan: "free",
     subscriptionId: null,
@@ -71,11 +71,14 @@ export function useSubscription() {
   }, [user]);
 
   useEffect(() => {
+    if (authLoading) return;
+
+    setLoading(true);
     checkSubscription();
     // Auto-refresh every 60 seconds
     const interval = setInterval(checkSubscription, 60_000);
     return () => clearInterval(interval);
-  }, [checkSubscription]);
+  }, [authLoading, checkSubscription]);
 
   const isPremium = state.plan !== "free";
 
