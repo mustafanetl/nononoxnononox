@@ -16,7 +16,8 @@ import { FlightData } from "@/components/FlightCard";
 import { ActivityData } from "@/components/ActivityCard";
 import { TripPlanData } from "@/components/TripSummaryCard";
 import { shareTripSummary } from "@/utils/tripSummary";
-import { setWikimediaImage, getStockCityImage } from "@/utils/cityImages";
+import { setWikimediaImage } from "@/utils/cityImages";
+import { useCityHeroImage } from "@/hooks/useCityHeroImage";
 import { exportTripPlanPDF } from "@/utils/pdfExport";
 import { createDistinctPhotoGallery } from "@/utils/photoGallery";
 import { getSkyscannerUrl, getBookingDotComUrl } from "@/utils/bookingLinks";
@@ -279,10 +280,11 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
     enrichedImgs.find((i: any) => i && i !== heroPick)?.url ||
     enrichedImgs.find((i: any) => i && i !== heroPick)?.thumbUrl;
 
-  // Hero photo: prefer the curated city stock photo so every trip gets a
-  // recognizable, high-quality skyline/landmark shot. Google Places photos
-  // are great inside the plan but often pick a random close-up for the hero.
-  const stockHeroImg = getStockCityImage(destination);
+  // Hero photo: prefer a curated stock photo (instant), fall back to
+  // Wikipedia's lead image (always actually the right city), and only then
+  // to a Google Places photo. This guarantees Baghdad shows Baghdad, not
+  // a random skyline from the generic pool.
+  const stockHeroImg = useCityHeroImage(destination);
   const heroImgFinal = stockHeroImg || heroImg;
 
   const days = data.itinerary.length || 1;
