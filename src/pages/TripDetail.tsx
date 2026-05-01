@@ -271,11 +271,13 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
   const mapPoints: MapPoint[] = [
     ...data.hotels.filter((h: any) => h.lat && h.lng).map((h: any) => ({
-      name: h.name, lat: h.lat, lng: h.lng, type: "hotel" as const, day: 1,
+      name: h.name, lat: h.lat, lng: h.lng, type: "hotel" as const,
+      photo: (h as any).realPhoto || (h as any).image,
     })),
     ...data.activities.filter((a: any) => a.lat && a.lng).map((a: any, i: number) => ({
       name: a.name, lat: a.lat, lng: a.lng, type: "activity" as const,
       day: data.itinerary.length > 0 ? ((i % data.itinerary.length) + 1) : undefined,
+      photo: (a as any).realPhoto || (Array.isArray((a as any).realPhotos) ? (a as any).realPhotos[0] : undefined),
     })),
   ];
 
