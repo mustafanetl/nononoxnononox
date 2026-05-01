@@ -374,7 +374,7 @@ const Chat = () => {
 };
 
 const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise<void> }) => {
-  const { isPremium } = useSubscription();
+  const { isPremium, loading: subLoading } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallContext, setPaywallContext] = useState<{ destination?: string; tripStats?: any }>({});
   const [planGenerated, setPlanGenerated] = useState(false);
@@ -1297,7 +1297,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             {/* Full plan → show summary card; otherwise show inline cards */}
                             {/* Hide plan cards while crafting animation is still running */}
                             {isFullPlan && destination && !hideLatestResponse ? (
-                              isPremium ? (
+                              subLoading || isPremium ? (
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
                                   destination={destination}
@@ -1324,7 +1324,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             ) : !hideLatestResponse && (
                               <>
                                 {/* If plan already generated and user is free, gate ALL card blocks */}
-                                {planGenerated && !isPremium ? (
+                                {planGenerated && !isPremium && !subLoading ? (
                                   (parsed.flights.length > 0 || parsed.hotels.length > 0 || parsed.activities.length > 0 || parsed.itinerary.length > 0) ? (
                                     <div className="mt-4 p-4 rounded-xl border border-border bg-muted/30 text-center">
                                       <p className="text-sm font-medium text-foreground mb-2">🔒 Unlock your full plan</p>
