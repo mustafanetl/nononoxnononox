@@ -324,6 +324,20 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const { messages, isLoading, qaStatus, error, sendMessage, clearChat, conversations, activeId, switchChat, deleteChat, preferences, exportLocalData, replaceActivity, replaceItinerarySlot } = useRzumaChat();
   const [selectedSlotRef, setSelectedSlotRef] = useState<{ day: number; slotIdx: number } | null>(null);
   const { compareItems } = useTripContext();
+  const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
+  const [craftingPlan, setCraftingPlan] = useState<{ destination: string; progress: number } | null>(null);
+  const prevActiveId = useRef(activeId);
+  const prefsSynced = useRef(false);
+
+  const originCity = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("jolliday-preferences");
+      const p = raw ? JSON.parse(raw) : {};
+      return (p?.homeCity as string) || "Home";
+    } catch {
+      return "Home";
+    }
+  }, [craftingActive]);
 
   // Track whether assistant has started streaming content for current response
   const hasStreamedContent = useMemo(() => {
@@ -463,21 +477,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [searchParams] = useSearchParams();
   const initialQuerySent = useRef(false);
-  const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
-  const [craftingPlan, setCraftingPlan] = useState<{ destination: string; progress: number } | null>(null);
-  const prevActiveId = useRef(activeId);
-  const prefsSynced = useRef(false);
-
-  // Origin city for the crafting map — read from local prefs (synced with Settings)
-  const originCity = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("jolliday-preferences");
-      const p = raw ? JSON.parse(raw) : {};
-      return (p?.homeCity as string) || "Home";
-    } catch {
-      return "Home";
-    }
-  }, [craftingActive]);
 
   // Activities being streamed for the current crafting message — fed to PlanCraftingMap.
   const craftingActivities = useMemo<CraftActivity[]>(() => {
