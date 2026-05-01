@@ -449,6 +449,31 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     );
   }, [craftingPlan?.destination, enrichedData]);
 
+  // Eager enrichment during crafting so the map shows real photos in real time.
+  // Fires whenever we have a destination + at least one activity name and we haven't
+  // already enriched this destination. Premium-only (matches main enrichment policy).
+  const eagerEnrichRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!craftingActive || !isPremium) return;
+    const dest = craftingPlan?.destination || "";
+    if (!dest) return;
+    if (enrichedData[dest]) return;
+    if (craftingActivities.length === 0) return;
+    const names = craftingActivities.map((a) => a.name).filter(Boolean);
+    // Re-fire when the set of names grows (signature changes)
+    const sig = `${dest}|${names.sort().join("|")}`;
+    if (eagerEnrichRef.current.has(sig)) return;
+    eagerEnrichRef.current.add(sig);
+    fetchEnrichment(dest, undefined, names, false).then((data) => {
+      if (data) {
+        setEnrichedData((prev) => ({ ...prev, [dest]: data }));
+        if (data.images && data.images.length > 0) {
+          setWikimediaImage(dest, data.images[0].thumbUrl || data.images[0].url);
+        }
+      }
+    });
+  }, [craftingActive, isPremium, craftingPlan?.destination, craftingActivities, enrichedData]);
+
   // Memoize parsed messages to avoid re-parsing on every render
   const parsedMessages = useMemo(() => {
     return messages.map((msg) => ({
