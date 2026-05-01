@@ -491,14 +491,26 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
     const latestCities = inferCitiesFromPrompt(latestUser.content);
     const previousCities = inferCitiesFromPrompt(previousUser?.content || "");
-    const destination = latestCities.destination || previousCities.destination;
     const origin = latestCities.origin || previousCities.origin || originCity;
 
-    if (!destination) return;
+    // Try to recover a destination from the most recent assistant message that
+    // already mentioned one (e.g., during a follow-up "yes, prepare the plan").
+    let recoveredDestination = "";
+    for (let i = messages.length - 1; i >= 0 && !recoveredDestination; i--) {
+      const m = messages[i];
+      if (m.role === "assistant") {
+        recoveredDestination = extractStructuredDestination(m.content) || "";
+      }
+    }
+
+    const destination =
+      latestCities.destination ||
+      previousCities.destination ||
+      recoveredDestination ||
+      "your trip";
 
     const seed = `${latestUser.content}|${destination}|${origin}`;
-    const shouldStart = latestCities.destination || isPlanConfirmationMessage(latestUser.content);
-    if (shouldStart && pendingCraftSeedRef.current !== seed) {
+    if (pendingCraftSeedRef.current !== seed) {
       pendingCraftSeedRef.current = seed;
       startCrafting(destination, origin);
     }
