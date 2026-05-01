@@ -17,6 +17,7 @@ const HeroSection = () => {
   return (
     <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 px-4">
       <div className="container mx-auto max-w-6xl">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] gap-12 lg:gap-16 items-start">
         <div className="max-w-4xl">
           <span className="inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground mb-6">
             Your AI travel agent
@@ -77,6 +78,47 @@ const HeroSection = () => {
             <span className="hidden sm:inline text-border">/</span>
             <span>Plans in under 20 seconds</span>
           </div>
+        </div>
+
+        {/* Hero image collage */}
+        <div className="hidden lg:grid grid-cols-2 gap-3 mt-2">
+          <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-border row-span-2">
+            <img
+              src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=900&q=80&auto=format&fit=crop"
+              alt="Paris, Eiffel Tower"
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="eager"
+            />
+            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-white/70">France</div>
+              <div className="text-xl font-bold text-white">Paris</div>
+            </div>
+          </div>
+          <div className="relative aspect-square rounded-2xl overflow-hidden border border-border">
+            <img
+              src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&q=80&auto=format&fit=crop"
+              alt="Tokyo skyline"
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="eager"
+            />
+            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-white/70">Japan</div>
+              <div className="text-base font-bold text-white">Tokyo</div>
+            </div>
+          </div>
+          <div className="relative aspect-square rounded-2xl overflow-hidden border border-border">
+            <img
+              src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=80&auto=format&fit=crop"
+              alt="Bali rice terraces"
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="eager"
+            />
+            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-white/70">Indonesia</div>
+              <div className="text-base font-bold text-white">Bali</div>
+            </div>
+          </div>
+        </div>
         </div>
       </div>
     </section>
