@@ -1221,7 +1221,7 @@ const StatTile: React.FC<{ label: string; value: number | string; icon?: React.R
 };
 
 /** Sticky day rail — pill nav with scroll-spy across day-N anchors. */
-const DayRail: React.FC<{ days: { day: number; title: string }[] }> = ({ days }) => {
+const DayRail: React.FC<{ days: { day: number; title: string }[]; dayLabel?: string }> = ({ days, dayLabel = "Day" }) => {
   const [active, setActive] = useState<number>(days[0]?.day ?? 1);
   useEffect(() => {
     if (days.length === 0) return;
@@ -1270,7 +1270,7 @@ const DayRail: React.FC<{ days: { day: number; title: string }[] }> = ({ days })
                   ? "bg-foreground text-background shadow-sm"
                   : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
             >
-              Day {d.day}
+              {dayLabel} {d.day}
               <span className="hidden sm:inline opacity-60 font-normal"> · {d.title.slice(0, 22)}{d.title.length > 22 ? "…" : ""}</span>
             </button>
           );
@@ -1302,7 +1302,8 @@ const ClosingCard: React.FC<{
   onSave: () => void;
   saving: boolean;
   sharing: boolean;
-}> = ({ destination, days, backgroundImage, isShared, onShare, onExportPDF, onSave, saving, sharing }) => (
+  t: TripStrings;
+}> = ({ destination, days, backgroundImage, isShared, onShare, onExportPDF, onSave, saving, sharing, t }) => (
   <div className="max-w-5xl mx-auto px-4 sm:px-8 mt-20 mb-12">
     <div className="relative overflow-hidden rounded-3xl border border-border min-h-[280px]">
       {backgroundImage ? (
@@ -1313,30 +1314,30 @@ const ClosingCard: React.FC<{
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/30" />
       <div className="relative z-10 p-8 sm:p-12 flex flex-col items-center text-center">
         <div className="inline-flex items-center gap-2 text-white/80 text-[10px] uppercase tracking-[0.35em] mb-4">
-          <Compass className="h-3.5 w-3.5" /> Crafted by Jolliday
+          <Compass className="h-3.5 w-3.5" /> {t.craftedBy}
         </div>
         <h3 className="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight max-w-2xl">
-          {days} unforgettable days in {destination}.
+          {t.closingHeadline(days, destination)}
         </h3>
         <p className="mt-3 text-sm text-white/70 max-w-md">
-          Save it, share it, or export a PDF for the road. Prices are estimates — the memories aren't.
+          {t.closingSub}
         </p>
         <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
           {!isShared && (
             <Button onClick={onSave} disabled={saving} size="lg"
               className="gap-2 bg-white text-black hover:bg-white/90 h-11 px-6">
-              <Bookmark className="h-4 w-4" /> {saving ? "Saving..." : "Save trip"}
+              <Bookmark className="h-4 w-4" /> {saving ? t.saving : t.saveTrip}
             </Button>
           )}
           <Button onClick={onShare} disabled={sharing} size="lg" variant="outline"
             className="gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-11 px-6">
             {isShared ? <Link2 className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-            {isShared ? "Copy link" : sharing ? "Creating..." : "Share trip"}
+            {isShared ? t.copyLink : sharing ? t.sharing : t.shareTrip}
           </Button>
           {!isShared && (
             <Button onClick={onExportPDF} size="lg" variant="outline"
               className="gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-11 px-6">
-              <Download className="h-4 w-4" /> Download PDF
+              <Download className="h-4 w-4" /> {t.downloadPdf}
             </Button>
           )}
         </div>
@@ -1345,7 +1346,7 @@ const ClosingCard: React.FC<{
   </div>
 );
 
-const FlightRow = ({ flight: f, onClick }: { flight: FlightData; onClick: () => void }) => (
+const FlightRow = ({ flight: f, onClick, t }: { flight: FlightData; onClick: () => void; t: TripStrings }) => (
   <div onClick={onClick}
     className="group relative p-4 rounded-2xl bg-card border border-border transition-all duration-300 cursor-pointer hover:shadow-lg hover:border-foreground/30 hover:-translate-y-0.5">
     <div className="flex items-center justify-between gap-4">
@@ -1364,7 +1365,7 @@ const FlightRow = ({ flight: f, onClick }: { flight: FlightData; onClick: () => 
             <div className="h-px flex-1 bg-border" />
           </div>
           <span className="text-[10px] text-muted-foreground">
-            {f.stops === 0 ? "Direct" : `${f.stops} stop${f.stops > 1 ? "s" : ""}`}
+            {f.stops === 0 ? t.direct : t.stopWord(f.stops)}
           </span>
         </div>
         <div className="text-center shrink-0">
@@ -1382,14 +1383,14 @@ const FlightRow = ({ flight: f, onClick }: { flight: FlightData; onClick: () => 
       <a href={getSkyscannerUrl(f.from, f.to, f.date)} target="_blank" rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
         className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
-        Search on Skyscanner <ExternalLink className="h-3 w-3" />
+        {t.searchOnSkyscanner} <ExternalLink className="h-3 w-3" />
       </a>
     </div>
   </div>
 );
 
 /** Compact hotel row used inside the side-by-side Logistics block. */
-const HotelRow = ({ hotel: h, onClick }: { hotel: HotelData; onClick: () => void }) => (
+const HotelRow = ({ hotel: h, onClick, t }: { hotel: HotelData; onClick: () => void; t: TripStrings }) => (
   <div onClick={onClick}
     className="group flex gap-3 p-3 rounded-2xl bg-card border border-border cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-foreground/30 hover:-translate-y-0.5">
     <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/15 via-muted to-accent/15">
@@ -1417,11 +1418,11 @@ const HotelRow = ({ hotel: h, onClick }: { hotel: HotelData; onClick: () => void
         </div>
       </div>
       <div className="flex items-center justify-between mt-2">
-        <span className="text-sm font-bold text-foreground">{h.currency}{h.pricePerNight}<span className="text-[10px] font-normal text-muted-foreground">/night</span></span>
+        <span className="text-sm font-bold text-foreground">{h.currency}{h.pricePerNight}<span className="text-[10px] font-normal text-muted-foreground">{t.perNight}</span></span>
         <a href={getBookingDotComUrl(h.name, h.location)} target="_blank" rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline">
-          Booking.com <ExternalLink className="h-2.5 w-2.5" />
+          {t.bookingShort} <ExternalLink className="h-2.5 w-2.5" />
         </a>
       </div>
     </div>
