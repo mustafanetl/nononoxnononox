@@ -432,11 +432,17 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
         zIndexOffset: 1000,
       }).addTo(map);
 
-      const bounds = L.latLngBounds([
-        [geometryPoints.origin.lat, geometryPoints.origin.lng],
-        [geometryPoints.destination.lat, geometryPoints.destination.lng],
-      ]);
-      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 5, animate: false });
+      if (hasOrigin) {
+        const bounds = L.latLngBounds([
+          [geometryPoints.origin.lat, geometryPoints.origin.lng],
+          [geometryPoints.destination.lat, geometryPoints.destination.lng],
+        ]);
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 5, animate: false });
+      } else {
+        // No origin known — start centered on the destination so we don't
+        // briefly flash a London/world view.
+        map.setView([geometryPoints.destination.lat, geometryPoints.destination.lng], 6, { animate: false });
+      }
       currentViewRef.current = {
         center: [map.getCenter().lat, map.getCenter().lng],
         zoom: map.getZoom(),
