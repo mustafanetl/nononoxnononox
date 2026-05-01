@@ -462,7 +462,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
           destinationMarkerRef.current.setOpacity(fadeIn);
         }
         pointMarkersRef.current.forEach((m) => m.setOpacity(0));
-        setCaption(`Airplane to ${destinationCity || "your destination"}…`);
+        setCaption(`Plotting your route to ${destinationCity || "your destination"}…`);
       }
       // === PHASE 2: Cinematic flyTo into the city ===
       else if (p < P_ZOOM_END) {
@@ -493,7 +493,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
           }
           currentViewRef.current = { ...cityView };
         }
-        setCaption(`Arrived in ${destinationCity || "your destination"}`);
+        setCaption(`Touching down in ${destinationCity || "your destination"}…`);
       }
       // === PHASE 3: City tour — pins & dashed route reveal ===
       else {
@@ -520,7 +520,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
         const totalActsLocal = acts.length;
         if (totalActsLocal === 0) {
           tourRouteRef.current.setLatLngs([] as any);
-          setCaption(p >= 92 ? "Finalizing your itinerary…" : `Exploring ${destinationCity || "the city"}…`);
+          setCaption(p >= 92 ? "Wrapping up your itinerary…" : `Scouting the best spots in ${destinationCity || "the city"}…`);
         } else {
           // Continuous reveal: each pin fades in over its slice; route grows progressively
           const eased = easeInOut(tourT);
@@ -547,13 +547,13 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
           tourRouteRef.current.setLatLngs(route as any);
 
           if (p >= 92) {
-            setCaption("Finalizing your itinerary…");
+            setCaption("Polishing your itinerary…");
           } else {
             const visibleIdx = clamp(Math.ceil(exact) - 1, 0, totalActsLocal - 1);
             const current = stableActivities[visibleIdx];
             setCaption(current?.name
-              ? `Adding ${current.name} (${Math.min(totalActsLocal, Math.ceil(exact))}/${totalActsLocal})`
-              : `Pinning stops (${Math.min(totalActsLocal, Math.ceil(exact))}/${totalActsLocal})`);
+              ? `Adding ${current.name}  ·  ${Math.min(totalActsLocal, Math.ceil(exact))}/${totalActsLocal}`
+              : `Pinning your stops  ·  ${Math.min(totalActsLocal, Math.ceil(exact))}/${totalActsLocal}`);
           }
         }
       }
