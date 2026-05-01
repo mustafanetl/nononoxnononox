@@ -335,6 +335,49 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
     targetProgressRef.current = clamp(progress, 0, 100);
   }, [progress]);
 
+  // Precompute flight + city target views whenever geometry changes (NOT every frame)
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !LRef.current) return;
+    const L = LRef.current;
+    const map = mapRef.current;
+
+    const flightBounds = L.latLngBounds([
+      [geometryPoints.origin.lat, geometryPoints.origin.lng],
+      [geometryPoints.destination.lat, geometryPoints.destination.lng],
+    ]);
+    const flightFit = (map as any)._getBoundsCenterZoom
+      ? (map as any)._getBoundsCenterZoom(flightBounds, { padding: [60, 60], maxZoom: 5 })
+      : { center: flightBounds.getCenter(), zoom: 4 };
+    flightViewRef.current = {
+      center: [flightFit.center.lat, flightFit.center.lng],
+      zoom: clamp(flightFit.zoom ?? 4, 2, 5),
+    };
+
+    const acts = geometryPoints.activities;
+    const cityPts: [number, number][] = [
+      [geometryPoints.destination.lat, geometryPoints.destination.lng],
+      ...acts.map((a) => [a.lat, a.lng] as [number, number]),
+    ];
+    const cityBounds = L.latLngBounds(cityPts as any);
+    const cityFit = (map as any)._getBoundsCenterZoom
+      ? (map as any)._getBoundsCenterZoom(cityBounds, { padding: [60, 60], maxZoom: 14 })
+      : { center: cityBounds.getCenter(), zoom: 13 };
+    cityViewRef.current = {
+      center: [cityFit.center.lat, cityFit.center.lng],
+      zoom: clamp(cityFit.zoom ?? 13, 11, 14),
+    };
+
+    // Reset transition guard if geometry changed mid-flight
+    flyStartedRef.current = false;
+  }, [
+    mapReady,
+    geometryPoints.origin.lat,
+    geometryPoints.origin.lng,
+    geometryPoints.destination.lat,
+    geometryPoints.destination.lng,
+    activityNamesKey,
+  ]);
+
   // Single rAF loop drives EVERYTHING — smooth interpolation toward target
   useEffect(() => {
     if (!mapReady || !mapRef.current || !planeMarkerRef.current || !flightRouteRef.current || !tourRouteRef.current || !LRef.current) return;
