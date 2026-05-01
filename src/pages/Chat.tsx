@@ -37,6 +37,45 @@ import { toast } from "sonner";
 
 // Enrichment cache to avoid re-fetching
 const enrichmentCache: Record<string, any> = {};
+const warmedImageUrls = new Set<string>();
+
+const warmImage = (url?: string) => {
+  if (typeof window === "undefined" || !url || warmedImageUrls.has(url)) return;
+  warmedImageUrls.add(url);
+  const img = new Image();
+  img.decoding = "async";
+  img.src = url;
+};
+
+const warmEnrichmentAssets = (data: any) => {
+  data?.images?.slice?.(0, 4)?.forEach?.((img: any) => warmImage(img?.thumbUrl || img?.url));
+  Object.values(data?.activityPhotos || {}).forEach((photo: any) => {
+    warmImage(photo?.thumbPhoto || photo?.photo);
+    if (Array.isArray(photo?.photos)) {
+      photo.photos.slice(0, 3).forEach((url: string) => warmImage(url));
+    }
+  });
+};
+
+const mergeEnrichmentData = (prev: any, next: any) => {
+  if (!prev) return next;
+  if (!next) return prev;
+
+  const mergedActivityPhotos = {
+    ...(prev.activityPhotos || {}),
+    ...(next.activityPhotos || {}),
+  };
+
+  return {
+    ...prev,
+    ...next,
+    geo: next.geo ?? prev.geo,
+    images: Array.isArray(next.images) && next.images.length > 0 ? next.images : prev.images,
+    places: Array.isArray(next.places) && next.places.length > 0 ? next.places : prev.places,
+    hotels: Array.isArray(next.hotels) && next.hotels.length > 0 ? next.hotels : prev.hotels,
+    activityPhotos: mergedActivityPhotos,
+  };
+};
 
 const fetchEnrichment = async (destination: string, travelMonth?: string, activityNames?: string[], imageOnly?: boolean, hotelNames?: string[]) => {
   // Cache key includes activity/hotel names to avoid stale photo reuse
@@ -264,6 +303,12 @@ const isPlanConfirmationMessage = (text: string) => {
 
 const hasCraftingSignals = (content: string) => /(?:```)?(activities|itinerary|hotels|flights|travelinfo|destination_enrich)\b/i.test(content);
 
+const hasRenderableFullPlan = (content: string) => {
+  const parsed = parseMessageContent(content);
+  const blockTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
+  return blockTypeCount >= 2;
+};
+
 const HorizontalCarousel = forwardRef<HTMLDivElement, { children: React.ReactNode }>(({ children }, ref) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -369,6 +414,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [craftingOriginCity, setCraftingOriginCity] = useState<string>("");
   const lastCraftedMsgIndex = useRef(-1);
   const craftingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const craftingFinalizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const craftingProgressRef = useRef(0);
   const streamingDoneRef = useRef(false);
   const craftingStartTimeRef = useRef(0);
@@ -380,6 +426,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
     craftingProgressRef.current = 0;
     streamingDoneRef.current = false;
+    if (craftingFinalizeTimeoutRef.current) {
+      clearTimeout(craftingFinalizeTimeoutRef.current);
+      craftingFinalizeTimeoutRef.current = null;
+    }
     craftingStartTimeRef.current = Date.now();
     setCraftingPlanType(/```(flights|hotels)/s.test(content) ? "full" : "local");
     setCraftingOriginCity(origin.trim());
@@ -474,6 +524,24 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       if (lastMsg?.role === "assistant") {
         const hasFlightsOrHotels = /```(flights|hotels)/s.test(lastMsg.content);
         setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
+        if (hasRenderableFullPlan(lastMsg.content)) {
+          craftingProgressRef.current = Math.max(craftingProgressRef.current, 58);
+          setCraftingPlan((prev) => prev ? { ...prev, progress: Math.max(prev.progress, 58) } : prev);
+          if (craftingIntervalRef.current) {
+            clearInterval(craftingIntervalRef.current);
+            craftingIntervalRef.current = null;
+          }
+          if (craftingFinalizeTimeoutRef.current) {
+            clearTimeout(craftingFinalizeTimeoutRef.current);
+          }
+          craftingFinalizeTimeoutRef.current = setTimeout(() => {
+            pendingCraftSeedRef.current = "";
+            setCraftingActive(false);
+            setCraftingPlan(null);
+            setCraftingOriginCity("");
+            craftingFinalizeTimeoutRef.current = null;
+          }, 950);
+        }
       }
     }
   }, [isLoading, messages]);
@@ -484,6 +552,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       if (craftingIntervalRef.current) {
         clearInterval(craftingIntervalRef.current);
         craftingIntervalRef.current = null;
+      }
+      if (craftingFinalizeTimeoutRef.current) {
+        clearTimeout(craftingFinalizeTimeoutRef.current);
+        craftingFinalizeTimeoutRef.current = null;
       }
     };
   }, []);
@@ -588,30 +660,31 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     return undefined;
   }, [craftingPlan?.destination, enrichedData]);
 
+  const shouldShowCraftingMap = isCraftingPlan && !!craftingPlan;
+
   // Eager enrichment during crafting so the map shows real photos in real time.
   // Fires whenever we have a destination + at least one activity name and we haven't
   // already enriched this destination. Premium-only (matches main enrichment policy).
   const eagerEnrichRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (!craftingActive || !isPremium) return;
+    if (!craftingActive) return;
     const dest = craftingPlan?.destination || "";
     if (!dest) return;
-    if (enrichedData[dest]) return;
-    if (craftingActivities.length === 0) return;
     const names = craftingActivities.map((a) => a.name).filter(Boolean);
     // Re-fire when the set of names grows (signature changes)
-    const sig = `${dest}|${names.sort().join("|")}`;
+    const sig = `${dest}|${isPremium ? "full" : "imageOnly"}|${[...names].sort().join("|")}`;
     if (eagerEnrichRef.current.has(sig)) return;
     eagerEnrichRef.current.add(sig);
-    fetchEnrichment(dest, undefined, names, false).then((data) => {
+    fetchEnrichment(dest, undefined, names.length > 0 ? names : undefined, !isPremium).then((data) => {
       if (data) {
-        setEnrichedData((prev) => ({ ...prev, [dest]: data }));
+        warmEnrichmentAssets(data);
+        setEnrichedData((prev) => ({ ...prev, [dest]: mergeEnrichmentData(prev[dest], data) }));
         if (data.images && data.images.length > 0) {
           setWikimediaImage(dest, data.images[0].thumbUrl || data.images[0].url);
         }
       }
     });
-  }, [craftingActive, isPremium, craftingPlan?.destination, craftingActivities, enrichedData]);
+  }, [craftingActive, isPremium, craftingPlan?.destination, craftingActivities]);
 
   // Memoize parsed messages to avoid re-parsing on every render
   const parsedMessages = useMemo(() => {
@@ -650,6 +723,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         clearInterval(craftingIntervalRef.current);
         craftingIntervalRef.current = null;
       }
+      if (craftingFinalizeTimeoutRef.current) {
+        clearTimeout(craftingFinalizeTimeoutRef.current);
+        craftingFinalizeTimeoutRef.current = null;
+      }
       craftingProgressRef.current = 0;
       streamingDoneRef.current = false;
       lastCraftedMsgIndex.current = -1;
@@ -658,7 +735,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
   // Detect when a full plan has been generated for free users
   useEffect(() => {
-    if (isPremium || isLoading || isCraftingPlan) return;
+    if (isPremium || isLoading || shouldShowCraftingMap) return;
     const hasFullPlan = parsedMessages.some((msg) => {
       if (msg.role !== "assistant") return false;
       const p = msg.parsed;
@@ -670,7 +747,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       return blockTypes >= 2;
     });
     if (hasFullPlan) setPlanGenerated(true);
-  }, [parsedMessages, isLoading, isPremium, isCraftingPlan]);
+  }, [parsedMessages, isLoading, isPremium, shouldShowCraftingMap]);
 
   // Auto-enrich destinations when streaming is done
   // Premium: full enrichment. Free: imageOnly (1 Google photo for the paywall card)
@@ -685,7 +762,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           const hotelNamesList = msg.parsed.hotels.map((h: any) => h.name).filter(Boolean);
           fetchEnrichment(destination, travelMonth, activityNames, false, hotelNamesList).then((data) => {
             if (data) {
-              setEnrichedData((prev) => ({ ...prev, [destination]: data }));
+              warmEnrichmentAssets(data);
+              setEnrichedData((prev) => ({ ...prev, [destination]: mergeEnrichmentData(prev[destination], data) }));
               if (data.images && data.images.length > 0) {
                 setWikimediaImage(destination, data.images[0].thumbUrl || data.images[0].url);
               }
@@ -695,7 +773,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           // Free users: just fetch 1 real Google image for the paywall card
           fetchEnrichment(destination, undefined, undefined, true).then((data) => {
             if (data) {
-              setEnrichedData((prev) => ({ ...prev, [destination]: data }));
+              warmEnrichmentAssets(data);
+              setEnrichedData((prev) => ({ ...prev, [destination]: mergeEnrichmentData(prev[destination], data) }));
             }
           });
         }
@@ -1102,7 +1181,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
                   // Hide the latest assistant response entirely while streaming or crafting so only the map loader is visible.
-                  const hideLatestResponse = isLastAssistant && (isLoading || isCraftingPlan);
+                  const hideLatestResponse = isLastAssistant && (isLoading || shouldShowCraftingMap);
 
                   // Determine if this is a "full trip plan" (has multiple card types)
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
@@ -1242,7 +1321,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 })}
 
                 {/* Plan crafting animation — full width, prominent */}
-                {isCraftingPlan && craftingPlan && (
+                {shouldShowCraftingMap && (
                   <PlanCraftingMap
                     originCity={craftingOriginCity || originCity}
                     destinationCity={craftingPlan.destination || "your destination"}

@@ -22,7 +22,7 @@ type Point = {
 };
 
 const DEFAULT_ORIGIN = { lat: 51.5074, lng: -0.1278 };
-const DEFAULT_DESTINATION = { lat: 59.3293, lng: 18.0686 };
+const DEFAULT_DESTINATION = { lat: 20, lng: 0 };
 const ACTIVITY_OFFSETS = [
   { lat: 0.012, lng: 0.010 },
   { lat: -0.008, lng: 0.018 },
@@ -38,13 +38,15 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "•";
 
-const hashCoords = (input: string, fallback: { lat: number; lng: number }) => {
+const hashCoords = (input: string, fallback: { lat: number; lng: number }, spread?: { lat: number; lng: number }) => {
   const source = input.trim().toLowerCase();
   if (!source) return fallback;
   let hash = 0;
   for (let i = 0; i < source.length; i++) hash = (hash * 31 + source.charCodeAt(i)) >>> 0;
-  const latOffset = ((hash % 1600) / 10000) - 0.08;
-  const lngOffset = ((((hash / 1600) | 0) % 2200) / 10000) - 0.11;
+  const latSpread = spread?.lat ?? 0.08;
+  const lngSpread = spread?.lng ?? 0.11;
+  const latOffset = (((hash % 2000) / 1999) * 2 - 1) * latSpread;
+  const lngOffset = (((((hash / 2000) | 0) % 4000) / 3999) * 2 - 1) * lngSpread;
   return { lat: fallback.lat + latOffset, lng: fallback.lng + lngOffset };
 };
 
@@ -55,13 +57,14 @@ const buildPoints = (
   destinationGeo: CraftGeo | undefined,
   activities: CraftActivity[]
 ) => {
-  const origin = hashCoords(originCity, DEFAULT_ORIGIN);
-  const destination = destinationGeo || hashCoords(destinationCity, DEFAULT_DESTINATION);
+  const origin = hashCoords(originCity, DEFAULT_ORIGIN, { lat: 0.4, lng: 0.6 });
+  const destination = destinationGeo || hashCoords(destinationCity, DEFAULT_DESTINATION, { lat: 32, lng: 70 });
   const activityPoints = activities.slice(0, 5).map((activity, index) => {
     const offset = ACTIVITY_OFFSETS[index] || ACTIVITY_OFFSETS[ACTIVITY_OFFSETS.length - 1];
+    const lngScale = Math.max(0.45, Math.cos((destination.lat * Math.PI) / 180));
     return {
       lat: destination.lat + offset.lat,
-      lng: destination.lng + offset.lng,
+      lng: destination.lng + offset.lng / lngScale,
       label: activity.name || `Stop ${index + 1}`,
       photo: activity.photo,
     } satisfies Point;
