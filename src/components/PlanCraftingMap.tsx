@@ -298,6 +298,11 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
   const planeMarkerRef = useRef<any>(null);
   const destinationMarkerRef = useRef<any>(null);
   const pointMarkersRef = useRef<any[]>([]);
+  // Cache the last rendered icon HTML per marker so we don't re-set the icon
+  // (which re-creates the <img> DOM and causes a visible flicker) when the
+  // photo URL or label hasn't actually changed between progress ticks.
+  const destinationIconHtmlRef = useRef<string>("");
+  const pointIconHtmlRef = useRef<string[]>([]);
 
   // rAF state
   const rafRef = useRef<number | null>(null);
@@ -339,6 +344,13 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
     () => buildPoints(originCity, destinationCity, undefined, destinationGeo, stableActivities.map((a) => ({ name: a.name }))),
     [originCity, destinationCity, destinationGeo, activityNamesKey]
   );
+
+  // Did we actually resolve a real origin city? If not, we skip the
+  // intercontinental flight phase — otherwise the plane appears to launch
+  // from a random/default spot (looked like "always starts from UK").
+  const hasOrigin = useMemo(() => !!lookupCityCoords(originCity || ""), [originCity]);
+  const effectiveFlightEnd = hasOrigin ? P_FLIGHT_END : 0;
+  const effectiveZoomEnd = hasOrigin ? P_ZOOM_END : 8; // tiny intro fade-in
 
   const flightArc = useMemo(
     () => buildArc(
@@ -476,9 +488,14 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
     });
     if (!destinationMarkerRef.current) {
       destinationMarkerRef.current = L.marker([points.destination.lat, points.destination.lng], { icon, opacity: 0, zIndexOffset: 600 }).addTo(mapRef.current);
+      destinationIconHtmlRef.current = buildPhotoMarkerHtml(points.destination.label, points.destination.photo, 60, true);
     } else {
       destinationMarkerRef.current.setLatLng([points.destination.lat, points.destination.lng]);
-      destinationMarkerRef.current.setIcon(icon);
+      const nextHtml = buildPhotoMarkerHtml(points.destination.label, points.destination.photo, 60, true);
+      if (nextHtml !== destinationIconHtmlRef.current) {
+        destinationMarkerRef.current.setIcon(icon);
+        destinationIconHtmlRef.current = nextHtml;
+      }
     }
   }, [mapReady, points.destination.lat, points.destination.lng, points.destination.label, points.destination.photo]);
 
@@ -487,20 +504,21 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
     if (!mapReady || !mapRef.current || !LRef.current) return;
     const L = LRef.current;
     points.activities.forEach((point, index) => {
-      const icon = L.divIcon({
-        className: "",
-        html: buildPhotoMarkerHtml(point.label, point.photo, 48),
-        iconSize: [48, 48],
-        iconAnchor: [24, 24],
-      });
+      const html = buildPhotoMarkerHtml(point.label, point.photo, 48);
       const existing = pointMarkersRef.current[index];
       if (!existing) {
+        const icon = L.divIcon({ className: "", html, iconSize: [48, 48], iconAnchor: [24, 24] });
         const marker = L.marker([point.lat, point.lng], { icon, opacity: 0, zIndexOffset: 400 }).addTo(mapRef.current);
         marker.bindTooltip(point.label, { permanent: false, direction: "top", offset: [0, -22], opacity: 0.95 });
         pointMarkersRef.current[index] = marker;
+        pointIconHtmlRef.current[index] = html;
       } else {
         existing.setLatLng([point.lat, point.lng]);
-        existing.setIcon(icon);
+        if (pointIconHtmlRef.current[index] !== html) {
+          const icon = L.divIcon({ className: "", html, iconSize: [48, 48], iconAnchor: [24, 24] });
+          existing.setIcon(icon);
+          pointIconHtmlRef.current[index] = html;
+        }
         existing.setTooltipContent(point.label);
       }
     });
@@ -508,6 +526,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
       try { pointMarkersRef.current[i]?.remove(); } catch {}
     }
     pointMarkersRef.current = pointMarkersRef.current.slice(0, points.activities.length);
+    pointIconHtmlRef.current = pointIconHtmlRef.current.slice(0, points.activities.length);
   }, [mapReady, points.activities]);
 
   // Update target progress whenever prop changes
