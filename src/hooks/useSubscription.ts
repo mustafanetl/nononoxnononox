@@ -30,6 +30,7 @@ export function useSubscription() {
 
     try {
       const { data, error } = await supabase.functions.invoke("check-subscription");
+      // Treat transient edge-runtime outages (503 SERVICE_DEGRADED) as "unknown" — fall back, don't throw to UI.
       if (error) throw error;
 
       if (data?.subscribed) {
@@ -43,25 +44,26 @@ export function useSubscription() {
         setState({ plan: "free", subscriptionId: null, subscriptionEnd: null, cancelAtPeriodEnd: false });
       }
     } catch {
-      // Fallback to DB check
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("plan, status, expires_at")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Edge function unreachable (e.g. 503 SUPABASE_EDGE_RUNTIME_SERVICE_DEGRADED).
+      // Fall back to DB check; if that also fails, default to free silently so the UI never blanks.
+      try {
+        const { data } = await supabase
+          .from("subscriptions")
+          .select("plan, status, expires_at")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
-      if (data && data.status === "active") {
-        if (data.expires_at && new Date(data.expires_at) < new Date()) {
-          setState({ plan: "free", subscriptionId: null, subscriptionEnd: null, cancelAtPeriodEnd: false });
-        } else {
+        if (data && data.status === "active" && (!data.expires_at || new Date(data.expires_at) >= new Date())) {
           setState({
             plan: data.plan as SubscriptionPlan,
             subscriptionId: null,
             subscriptionEnd: data.expires_at,
             cancelAtPeriodEnd: false,
           });
+        } else {
+          setState({ plan: "free", subscriptionId: null, subscriptionEnd: null, cancelAtPeriodEnd: false });
         }
-      } else {
+      } catch {
         setState({ plan: "free", subscriptionId: null, subscriptionEnd: null, cancelAtPeriodEnd: false });
       }
     }

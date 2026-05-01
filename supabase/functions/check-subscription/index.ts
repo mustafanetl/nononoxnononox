@@ -97,9 +97,11 @@ serve(async (req) => {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    // Never 500 to the client — the UI treats a failed subscription check as "unknown" and falls back to free.
+    // Returning 200 with subscribed:false + error keeps the app usable during transient Stripe/runtime issues.
+    return new Response(JSON.stringify({ subscribed: false, error: errorMessage, fallback: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+      status: 200,
     });
   }
 });
