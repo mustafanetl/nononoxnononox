@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown } from "lucide-react";
+import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown, MoreHorizontal } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { useAuth } from "@/hooks/useAuth";
 import FlightCard, { FlightData } from "@/components/FlightCard";
@@ -29,6 +29,13 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
 import { shareTripSummary } from "@/utils/tripSummary";
 import { exportTripPDF } from "@/utils/pdfExport";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { setWikimediaImage } from "@/utils/cityImages";
 import { Link, useSearchParams } from "react-router-dom";
@@ -1066,19 +1073,25 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
               </Button>
             )}
             {hasMessages && (
-              <Button variant="ghost" size="icon" onClick={handleSaveTrip} className="h-9 w-9" title="Save trip">
-                <Save className="h-4 w-4" />
-              </Button>
-            )}
-            {hasMessages && (
-              <Button variant="ghost" size="icon" onClick={handleExportPDF} className="h-9 w-9" title="Export PDF">
-                <Download className="h-4 w-4" />
-              </Button>
-            )}
-            {hasMessages && (
-              <Button variant="ghost" size="icon" onClick={handleShare} className="h-9 w-9" title="Share">
-                <Share2 className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9" title="Trip actions">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleSaveTrip}>
+                    <Save className="h-4 w-4 mr-2" /> Save trip
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPDF}>
+                    <Download className="h-4 w-4 mr-2" /> Export PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleShare}>
+                    <Share2 className="h-4 w-4 mr-2" /> Share
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             <ThemeToggle />
           </div>
