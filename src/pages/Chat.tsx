@@ -509,6 +509,24 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       recoveredDestination ||
       "your trip";
 
+    // Only START the crafting animation when we're CONFIDENT the AI is about
+    // to actually build the plan — not while it's still asking clarifying
+    // questions. Triggers:
+    //  1) The user message itself is a "make/prepare the plan" confirmation.
+    //  2) The PREVIOUS assistant message asked the "Shall I prepare the plan?"
+    //     style confirmation, and the user's reply reads as a yes.
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    const lastAssistantAskedToPrepare = lastAssistant
+      ? /(shall i (prepare|build|create|make) (the )?(full )?plan|ready to (prepare|build|create|make) (your |the )?plan|prepare the (full )?plan\??)/i.test(lastAssistant.content)
+      : false;
+    const userSaidYes = /^\s*(yes|yep|yeah|sure|ok(ay)?|do it|go ahead|please do|sounds good|let's go|let's do it|prepare it|make it)\b[\s.!?]*$/i.test(latestUser.content);
+
+    const shouldStart =
+      isPlanConfirmationMessage(latestUser.content) ||
+      (lastAssistantAskedToPrepare && userSaidYes);
+
+    if (!shouldStart) return;
+
     const seed = `${latestUser.content}|${destination}|${origin}`;
     if (pendingCraftSeedRef.current !== seed) {
       pendingCraftSeedRef.current = seed;
