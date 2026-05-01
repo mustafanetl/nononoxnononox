@@ -115,7 +115,9 @@ async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any
       for (const photo of place.photos) {
         const w = photo.widthPx || 800;
         const h = photo.heightPx || 600;
-        if (landscapeOnly && w < h * 1.2) continue;
+        if (landscapeOnly && w < h * 1.25) continue;
+        // Drop tiny / low-res photos that look bad as a full-bleed hero.
+        if (landscapeOnly && w < 1200) continue;
         out.push({
           url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=1920&key=${apiKey}`,
           thumbUrl: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=400&key=${apiKey}`,
@@ -128,19 +130,48 @@ async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any
     return out;
   };
 
-  // Stage 1 — wide cityscape, prefer landscape photos for hero
-  const cityscapePlaces = await runQuery(`${destination} skyline cityscape`, undefined, 3);
-  const cityscapePhotos = collectPhotos(cityscapePlaces, true);
+  // Run several queries in parallel and prefer wide cityscape shots first.
+  // For each query, grab the FIRST photo from each place (Google's top photo
+  // is usually the most representative — later photos are often interiors,
+  // close-ups, or random snapshots).
+  const collectFirstPhotos = (places: any[], landscapeOnly = false): any[] => {
+    const out: any[] = [];
+    for (const place of places) {
+      const photo = place.photos?.[0];
+      if (!photo) continue;
+      const w = photo.widthPx || 800;
+      const h = photo.heightPx || 600;
+      if (landscapeOnly && (w < h * 1.25 || w < 1200)) continue;
+      out.push({
+        url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=1920&key=${apiKey}`,
+        thumbUrl: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=400&key=${apiKey}`,
+        width: w,
+        height: h,
+        attributions: photo.authorAttributions || [],
+      });
+    }
+    return out;
+  };
 
-  // Stage 2 — landmarks fallback
-  const landmarkPlaces = await runQuery(
-    `famous landmarks and attractions in ${destination}`,
-    "tourist_attraction",
-    3
-  );
-  const landmarkPhotos = collectPhotos(landmarkPlaces, false);
+  const [skylinePlaces, downtownPlaces, viewpointPlaces, landmarkPlaces] = await Promise.all([
+    runQuery(`${destination} skyline aerial view`, undefined, 4),
+    runQuery(`${destination} city center downtown`, undefined, 4),
+    runQuery(`${destination} viewpoint panorama`, undefined, 3),
+    runQuery(`famous landmarks in ${destination}`, "tourist_attraction", 4),
+  ]);
 
-  const merged = [...cityscapePhotos, ...landmarkPhotos];
+  // Hero candidates: strict landscape only.
+  const heroCandidates = [
+    ...collectFirstPhotos(skylinePlaces, true),
+    ...collectFirstPhotos(downtownPlaces, true),
+    ...collectFirstPhotos(viewpointPlaces, true),
+    ...collectFirstPhotos(landmarkPlaces, true),
+  ];
+
+  // Filler for remaining slots: landmarks (any aspect, but still first photo).
+  const fillerPhotos = collectFirstPhotos(landmarkPlaces, false);
+
+  const merged = [...heroCandidates, ...fillerPhotos];
   // De-dup by photo URL
   const seen = new Set<string>();
   const unique = merged.filter((p) => {
