@@ -24,11 +24,11 @@ export type TripPlanData = {
 
 const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlanData; destination: string; enrichedImages?: any[] }) => {
   const navigate = useNavigate();
-  const { isPremium } = useSubscription();
+  const { isPremium, loading: subLoading } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
 
   const handleClick = () => {
-    if (!isPremium) {
+    if (!isPremium && !subLoading) {
       setShowPaywall(true);
       return;
     }
