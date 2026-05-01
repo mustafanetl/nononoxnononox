@@ -25,6 +25,7 @@ import { getSkyscannerUrl, getBookingDotComUrl } from "@/utils/bookingLinks";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { detectLang, extractTripLangSample, getTripStrings, type TripStrings } from "@/utils/tripI18n";
 
 /* ═══════════════════════════════════════════
    Editorial-style trip view
@@ -273,6 +274,11 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
   if (!tripData) return null;
   const { data, destination } = tripData;
+
+  // Detect the language the user planned this trip in (from AI-generated text/itinerary)
+  // and pull the localized UI string bundle. Falls back to English when uncertain.
+  const tripLang = detectLang(extractTripLangSample(data));
+  const t = getTripStrings(tripLang);
 
   // Prefer the first landscape image so the hero banner doesn't get a portrait/macro shot.
   const enrichedImgs = tripData.enrichedImages || [];
@@ -572,12 +578,12 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       {isShared && (
         <div className="sticky top-0 z-50 bg-foreground text-background px-4 py-2.5 text-sm flex items-center justify-between gap-3">
           <span className="truncate">
-            <span className="font-semibold">Shared trip</span>
-            <span className="opacity-70 hidden sm:inline"> · Sign up to import & customize this plan</span>
+            <span className="font-semibold">{t.sharedTrip}</span>
+            <span className="opacity-70 hidden sm:inline"> · {t.sharedTripSubtitle}</span>
           </span>
           <Button size="sm" variant="secondary" onClick={handleImport} disabled={importing}
             className="h-7 gap-1.5 shrink-0">
-            <LogIn className="h-3.5 w-3.5" /> {importing ? "Importing..." : "Import this trip"}
+            <LogIn className="h-3.5 w-3.5" /> {importing ? t.importing : t.importTrip}
           </Button>
         </div>
       )}
@@ -598,20 +604,20 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
             {!isShared && (
               <>
                 <Button size="sm" variant="default" onClick={handleSave} disabled={saving} className="h-8 gap-1.5">
-                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save"}
+                  <Bookmark className="h-3.5 w-3.5" /> {saving ? t.saving : t.saveTrip}
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleExportPDF} className="h-8 gap-1.5">
-                  <Download className="h-3.5 w-3.5" /> PDF
+                  <Download className="h-3.5 w-3.5" /> {t.downloadPdf}
                 </Button>
               </>
             )}
             <Button size="sm" variant="outline" onClick={handleShare} disabled={sharing} className="h-8 gap-1.5">
               {isShared ? <Link2 className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-              {isShared ? "Copy link" : sharing ? "Creating..." : "Share"}
+              {isShared ? t.copyLink : sharing ? t.sharing : t.shareTrip}
             </Button>
             {isShared && (
               <Button size="sm" onClick={handleImport} disabled={importing} className="h-8 gap-1.5">
-                <LogIn className="h-3.5 w-3.5" /> {importing ? "..." : "Import"}
+                <LogIn className="h-3.5 w-3.5" /> {importing ? "..." : t.importTrip}
               </Button>
             )}
           </div>
@@ -641,23 +647,23 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               <>
                 <Button size="sm" onClick={handleSave} disabled={saving}
                   className="gap-1.5 bg-white text-black hover:bg-white/90">
-                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save"}
+                  <Bookmark className="h-3.5 w-3.5" /> {saving ? t.saving : t.saveTrip}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={handleExportPDF}
                   className="gap-1.5 bg-white/15 backdrop-blur-md hover:bg-white/25 text-white">
-                  <Download className="h-3.5 w-3.5" /> PDF
+                  <Download className="h-3.5 w-3.5" /> {t.downloadPdf}
                 </Button>
               </>
             )}
             <Button variant="ghost" size="sm" onClick={handleShare} disabled={sharing}
               className="gap-1.5 bg-white/15 backdrop-blur-md hover:bg-white/25 text-white">
               {isShared ? <Link2 className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-              {isShared ? "Copy link" : sharing ? "Creating..." : "Share link"}
+              {isShared ? t.copyLink : sharing ? t.sharing : t.shareTrip}
             </Button>
             {isShared && (
               <Button size="sm" onClick={handleImport} disabled={importing}
                 className="gap-1.5 bg-white text-black hover:bg-white/90">
-                <LogIn className="h-3.5 w-3.5" /> {importing ? "Importing..." : "Import"}
+                <LogIn className="h-3.5 w-3.5" /> {importing ? t.importing : t.importTrip}
               </Button>
             )}
           </div>
@@ -670,7 +676,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               className="text-[11px] sm:text-xs uppercase tracking-[0.35em] text-white/85 mb-4 animate-hero-rise inline-flex items-center gap-2"
               style={{ animationDelay: "0.05s" }}
             >
-              <Compass className="h-3.5 w-3.5" /> Your Jolliday
+              <Compass className="h-3.5 w-3.5" /> {t.yourJolliday}
             </p>
             <h1
               className="text-5xl sm:text-7xl lg:text-[88px] font-bold text-white tracking-tight leading-[0.95] drop-shadow-2xl animate-hero-rise"
@@ -682,14 +688,14 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               className="mt-5 max-w-xl text-white/85 text-base sm:text-lg leading-relaxed animate-hero-rise"
               style={{ animationDelay: "0.32s" }}
             >
-              A {days}-day plan, hand-built around the moments worth remembering.
+              {t.daysSubtitle(days)}
             </p>
           </div>
         </div>
         {/* Scroll cue */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/70 text-[10px] tracking-[0.3em] uppercase animate-hero-rise hidden sm:block"
              style={{ animationDelay: "0.5s" }}>
-          scroll
+          {t.scroll}
         </div>
       </div>
 
@@ -697,13 +703,13 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       <Reveal>
         <div className="max-w-5xl mx-auto px-4 sm:px-8 -mt-12 sm:-mt-16 relative z-10 mb-14 sm:mb-20">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <StatTile label="Days" value={data.itinerary.length || days} icon={<CalendarDays className="h-3.5 w-3.5" />} />
-            <StatTile label="Stops" value={
+            <StatTile label={t.days} value={data.itinerary.length || days} icon={<CalendarDays className="h-3.5 w-3.5" />} />
+            <StatTile label={t.stops} value={
               data.itinerary.reduce((s: number, d: any) => s + (Array.isArray(d?.slots) ? d.slots.length : 0), 0)
               || data.activities.length
             } icon={<MapPin className="h-3.5 w-3.5" />} />
-            <StatTile label="Stays" value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} />
-            <StatTile label="From" value={totalBudget > 0 ? `${currency}${totalBudget.toLocaleString()}` : "—"} icon={<Sparkles className="h-3.5 w-3.5" />} />
+            <StatTile label={t.stays} value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} />
+            <StatTile label={t.from} value={totalBudget > 0 ? `${currency}${totalBudget.toLocaleString()}` : "—"} icon={<Sparkles className="h-3.5 w-3.5" />} />
           </div>
         </div>
       </Reveal>
@@ -734,14 +740,14 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               </div>
               <div className="rounded-3xl border border-border bg-card p-6 sm:p-7 flex flex-col justify-between">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-3">The story</p>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-3">{t.theStory}</p>
                   <p className="text-lg sm:text-xl font-semibold text-foreground leading-snug tracking-tight">
                     {data.text?.split("\n").find(l => l.trim().length > 30)?.slice(0, 220)
-                      || `A handcrafted ${days}-day plan in ${destination}.`}
+                      || t.storyFallback(days, destination)}
                   </p>
                 </div>
                 <p className="mt-6 text-xs text-muted-foreground flex items-center gap-1.5">
-                  <MapPin className="h-3 w-3" /> Tap a pin on the map to open that stop.
+                  <MapPin className="h-3 w-3" /> {t.tapPin}
                 </p>
               </div>
             </div>
@@ -752,16 +758,17 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       {/* ── Logistics: Flights + Hotels side-by-side ── */}
       {(data.flights.length > 0 || data.hotels.length > 0) && (
         <Reveal>
-          <Section eyebrow="Logistics" title="Getting there & where you'll sleep" maxWidth="max-w-6xl">
+          <Section eyebrow={t.logistics} title={t.logisticsTitle} maxWidth="max-w-6xl">
             <div className="grid lg:grid-cols-2 gap-6">
               {data.flights.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                    <Plane className="h-3.5 w-3.5" /> Flights
+                    <Plane className="h-3.5 w-3.5" /> {t.flights}
                   </div>
                   <div className="space-y-3">
                     {data.flights.map((f, i) => (
                       <FlightRow key={f.id || i} flight={f}
+                        t={t}
                         onClick={() => { setSelectedFlight(f); setFlightModalOpen(true); }} />
                     ))}
                   </div>
@@ -770,11 +777,12 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               {data.hotels.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                    <Hotel className="h-3.5 w-3.5" /> Hotels
+                    <Hotel className="h-3.5 w-3.5" /> {t.hotels}
                   </div>
                   <div className="space-y-3">
                     {data.hotels.map((h, i) => (
                       <HotelRow key={h.id || i} hotel={h}
+                        t={t}
                         onClick={() => { setSelectedHotel(h); setHotelModalOpen(true); }} />
                     ))}
                   </div>
@@ -787,9 +795,9 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
       {/* ── Day-by-day itinerary (the centerpiece) ── */}
       {data.itinerary.length > 0 && (
-        <Section eyebrow="The plan" title="Day by day" maxWidth="max-w-5xl">
+        <Section eyebrow={t.thePlan} title={t.dayByDay} maxWidth="max-w-5xl">
           {/* Sticky day rail */}
-          <DayRail days={data.itinerary.map((d: any) => ({ day: d.day, title: d.title }))} />
+          <DayRail days={data.itinerary.map((d: any) => ({ day: d.day, title: d.title }))} dayLabel={t.day} />
           <div className="space-y-20 sm:space-y-24 mt-10">
             {data.itinerary.map((day, dayIdx) => {
               const dayPhoto = photoForDay(day.day);
@@ -809,7 +817,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                       <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
                       <div className="absolute top-4 left-5">
                         <span className="px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[10px] font-bold tracking-[0.2em] uppercase text-foreground">
-                          Day {day.day}
+                          {t.day} {day.day}
                         </span>
                       </div>
                     </div>
@@ -825,7 +833,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                       </h3>
                       {day.slots && day.slots.length > 0 && (
                         <p className="mt-2 text-sm text-muted-foreground">
-                          {day.slots.length} stops · starts {day.slots[0]?.time}
+                          {t.stopsStartsAt(day.slots.length, day.slots[0]?.time || "")}
                         </p>
                       )}
                     </div>
@@ -916,7 +924,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                     <span className="text-xs font-mono font-semibold text-muted-foreground tabular-nums">{slot.time}</span>
                                     {slot.bookAhead && (
                                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                                        <Ticket className="h-3 w-3" /> Book ahead
+                                        <Ticket className="h-3 w-3" /> {t.bookAhead}
                                       </span>
                                     )}
                                   </div>
@@ -1003,7 +1011,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       {/* ── Activities gallery ── */}
       {data.activities.length > 0 && (
         <Reveal>
-          <Section eyebrow="Don't miss" title="Experiences" maxWidth="max-w-6xl">
+          <Section eyebrow={t.dontMiss} title={t.experiences} maxWidth="max-w-6xl">
             <div className="bento-grid">
               {data.activities.map((a, i) => (
                 <ActivityTile
@@ -1034,6 +1042,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
           onSave={handleSave}
           saving={saving}
           sharing={sharing}
+          t={t}
         />
       </Reveal>
 
@@ -1044,22 +1053,22 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
             {isShared ? (
               <>
                 <Button variant="outline" size="sm" onClick={handleShare} className="h-9 gap-1.5">
-                  <Link2 className="h-3.5 w-3.5" /> Copy link
+                  <Link2 className="h-3.5 w-3.5" /> {t.copyLink}
                 </Button>
                 <Button size="sm" onClick={handleImport} disabled={importing} className="gap-1.5 h-9">
-                  <LogIn className="h-3.5 w-3.5" /> {importing ? "..." : "Import"}
+                  <LogIn className="h-3.5 w-3.5" /> {importing ? "..." : t.importTrip}
                 </Button>
               </>
             ) : (
               <>
                 <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 h-9">
-                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "..." : "Save"}
+                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "..." : t.saveTrip}
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleExportPDF} className="h-9 w-9 p-0">
                   <Download className="h-3.5 w-3.5" />
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleShare} disabled={sharing} className="h-9 gap-1.5">
-                  <Link2 className="h-3.5 w-3.5" /> {sharing ? "..." : "Share"}
+                  <Link2 className="h-3.5 w-3.5" /> {sharing ? "..." : t.shareTrip}
                 </Button>
               </>
             )}
@@ -1212,7 +1221,7 @@ const StatTile: React.FC<{ label: string; value: number | string; icon?: React.R
 };
 
 /** Sticky day rail — pill nav with scroll-spy across day-N anchors. */
-const DayRail: React.FC<{ days: { day: number; title: string }[] }> = ({ days }) => {
+const DayRail: React.FC<{ days: { day: number; title: string }[]; dayLabel?: string }> = ({ days, dayLabel = "Day" }) => {
   const [active, setActive] = useState<number>(days[0]?.day ?? 1);
   useEffect(() => {
     if (days.length === 0) return;
@@ -1261,7 +1270,7 @@ const DayRail: React.FC<{ days: { day: number; title: string }[] }> = ({ days })
                   ? "bg-foreground text-background shadow-sm"
                   : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
             >
-              Day {d.day}
+              {dayLabel} {d.day}
               <span className="hidden sm:inline opacity-60 font-normal"> · {d.title.slice(0, 22)}{d.title.length > 22 ? "…" : ""}</span>
             </button>
           );
@@ -1293,7 +1302,8 @@ const ClosingCard: React.FC<{
   onSave: () => void;
   saving: boolean;
   sharing: boolean;
-}> = ({ destination, days, backgroundImage, isShared, onShare, onExportPDF, onSave, saving, sharing }) => (
+  t: TripStrings;
+}> = ({ destination, days, backgroundImage, isShared, onShare, onExportPDF, onSave, saving, sharing, t }) => (
   <div className="max-w-5xl mx-auto px-4 sm:px-8 mt-20 mb-12">
     <div className="relative overflow-hidden rounded-3xl border border-border min-h-[280px]">
       {backgroundImage ? (
@@ -1304,30 +1314,30 @@ const ClosingCard: React.FC<{
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/30" />
       <div className="relative z-10 p-8 sm:p-12 flex flex-col items-center text-center">
         <div className="inline-flex items-center gap-2 text-white/80 text-[10px] uppercase tracking-[0.35em] mb-4">
-          <Compass className="h-3.5 w-3.5" /> Crafted by Jolliday
+          <Compass className="h-3.5 w-3.5" /> {t.craftedBy}
         </div>
         <h3 className="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight max-w-2xl">
-          {days} unforgettable days in {destination}.
+          {t.closingHeadline(days, destination)}
         </h3>
         <p className="mt-3 text-sm text-white/70 max-w-md">
-          Save it, share it, or export a PDF for the road. Prices are estimates — the memories aren't.
+          {t.closingSub}
         </p>
         <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
           {!isShared && (
             <Button onClick={onSave} disabled={saving} size="lg"
               className="gap-2 bg-white text-black hover:bg-white/90 h-11 px-6">
-              <Bookmark className="h-4 w-4" /> {saving ? "Saving..." : "Save trip"}
+              <Bookmark className="h-4 w-4" /> {saving ? t.saving : t.saveTrip}
             </Button>
           )}
           <Button onClick={onShare} disabled={sharing} size="lg" variant="outline"
             className="gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-11 px-6">
             {isShared ? <Link2 className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-            {isShared ? "Copy link" : sharing ? "Creating..." : "Share trip"}
+            {isShared ? t.copyLink : sharing ? t.sharing : t.shareTrip}
           </Button>
           {!isShared && (
             <Button onClick={onExportPDF} size="lg" variant="outline"
               className="gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-11 px-6">
-              <Download className="h-4 w-4" /> Download PDF
+              <Download className="h-4 w-4" /> {t.downloadPdf}
             </Button>
           )}
         </div>
@@ -1336,7 +1346,7 @@ const ClosingCard: React.FC<{
   </div>
 );
 
-const FlightRow = ({ flight: f, onClick }: { flight: FlightData; onClick: () => void }) => (
+const FlightRow = ({ flight: f, onClick, t }: { flight: FlightData; onClick: () => void; t: TripStrings }) => (
   <div onClick={onClick}
     className="group relative p-4 rounded-2xl bg-card border border-border transition-all duration-300 cursor-pointer hover:shadow-lg hover:border-foreground/30 hover:-translate-y-0.5">
     <div className="flex items-center justify-between gap-4">
@@ -1355,7 +1365,7 @@ const FlightRow = ({ flight: f, onClick }: { flight: FlightData; onClick: () => 
             <div className="h-px flex-1 bg-border" />
           </div>
           <span className="text-[10px] text-muted-foreground">
-            {f.stops === 0 ? "Direct" : `${f.stops} stop${f.stops > 1 ? "s" : ""}`}
+            {f.stops === 0 ? t.direct : t.stopWord(f.stops)}
           </span>
         </div>
         <div className="text-center shrink-0">
@@ -1373,14 +1383,14 @@ const FlightRow = ({ flight: f, onClick }: { flight: FlightData; onClick: () => 
       <a href={getSkyscannerUrl(f.from, f.to, f.date)} target="_blank" rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
         className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
-        Search on Skyscanner <ExternalLink className="h-3 w-3" />
+        {t.searchOnSkyscanner} <ExternalLink className="h-3 w-3" />
       </a>
     </div>
   </div>
 );
 
 /** Compact hotel row used inside the side-by-side Logistics block. */
-const HotelRow = ({ hotel: h, onClick }: { hotel: HotelData; onClick: () => void }) => (
+const HotelRow = ({ hotel: h, onClick, t }: { hotel: HotelData; onClick: () => void; t: TripStrings }) => (
   <div onClick={onClick}
     className="group flex gap-3 p-3 rounded-2xl bg-card border border-border cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-foreground/30 hover:-translate-y-0.5">
     <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/15 via-muted to-accent/15">
@@ -1408,11 +1418,11 @@ const HotelRow = ({ hotel: h, onClick }: { hotel: HotelData; onClick: () => void
         </div>
       </div>
       <div className="flex items-center justify-between mt-2">
-        <span className="text-sm font-bold text-foreground">{h.currency}{h.pricePerNight}<span className="text-[10px] font-normal text-muted-foreground">/night</span></span>
+        <span className="text-sm font-bold text-foreground">{h.currency}{h.pricePerNight}<span className="text-[10px] font-normal text-muted-foreground">{t.perNight}</span></span>
         <a href={getBookingDotComUrl(h.name, h.location)} target="_blank" rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline">
-          Booking.com <ExternalLink className="h-2.5 w-2.5" />
+          {t.bookingShort} <ExternalLink className="h-2.5 w-2.5" />
         </a>
       </div>
     </div>
