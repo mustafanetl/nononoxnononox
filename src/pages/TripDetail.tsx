@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Download, Share2, Plane, Hotel, Sparkles,
   MapPin, Clock, ExternalLink, Star, Bookmark, Ticket, ArrowRight, Camera, Link2, LogIn,
+  Footprints, Compass, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -616,16 +617,18 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
           </div>
         </div>
       </div>
-      {/* ── Magazine Hero ── */}
-      <div className="relative h-[58vh] min-h-[420px] max-h-[640px] overflow-hidden">
+      {/* ── Cinematic Hero ── */}
+      <div className="relative h-[62vh] min-h-[460px] max-h-[680px] overflow-hidden">
         {heroImgFinal ? (
-          <img src={heroImgFinal} alt={destination} className="w-full h-full object-cover scale-105" />
+          <img src={heroImgFinal} alt={destination}
+            className="w-full h-full object-cover animate-ken-burns" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30 flex items-center justify-center">
             <MapPin className="h-20 w-20 text-muted-foreground/30" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/15 to-background" />
+        <div className="absolute inset-0 noise-overlay" />
 
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 px-4 sm:px-8 pt-4 flex items-center justify-between z-10">
@@ -661,133 +664,181 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         </div>
 
         {/* Hero title */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-10 pb-10">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-xs sm:text-sm uppercase tracking-[0.25em] text-white/80 mb-3">Your Jolliday</p>
-            <h1 className="text-5xl sm:text-7xl font-bold text-white tracking-tight leading-[0.95] drop-shadow-lg">
+        <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-10 pb-12">
+          <div className="max-w-5xl mx-auto">
+            <p
+              className="text-[11px] sm:text-xs uppercase tracking-[0.35em] text-white/85 mb-4 animate-hero-rise inline-flex items-center gap-2"
+              style={{ animationDelay: "0.05s" }}
+            >
+              <Compass className="h-3.5 w-3.5" /> Your Jolliday
+            </p>
+            <h1
+              className="text-5xl sm:text-7xl lg:text-[88px] font-bold text-white tracking-tight leading-[0.95] drop-shadow-2xl animate-hero-rise"
+              style={{ animationDelay: "0.18s" }}
+            >
               {destination}
             </h1>
-            <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-white/90 text-sm">
-              {data.itinerary.length > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <span className="font-semibold text-white">{data.itinerary.length}</span> days
-                </span>
-              )}
-              {data.activities.length > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <span className="font-semibold text-white">{data.activities.length}</span> experiences
-                </span>
-              )}
-              {data.hotels.length > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <span className="font-semibold text-white">{data.hotels.length}</span> stays
-                </span>
-              )}
-              {totalBudget > 0 && (
-                <span className="flex items-center gap-1.5">
-                  from <span className="font-semibold text-white">{currency}{totalBudget.toLocaleString()}</span>
-                </span>
-              )}
+            <p
+              className="mt-5 max-w-xl text-white/85 text-base sm:text-lg leading-relaxed animate-hero-rise"
+              style={{ animationDelay: "0.32s" }}
+            >
+              A {days}-day plan, hand-built around the moments worth remembering.
+            </p>
+          </div>
+        </div>
+        {/* Scroll cue */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/70 text-[10px] tracking-[0.3em] uppercase animate-hero-rise hidden sm:block"
+             style={{ animationDelay: "0.5s" }}>
+          scroll
+        </div>
+      </div>
+
+      {/* ── At-a-glance stats ── */}
+      <Reveal>
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 -mt-12 sm:-mt-16 relative z-10 mb-14 sm:mb-20">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <StatTile label="Days" value={data.itinerary.length || days} icon={<CalendarDays className="h-3.5 w-3.5" />} />
+            <StatTile label="Stops" value={
+              data.itinerary.reduce((s: number, d: any) => s + (Array.isArray(d?.slots) ? d.slots.length : 0), 0)
+              || data.activities.length
+            } icon={<MapPin className="h-3.5 w-3.5" />} />
+            <StatTile label="Stays" value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} />
+            <StatTile label="From" value={totalBudget > 0 ? `${currency}${totalBudget.toLocaleString()}` : "—"} icon={<Sparkles className="h-3.5 w-3.5" />} />
+          </div>
+        </div>
+      </Reveal>
+
+      {/* ── Map + intro quote ── */}
+      {mapPoints.length > 0 && (
+        <Reveal>
+          <div className="max-w-5xl mx-auto px-4 sm:px-8 mb-16">
+            <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6 items-stretch">
+              <div className="relative rounded-3xl overflow-hidden border border-border">
+                <TripMap
+                  points={mapPoints}
+                  onMarkerClick={({ name, type, day, slotIdx }) => {
+                    if (type === "hotel") {
+                      const hotel = data.hotels.find((h: any) => h.name === name) || data.hotels[0];
+                      if (hotel) { setSelectedHotel(hotel); setHotelModalOpen(true); }
+                      return;
+                    }
+                    if (day != null && typeof slotIdx === "number") { openSlotModal(day, slotIdx); return; }
+                    const activity = data.activities.find((a: any) => a.name === name);
+                    if (activity) {
+                      setSelectedActivity(activity);
+                      setActivitySource({ kind: "activity", activityId: activity.id });
+                      setActivityModalOpen(true);
+                    }
+                  }}
+                />
+              </div>
+              <div className="rounded-3xl border border-border bg-card p-6 sm:p-7 flex flex-col justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-3">The story</p>
+                  <p className="text-lg sm:text-xl font-semibold text-foreground leading-snug tracking-tight">
+                    {data.text?.split("\n").find(l => l.trim().length > 30)?.slice(0, 220)
+                      || `A handcrafted ${days}-day plan in ${destination}.`}
+                  </p>
+                </div>
+                <p className="mt-6 text-xs text-muted-foreground flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3" /> Tap a pin on the map to open that stop.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* ── Pull-quote intro ── */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-8 -mt-2 mb-10 sm:mb-14">
-        {data.text && (
-          <p className="text-xl sm:text-2xl font-semibold text-foreground leading-snug tracking-tight">
-            {data.text.split("\n").find(l => l.trim().length > 30)?.slice(0, 240) || `A handcrafted ${days}-day plan in ${destination}.`}
-          </p>
-        )}
-      </div>
-
-      {/* ── Map (if available) ── */}
-      {mapPoints.length > 0 && (
-        <div className="max-w-4xl mx-auto px-4 sm:px-8 mb-12">
-          <TripMap
-            points={mapPoints}
-            onMarkerClick={({ name, type, day, slotIdx }) => {
-              if (type === "hotel") {
-                const hotel = data.hotels.find((h: any) => h.name === name) || data.hotels[0];
-                if (hotel) {
-                  setSelectedHotel(hotel);
-                  setHotelModalOpen(true);
-                }
-                return;
-              }
-              // Activity pin: prefer the exact slot it came from (always opens the rich card)
-              if (day != null && typeof slotIdx === "number") {
-                openSlotModal(day, slotIdx);
-                return;
-              }
-              // Fallback: top-level activity
-              const activity = data.activities.find((a: any) => a.name === name);
-              if (activity) {
-                setSelectedActivity(activity);
-                setActivitySource({ kind: "activity", activityId: activity.id });
-                setActivityModalOpen(true);
-              }
-            }}
-          />
-        </div>
+        </Reveal>
       )}
 
-      {/* ── Flights ── */}
-      {data.flights.length > 0 && (
-        <Section eyebrow="Getting there" title="Flights" maxWidth="max-w-3xl">
-          <div className="space-y-3">
-            {data.flights.map((f, i) => (
-              <FlightRow key={f.id || i} flight={f}
-                onClick={() => { setSelectedFlight(f); setFlightModalOpen(true); }} />
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* ── Hotels ── */}
-      {data.hotels.length > 0 && (
-        <Section eyebrow="Where you'll stay" title="Hotels" maxWidth="max-w-5xl">
-          <div className="grid gap-5 sm:grid-cols-2">
-            {data.hotels.map((h, i) => (
-              <HotelCardBig key={h.id || i} hotel={h}
-                onClick={() => { setSelectedHotel(h); setHotelModalOpen(true); }} />
-            ))}
-          </div>
-        </Section>
+      {/* ── Logistics: Flights + Hotels side-by-side ── */}
+      {(data.flights.length > 0 || data.hotels.length > 0) && (
+        <Reveal>
+          <Section eyebrow="Logistics" title="Getting there & where you'll sleep" maxWidth="max-w-6xl">
+            <div className="grid lg:grid-cols-2 gap-6">
+              {data.flights.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                    <Plane className="h-3.5 w-3.5" /> Flights
+                  </div>
+                  <div className="space-y-3">
+                    {data.flights.map((f, i) => (
+                      <FlightRow key={f.id || i} flight={f}
+                        onClick={() => { setSelectedFlight(f); setFlightModalOpen(true); }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {data.hotels.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                    <Hotel className="h-3.5 w-3.5" /> Hotels
+                  </div>
+                  <div className="space-y-3">
+                    {data.hotels.map((h, i) => (
+                      <HotelRow key={h.id || i} hotel={h}
+                        onClick={() => { setSelectedHotel(h); setHotelModalOpen(true); }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Section>
+        </Reveal>
       )}
 
       {/* ── Day-by-day itinerary (the centerpiece) ── */}
       {data.itinerary.length > 0 && (
-        <Section eyebrow="The plan" title="Day by day" maxWidth="max-w-4xl">
-          <div className="space-y-14">
-            {data.itinerary.map((day) => {
+        <Section eyebrow="The plan" title="Day by day" maxWidth="max-w-5xl">
+          {/* Sticky day rail */}
+          <DayRail days={data.itinerary.map((d: any) => ({ day: d.day, title: d.title }))} />
+          <div className="space-y-20 sm:space-y-24 mt-10">
+            {data.itinerary.map((day, dayIdx) => {
               const dayPhoto = photoForDay(day.day);
+              const reverse = dayIdx % 2 === 1;
               return (
-                <article key={day.day} className="group">
-                  {/* Day banner */}
-                  <div className="relative h-56 sm:h-72 rounded-3xl overflow-hidden mb-5">
-                    {dayPhoto ? (
-                      <img src={dayPhoto} alt={day.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6">
-                      <p className="text-xs uppercase tracking-[0.2em] text-white/80">Day {day.day}</p>
-                      <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mt-1 leading-tight">
+                <Reveal key={day.day}>
+                <article id={`day-${day.day}`} className="group scroll-mt-24">
+                  {/* Day banner with big outlined number */}
+                  <div className={`grid gap-5 lg:gap-7 mb-6 ${reverse ? "lg:grid-cols-[1fr_1.4fr]" : "lg:grid-cols-[1.4fr_1fr]"}`}>
+                    <div className={`relative h-56 sm:h-72 lg:h-80 rounded-3xl overflow-hidden ${reverse ? "lg:order-2" : ""}`}>
+                      {dayPhoto ? (
+                        <img src={dayPhoto} alt={day.title}
+                          className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
+                      <div className="absolute top-4 left-5">
+                        <span className="px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[10px] font-bold tracking-[0.2em] uppercase text-foreground">
+                          Day {day.day}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={`flex flex-col justify-center ${reverse ? "lg:order-1 lg:items-end lg:text-right" : ""}`}>
+                      <p
+                        className="text-[100px] sm:text-[140px] font-bold leading-none tracking-tighter text-transparent"
+                        style={{ WebkitTextStroke: "1.5px hsl(var(--foreground))" }}
+                      >
+                        {String(day.day).padStart(2, "0")}
+                      </p>
+                      <h3 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mt-2 leading-tight">
                         {day.title}
                       </h3>
+                      {day.slots && day.slots.length > 0 && (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {day.slots.length} stops · starts {day.slots[0]?.time}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {/* Slots */}
                   {day.slots && day.slots.length > 0 ? (
-                    <ol className="relative pl-6 sm:pl-8 border-l-2 border-border space-y-5">
+                    <ol className="relative pl-7 sm:pl-9 border-l-2 border-border space-y-7">
                       {day.slots.map((slot, sIdx) => (
                         <li key={sIdx} className="relative">
-                          <span className="absolute -left-[33px] sm:-left-[37px] top-1.5 w-3.5 h-3.5 rounded-full bg-foreground ring-4 ring-background" />
+                          <span className="absolute -left-[34px] sm:-left-[42px] top-1 w-7 h-7 rounded-full bg-foreground text-background ring-4 ring-background flex items-center justify-center text-[11px] font-bold tabular-nums">
+                            {sIdx + 1}
+                          </span>
                           {(() => {
                             const matched = matchActivity(slot.venue);
                             const slotPhotoMatch = resolveVenuePhotoMatch(slot.venue, tripData.itineraryVenuePhotos);
@@ -830,18 +881,18 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                               setActivityModalOpen(true);
                             };
                             return (
-                              <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-4 sm:gap-5 transition-transform duration-300 hover:-translate-y-0.5">
                                 {/* Hero photo column */}
                                 <button
                                   type="button"
                                   onClick={openModal}
-                                  className="relative h-44 sm:h-40 sm:w-40 rounded-2xl overflow-hidden group/photo bg-gradient-to-br from-primary/15 via-muted to-accent/15"
+                                  className="relative h-44 sm:h-44 sm:w-[180px] rounded-2xl overflow-hidden group/photo bg-gradient-to-br from-primary/15 via-muted to-accent/15 ring-1 ring-border hover:ring-foreground/30 transition"
                                 >
                                   {heroPhoto ? (
                                     <img
                                       src={heroPhoto}
                                       alt={slot.venue}
-                                      className="w-full h-full object-cover transition-transform duration-500 group-hover/photo:scale-105"
+                                      className="w-full h-full object-cover transition-transform duration-700 group-hover/photo:scale-110"
                                     />
                                   ) : (
                                     <div className="w-full h-full flex items-center justify-center">
@@ -925,9 +976,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                   )}
 
                                   {slot.transitNext && slot.transitNext !== "—" && sIdx < day.slots!.length - 1 && (
-                                    <div className="flex items-center gap-1.5 mt-3 text-[11px] italic text-muted-foreground/80">
-                                      <ArrowRight className="h-3 w-3" /> {slot.transitNext}
-                                    </div>
+                                    <TransitPill text={slot.transitNext} />
                                   )}
                                 </div>
                               </div>
@@ -944,6 +993,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                     </div>
                   )}
                 </article>
+                </Reveal>
               );
             })}
           </div>
@@ -952,32 +1002,40 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
       {/* ── Activities gallery ── */}
       {data.activities.length > 0 && (
-        <Section eyebrow="Don't miss" title="Experiences" maxWidth="max-w-5xl">
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {data.activities.map((a, i) => (
-              <ActivityTile key={a.id || i} activity={a}
-                onClick={() => {
-                  setSelectedActivity(a);
-                  setActivitySource({ kind: "activity", activityId: a.id });
-                  setActivityModalOpen(true);
-                }} />
-            ))}
-          </div>
-        </Section>
+        <Reveal>
+          <Section eyebrow="Don't miss" title="Experiences" maxWidth="max-w-6xl">
+            <div className="bento-grid">
+              {data.activities.map((a, i) => (
+                <ActivityTile
+                  key={a.id || i}
+                  activity={a}
+                  variant={i === 0 ? "feature" : i % 4 === 1 ? "tall" : "regular"}
+                  onClick={() => {
+                    setSelectedActivity(a);
+                    setActivitySource({ kind: "activity", activityId: a.id });
+                    setActivityModalOpen(true);
+                  }}
+                />
+              ))}
+            </div>
+          </Section>
+        </Reveal>
       )}
 
-      {/* ── Closing strip ── */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-8 mt-16 pt-10 border-t border-border text-center">
-        {secondaryImg && (
-          <div className="relative h-40 sm:h-56 rounded-2xl overflow-hidden mb-6">
-            <img src={secondaryImg} alt="" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-          </div>
-        )}
-        <p className="text-sm text-muted-foreground">
-          Crafted by Jolliday · prices are estimates · enjoy the trip ✦
-        </p>
-      </div>
+      {/* ── Closing share card ── */}
+      <Reveal>
+        <ClosingCard
+          destination={destination}
+          days={days}
+          backgroundImage={secondaryImg}
+          isShared={isShared}
+          onShare={handleShare}
+          onExportPDF={handleExportPDF}
+          onSave={handleSave}
+          saving={saving}
+          sharing={sharing}
+        />
+      </Reveal>
 
       {/* ── Floating mobile actions ── */}
       <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden">
@@ -1091,13 +1149,200 @@ const Section = ({
   </section>
 );
 
+/** Lightweight scroll-reveal: fades + slides children in once on first viewport entry. */
+const Reveal: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("is-visible");
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={`reveal ${className || ""}`}>
+      {children}
+    </div>
+  );
+};
+
+/** Animated count-up for numeric stats. Falls through for non-numeric values. */
+const useCountUp = (target: number, durationMs = 900) => {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!Number.isFinite(target)) return;
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setVal(Math.round(target * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+  return val;
+};
+
+const StatTile: React.FC<{ label: string; value: number | string; icon?: React.ReactNode }> = ({ label, value, icon }) => {
+  const isNumeric = typeof value === "number";
+  const counted = useCountUp(isNumeric ? value : 0);
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-2">
+        {icon}
+        {label}
+      </div>
+      <p className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground tabular-nums">
+        {isNumeric ? counted : value}
+      </p>
+    </div>
+  );
+};
+
+/** Sticky day rail — pill nav with scroll-spy across day-N anchors. */
+const DayRail: React.FC<{ days: { day: number; title: string }[] }> = ({ days }) => {
+  const [active, setActive] = useState<number>(days[0]?.day ?? 1);
+  useEffect(() => {
+    if (days.length === 0) return;
+    const observers: IntersectionObserver[] = [];
+    const seen = new Map<number, number>();
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          const id = (e.target as HTMLElement).id; // day-N
+          const n = parseInt(id.replace("day-", ""), 10);
+          if (Number.isFinite(n)) seen.set(n, e.intersectionRatio);
+        });
+        // pick the day with the highest visible ratio
+        let best = active;
+        let bestRatio = -1;
+        seen.forEach((ratio, n) => {
+          if (ratio > bestRatio) { bestRatio = ratio; best = n; }
+        });
+        if (bestRatio > 0) setActive(best);
+      },
+      { rootMargin: "-30% 0px -55% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+    days.forEach((d) => {
+      const el = document.getElementById(`day-${d.day}`);
+      if (el) io.observe(el);
+    });
+    observers.push(io);
+    return () => observers.forEach((o) => o.disconnect());
+  }, [days, active]);
+
+  if (days.length <= 1) return null;
+  return (
+    <div className="sticky top-14 sm:top-16 z-30 -mx-4 sm:-mx-8 px-4 sm:px-8 py-2 bg-background/85 backdrop-blur-md border-y border-border">
+      <div className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+        {days.map((d) => {
+          const isActive = d.day === active;
+          return (
+            <button
+              key={d.day}
+              onClick={() => {
+                const el = document.getElementById(`day-${d.day}`);
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-tight transition-all
+                ${isActive
+                  ? "bg-foreground text-background shadow-sm"
+                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+            >
+              Day {d.day}
+              <span className="hidden sm:inline opacity-60 font-normal"> · {d.title.slice(0, 22)}{d.title.length > 22 ? "…" : ""}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/** Pill that shows transit info (walk/transit) between two slots. */
+const TransitPill: React.FC<{ text: string }> = ({ text }) => (
+  <div className="mt-4 flex items-center gap-2">
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/70 text-muted-foreground text-[11px] font-medium">
+      <Footprints className="h-3 w-3" />
+      {text}
+    </span>
+    <span className="h-px flex-1 bg-border" />
+  </div>
+);
+
+/** Branded closing card — pause-worthy moment at the end of the page. */
+const ClosingCard: React.FC<{
+  destination: string;
+  days: number;
+  backgroundImage?: string;
+  isShared: boolean;
+  onShare: () => void;
+  onExportPDF: () => void;
+  onSave: () => void;
+  saving: boolean;
+  sharing: boolean;
+}> = ({ destination, days, backgroundImage, isShared, onShare, onExportPDF, onSave, saving, sharing }) => (
+  <div className="max-w-5xl mx-auto px-4 sm:px-8 mt-20 mb-12">
+    <div className="relative overflow-hidden rounded-3xl border border-border min-h-[280px]">
+      {backgroundImage ? (
+        <img src={backgroundImage} alt="" className="absolute inset-0 w-full h-full object-cover animate-ken-burns" />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground via-foreground/95 to-foreground/80" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/30" />
+      <div className="relative z-10 p-8 sm:p-12 flex flex-col items-center text-center">
+        <div className="inline-flex items-center gap-2 text-white/80 text-[10px] uppercase tracking-[0.35em] mb-4">
+          <Compass className="h-3.5 w-3.5" /> Crafted by Jolliday
+        </div>
+        <h3 className="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight max-w-2xl">
+          {days} unforgettable days in {destination}.
+        </h3>
+        <p className="mt-3 text-sm text-white/70 max-w-md">
+          Save it, share it, or export a PDF for the road. Prices are estimates — the memories aren't.
+        </p>
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
+          {!isShared && (
+            <Button onClick={onSave} disabled={saving} size="lg"
+              className="gap-2 bg-white text-black hover:bg-white/90 h-11 px-6">
+              <Bookmark className="h-4 w-4" /> {saving ? "Saving..." : "Save trip"}
+            </Button>
+          )}
+          <Button onClick={onShare} disabled={sharing} size="lg" variant="outline"
+            className="gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-11 px-6">
+            {isShared ? <Link2 className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+            {isShared ? "Copy link" : sharing ? "Creating..." : "Share trip"}
+          </Button>
+          {!isShared && (
+            <Button onClick={onExportPDF} size="lg" variant="outline"
+              className="gap-2 bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20 hover:text-white h-11 px-6">
+              <Download className="h-4 w-4" /> Download PDF
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const FlightRow = ({ flight: f, onClick }: { flight: FlightData; onClick: () => void }) => (
   <div onClick={onClick}
-    className="group relative p-5 rounded-2xl bg-card border border-border transition-all duration-300 cursor-pointer hover:shadow-lg hover:border-foreground/20">
+    className="group relative p-4 rounded-2xl bg-card border border-border transition-all duration-300 cursor-pointer hover:shadow-lg hover:border-foreground/30 hover:-translate-y-0.5">
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div className="text-center shrink-0">
-          <p className="text-xl font-bold text-foreground">{f.departureTime}</p>
+          <p className="text-lg font-bold text-foreground tabular-nums">{f.departureTime}</p>
           <p className="text-xs text-muted-foreground uppercase tracking-wider">{f.from}</p>
         </div>
         <div className="flex-1 flex flex-col items-center gap-1 px-2">
@@ -1114,22 +1359,62 @@ const FlightRow = ({ flight: f, onClick }: { flight: FlightData; onClick: () => 
           </span>
         </div>
         <div className="text-center shrink-0">
-          <p className="text-xl font-bold text-foreground">{f.arrivalTime}</p>
+          <p className="text-lg font-bold text-foreground tabular-nums">{f.arrivalTime}</p>
           <p className="text-xs text-muted-foreground uppercase tracking-wider">{f.to}</p>
         </div>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-xl font-bold text-foreground">{f.currency}{f.price}</p>
+        <p className="text-lg font-bold text-foreground">{f.currency}{f.price}</p>
         <p className="text-xs text-muted-foreground">{f.airline}</p>
       </div>
     </div>
-    <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
       <span className="text-xs text-muted-foreground">{f.date}</span>
       <a href={getSkyscannerUrl(f.from, f.to, f.date)} target="_blank" rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
         className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
         Search on Skyscanner <ExternalLink className="h-3 w-3" />
       </a>
+    </div>
+  </div>
+);
+
+/** Compact hotel row used inside the side-by-side Logistics block. */
+const HotelRow = ({ hotel: h, onClick }: { hotel: HotelData; onClick: () => void }) => (
+  <div onClick={onClick}
+    className="group flex gap-3 p-3 rounded-2xl bg-card border border-border cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-foreground/30 hover:-translate-y-0.5">
+    <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/15 via-muted to-accent/15">
+      {h.realImage ? (
+        <img src={h.realImage} alt={h.name}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <Hotel className="h-8 w-8 text-muted-foreground/40" />
+        </div>
+      )}
+    </div>
+    <div className="flex-1 min-w-0 flex flex-col justify-between">
+      <div>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-bold text-sm sm:text-base leading-tight text-foreground line-clamp-2">{h.name}</h3>
+          <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+            {Array.from({ length: h.stars }).map((_, j) => (
+              <Star key={j} className="h-3 w-3 fill-amber-400 text-amber-400" />
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+          <MapPin className="h-3 w-3" /> <span className="truncate">{h.location}</span>
+        </div>
+      </div>
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-sm font-bold text-foreground">{h.currency}{h.pricePerNight}<span className="text-[10px] font-normal text-muted-foreground">/night</span></span>
+        <a href={getBookingDotComUrl(h.name, h.location)} target="_blank" rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline">
+          Booking.com <ExternalLink className="h-2.5 w-2.5" />
+        </a>
+      </div>
     </div>
   </div>
 );
@@ -1172,33 +1457,69 @@ const HotelCardBig = ({ hotel: h, onClick }: { hotel: HotelData; onClick: () => 
   </div>
 );
 
-const ActivityTile = ({ activity: a, onClick }: { activity: ActivityData; onClick: () => void }) => (
-  <div onClick={onClick}
-    className="group rounded-2xl bg-card border border-border overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:border-foreground/20 hover:-translate-y-0.5">
-    <div className="relative h-48 overflow-hidden">
-      {a.realPhoto ? (
-        <img src={a.realPhoto} alt={a.name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-      ) : (
-        <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
-          <Sparkles className="h-10 w-10 text-muted-foreground/40" />
+/** Bento-aware activity tile — supports feature/tall/regular sizing within `.bento-grid`. */
+const ActivityTile = ({
+  activity: a,
+  onClick,
+  variant = "regular",
+}: {
+  activity: ActivityData;
+  onClick: () => void;
+  variant?: "feature" | "tall" | "regular";
+}) => {
+  const variantClass =
+    variant === "feature" ? "bento-feature" : variant === "tall" ? "bento-tall" : "";
+  const isFeature = variant === "feature";
+  return (
+    <div
+      onClick={onClick}
+      className={`${variantClass} group relative rounded-3xl overflow-hidden cursor-pointer border border-border bg-card transition-all duration-300 hover:shadow-2xl hover:-translate-y-0.5 hover:border-foreground/30`}
+    >
+      <div className="absolute inset-0">
+        {a.realPhoto ? (
+          <img
+            src={a.realPhoto}
+            alt={a.name}
+            className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-110"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
+            <Sparkles className="h-12 w-12 text-muted-foreground/40" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-black/15" />
+      </div>
+      {/* Variant-only minimum heights for mobile (where the bento grid collapses) */}
+      <div className={`relative ${isFeature ? "min-h-[360px]" : "min-h-[260px]"}`}>
+        <div className="absolute top-3 left-3">
+          <span className="px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-[10px] font-semibold uppercase tracking-wider text-foreground">
+            {a.category || "experience"}
+          </span>
         </div>
-      )}
-      <div className="absolute top-3 left-3">
-        <span className="px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-[10px] font-semibold uppercase tracking-wider text-foreground">
-          {a.category || "experience"}
-        </span>
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
+          <h3
+            className={`font-bold leading-tight text-white tracking-tight ${
+              isFeature ? "text-2xl sm:text-3xl" : "text-base sm:text-lg"
+            }`}
+          >
+            {a.name}
+          </h3>
+          {a.description && isFeature && (
+            <p className="text-sm text-white/85 line-clamp-2 mt-2 max-w-lg">{a.description}</p>
+          )}
+          <div className="flex items-center justify-between pt-3 text-xs text-white/85">
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" /> {a.duration}
+            </span>
+            <span className="font-bold text-white">
+              {a.currency}
+              {a.price}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
-    <div className="p-4 space-y-2">
-      <h3 className="font-bold text-base leading-tight text-foreground">{a.name}</h3>
-      {a.description && <p className="text-sm text-muted-foreground line-clamp-2">{a.description}</p>}
-      <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {a.duration}</span>
-        <span className="font-bold text-foreground">{a.currency}{a.price}</span>
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 export default TripDetail;
