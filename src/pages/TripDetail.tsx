@@ -315,6 +315,65 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
     return bestScore >= 0.9 ? best : null;
   };
 
+  // Resolve a slot to a renderable ActivityData (matched activity OR synthetic).
+  // Used by both the day-by-day timeline AND the map-marker click.
+  const resolveSlotActivity = (
+    slot: any,
+    dayNum: number,
+    slotIdx: number
+  ): { activity: ActivityData; matched: any | null; reels: string[] } => {
+    const matched = matchActivity(slot?.venue);
+    const slotPhotoMatch = resolveVenuePhotoMatch(slot?.venue, tripData!.itineraryVenuePhotos);
+    const heroPhoto: string | undefined =
+      slotPhotoMatch?.photo || slotPhotoMatch?.thumbPhoto || matched?.realPhoto;
+    const reels = createDistinctPhotoGallery({
+      primary: heroPhoto,
+      sources: [slotPhotoMatch?.photos, matched?.realPhotos],
+      limit: 4,
+    });
+    if (matched) {
+      return { activity: matched, matched, reels };
+    }
+    const synthetic: ActivityData = {
+      id: `${dayNum}-${slotIdx}-${slot?.venue || "stop"}`,
+      name: slot?.venue || "Stop",
+      category: "sightseeing",
+      duration: slot?.duration || "",
+      price: slot?.cost || 0,
+      currency,
+      image: heroPhoto || "",
+      occasion: "",
+      description: slot?.activity || `A highlighted stop in your ${destination} plan.`,
+      neighborhood: slotPhotoMatch?.address || slot?.neighborhood,
+      bookAhead: slot?.bookAhead,
+      realPhoto: heroPhoto,
+      realPhotos: reels,
+      verified: !!slotPhotoMatch?.verified,
+      verifiedAddress: slotPhotoMatch?.address || slot?.neighborhood,
+      verifiedRating: slotPhotoMatch?.rating || null,
+    } as ActivityData;
+    return { activity: synthetic, matched: null, reels };
+  };
+
+  const openSlotModal = (dayNum: number, slotIdx: number) => {
+    const day = data.itinerary.find((d: any) => d.day === dayNum);
+    const slot = day?.slots?.[slotIdx];
+    if (!slot) return;
+    const { activity } = resolveSlotActivity(slot, dayNum, slotIdx);
+    setSelectedActivity(activity);
+    setActivitySource({ kind: "slot", dayNum, slotIdx });
+    setActivityModalOpen(true);
+  };
+
+  // Coordinates for a slot, sourced from the matched activity card.
+  const slotCoords = (slot: any): { lat: number; lng: number } | null => {
+    const m = matchActivity(slot?.venue);
+    if (m && typeof m.lat === "number" && typeof m.lng === "number") {
+      return { lat: m.lat, lng: m.lng };
+    }
+    return null;
+  };
+
   const handleShare = async () => {
     // Shared-mode: copy the current public URL.
     if (isShared) {
