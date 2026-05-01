@@ -1495,48 +1495,51 @@ const ActivityTile = ({
   return (
     <div
       onClick={onClick}
-      className={`${variantClass} group relative rounded-3xl overflow-hidden cursor-pointer border border-border bg-card transition-all duration-300 hover:shadow-2xl hover:-translate-y-0.5 hover:border-foreground/30`}
+      className={`${variantClass} group relative rounded-3xl overflow-hidden cursor-pointer bg-card transition-all duration-500 hover:shadow-2xl hover:-translate-y-1`}
     >
       <div className="absolute inset-0">
         {a.realPhoto ? (
           <img
             src={a.realPhoto}
             alt={a.name}
-            className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.08]"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
             <Sparkles className="h-12 w-12 text-muted-foreground/40" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-black/15" />
+        {/* Lighter, photo-respecting overlay: dark only at the bottom where text sits */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+        <div className="absolute inset-0 ring-1 ring-inset ring-white/5 rounded-3xl pointer-events-none" />
       </div>
       {/* Variant-only minimum heights for mobile (where the bento grid collapses) */}
-      <div className={`relative ${isFeature ? "min-h-[360px]" : "min-h-[260px]"}`}>
+      <div className={`relative ${isFeature ? "min-h-[420px]" : "min-h-[280px]"}`}>
         <div className="absolute top-3 left-3">
-          <span className="px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-[10px] font-semibold uppercase tracking-wider text-foreground">
+          <span className="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-sm text-[10px] font-semibold uppercase tracking-[0.15em] text-foreground shadow-sm">
             {a.category || "experience"}
           </span>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
+        <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
           <h3
-            className={`font-bold leading-tight text-white tracking-tight ${
-              isFeature ? "text-2xl sm:text-3xl" : "text-base sm:text-lg"
+            className={`font-bold leading-[1.1] text-white tracking-tight drop-shadow-lg ${
+              isFeature ? "text-2xl sm:text-4xl" : "text-lg sm:text-xl"
             }`}
           >
             {a.name}
           </h3>
           {a.description && isFeature && (
-            <p className="text-sm text-white/85 line-clamp-2 mt-2 max-w-lg">{a.description}</p>
+            <p className="text-sm text-white/90 line-clamp-2 mt-2 max-w-lg leading-relaxed">{a.description}</p>
           )}
-          <div className="flex items-center justify-between pt-3 text-xs text-white/85">
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" /> {a.duration}
+          <div className="flex items-center justify-between pt-3 text-xs">
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white/95 font-medium">
+              <Clock className="h-3 w-3" /> {a.duration || "—"}
             </span>
-            <span className="font-bold text-white">
-              {a.currency}
-              {a.price}
-            </span>
+            {a.price > 0 && (
+              <span className="font-bold text-white text-sm tabular-nums drop-shadow">
+                {a.currency}{a.price}
+              </span>
+            )}
           </div>
         </div>
       </div>
