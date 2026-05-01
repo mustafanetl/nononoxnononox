@@ -15,16 +15,16 @@ const destinations: Dest[] = [
 const Card = ({ d, className = "" }: { d: Dest; className?: string }) => (
   <Link
     to={`/chat?q=Plan a trip to ${d.name}`}
-    className={`group relative block overflow-hidden rounded-lg border border-border bg-card hover:bg-muted/40 transition-colors ${className}`}
+    className={`group relative block overflow-hidden rounded-lg border border-border bg-gradient-to-br from-muted/30 via-card to-card hover:from-muted/60 hover:via-card hover:to-card transition-colors ${className}`}
   >
     <div className="absolute top-4 right-4 sm:top-5 sm:right-5 opacity-40 group-hover:opacity-100 transition-opacity">
       <ArrowUpRight className="h-5 w-5 text-foreground" />
     </div>
-    <div className="absolute inset-x-4 sm:inset-x-6 bottom-4 sm:bottom-6">
+    <div className="absolute inset-x-5 sm:inset-x-6 bottom-5 sm:bottom-6">
       <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
         {d.country}
       </div>
-      <div className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight mt-1 text-foreground group-hover:underline underline-offset-[6px] decoration-2">
+      <div className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mt-1 text-foreground group-hover:underline underline-offset-[6px] decoration-2">
         {d.name}
       </div>
       <div className="mt-2 text-xs sm:text-sm text-muted-foreground max-w-[18rem]">
@@ -54,14 +54,9 @@ const DestinationsMosaic = () => {
 
         {/* Mosaic */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-          <Card d={destinations[0]} className="col-span-2 md:col-span-2 aspect-[16/10]" />
-          <Card d={destinations[1]} className="col-span-2 md:col-span-1 aspect-[16/10] md:aspect-auto" />
-
-          <Card d={destinations[2]} className="col-span-1 aspect-square" />
-          <Card d={destinations[3]} className="col-span-1 md:col-span-2 aspect-square md:aspect-[16/10]" />
-
-          <Card d={destinations[4]} className="col-span-1 aspect-square" />
-          <Card d={destinations[5]} className="col-span-1 md:col-span-2 aspect-square md:aspect-[16/9]" />
+          {destinations.map((d) => (
+            <Card key={d.name} d={d} className="aspect-[5/3] md:aspect-[4/3]" />
+          ))}
         </div>
       </div>
     </section>
