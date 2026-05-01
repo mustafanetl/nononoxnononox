@@ -647,23 +647,23 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               <>
                 <Button size="sm" onClick={handleSave} disabled={saving}
                   className="gap-1.5 bg-white text-black hover:bg-white/90">
-                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save"}
+                  <Bookmark className="h-3.5 w-3.5" /> {saving ? t.saving : t.saveTrip}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={handleExportPDF}
                   className="gap-1.5 bg-white/15 backdrop-blur-md hover:bg-white/25 text-white">
-                  <Download className="h-3.5 w-3.5" /> PDF
+                  <Download className="h-3.5 w-3.5" /> {t.downloadPdf}
                 </Button>
               </>
             )}
             <Button variant="ghost" size="sm" onClick={handleShare} disabled={sharing}
               className="gap-1.5 bg-white/15 backdrop-blur-md hover:bg-white/25 text-white">
               {isShared ? <Link2 className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-              {isShared ? "Copy link" : sharing ? "Creating..." : "Share link"}
+              {isShared ? t.copyLink : sharing ? t.sharing : t.shareTrip}
             </Button>
             {isShared && (
               <Button size="sm" onClick={handleImport} disabled={importing}
                 className="gap-1.5 bg-white text-black hover:bg-white/90">
-                <LogIn className="h-3.5 w-3.5" /> {importing ? "Importing..." : "Import"}
+                <LogIn className="h-3.5 w-3.5" /> {importing ? t.importing : t.importTrip}
               </Button>
             )}
           </div>
@@ -676,7 +676,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               className="text-[11px] sm:text-xs uppercase tracking-[0.35em] text-white/85 mb-4 animate-hero-rise inline-flex items-center gap-2"
               style={{ animationDelay: "0.05s" }}
             >
-              <Compass className="h-3.5 w-3.5" /> Your Jolliday
+              <Compass className="h-3.5 w-3.5" /> {t.yourJolliday}
             </p>
             <h1
               className="text-5xl sm:text-7xl lg:text-[88px] font-bold text-white tracking-tight leading-[0.95] drop-shadow-2xl animate-hero-rise"
@@ -688,14 +688,14 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               className="mt-5 max-w-xl text-white/85 text-base sm:text-lg leading-relaxed animate-hero-rise"
               style={{ animationDelay: "0.32s" }}
             >
-              A {days}-day plan, hand-built around the moments worth remembering.
+              {t.daysSubtitle(days)}
             </p>
           </div>
         </div>
         {/* Scroll cue */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/70 text-[10px] tracking-[0.3em] uppercase animate-hero-rise hidden sm:block"
              style={{ animationDelay: "0.5s" }}>
-          scroll
+          {t.scroll}
         </div>
       </div>
 
@@ -703,13 +703,13 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       <Reveal>
         <div className="max-w-5xl mx-auto px-4 sm:px-8 -mt-12 sm:-mt-16 relative z-10 mb-14 sm:mb-20">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <StatTile label="Days" value={data.itinerary.length || days} icon={<CalendarDays className="h-3.5 w-3.5" />} />
-            <StatTile label="Stops" value={
+            <StatTile label={t.days} value={data.itinerary.length || days} icon={<CalendarDays className="h-3.5 w-3.5" />} />
+            <StatTile label={t.stops} value={
               data.itinerary.reduce((s: number, d: any) => s + (Array.isArray(d?.slots) ? d.slots.length : 0), 0)
               || data.activities.length
             } icon={<MapPin className="h-3.5 w-3.5" />} />
-            <StatTile label="Stays" value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} />
-            <StatTile label="From" value={totalBudget > 0 ? `${currency}${totalBudget.toLocaleString()}` : "—"} icon={<Sparkles className="h-3.5 w-3.5" />} />
+            <StatTile label={t.stays} value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} />
+            <StatTile label={t.from} value={totalBudget > 0 ? `${currency}${totalBudget.toLocaleString()}` : "—"} icon={<Sparkles className="h-3.5 w-3.5" />} />
           </div>
         </div>
       </Reveal>
@@ -740,14 +740,14 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               </div>
               <div className="rounded-3xl border border-border bg-card p-6 sm:p-7 flex flex-col justify-between">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-3">The story</p>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-3">{t.theStory}</p>
                   <p className="text-lg sm:text-xl font-semibold text-foreground leading-snug tracking-tight">
                     {data.text?.split("\n").find(l => l.trim().length > 30)?.slice(0, 220)
-                      || `A handcrafted ${days}-day plan in ${destination}.`}
+                      || t.storyFallback(days, destination)}
                   </p>
                 </div>
                 <p className="mt-6 text-xs text-muted-foreground flex items-center gap-1.5">
-                  <MapPin className="h-3 w-3" /> Tap a pin on the map to open that stop.
+                  <MapPin className="h-3 w-3" /> {t.tapPin}
                 </p>
               </div>
             </div>
@@ -758,16 +758,17 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       {/* ── Logistics: Flights + Hotels side-by-side ── */}
       {(data.flights.length > 0 || data.hotels.length > 0) && (
         <Reveal>
-          <Section eyebrow="Logistics" title="Getting there & where you'll sleep" maxWidth="max-w-6xl">
+          <Section eyebrow={t.logistics} title={t.logisticsTitle} maxWidth="max-w-6xl">
             <div className="grid lg:grid-cols-2 gap-6">
               {data.flights.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                    <Plane className="h-3.5 w-3.5" /> Flights
+                    <Plane className="h-3.5 w-3.5" /> {t.flights}
                   </div>
                   <div className="space-y-3">
                     {data.flights.map((f, i) => (
                       <FlightRow key={f.id || i} flight={f}
+                        t={t}
                         onClick={() => { setSelectedFlight(f); setFlightModalOpen(true); }} />
                     ))}
                   </div>
@@ -776,11 +777,12 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               {data.hotels.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                    <Hotel className="h-3.5 w-3.5" /> Hotels
+                    <Hotel className="h-3.5 w-3.5" /> {t.hotels}
                   </div>
                   <div className="space-y-3">
                     {data.hotels.map((h, i) => (
                       <HotelRow key={h.id || i} hotel={h}
+                        t={t}
                         onClick={() => { setSelectedHotel(h); setHotelModalOpen(true); }} />
                     ))}
                   </div>
@@ -793,9 +795,9 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
       {/* ── Day-by-day itinerary (the centerpiece) ── */}
       {data.itinerary.length > 0 && (
-        <Section eyebrow="The plan" title="Day by day" maxWidth="max-w-5xl">
+        <Section eyebrow={t.thePlan} title={t.dayByDay} maxWidth="max-w-5xl">
           {/* Sticky day rail */}
-          <DayRail days={data.itinerary.map((d: any) => ({ day: d.day, title: d.title }))} />
+          <DayRail days={data.itinerary.map((d: any) => ({ day: d.day, title: d.title }))} dayLabel={t.day} />
           <div className="space-y-20 sm:space-y-24 mt-10">
             {data.itinerary.map((day, dayIdx) => {
               const dayPhoto = photoForDay(day.day);
@@ -815,7 +817,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                       <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
                       <div className="absolute top-4 left-5">
                         <span className="px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[10px] font-bold tracking-[0.2em] uppercase text-foreground">
-                          Day {day.day}
+                          {t.day} {day.day}
                         </span>
                       </div>
                     </div>
@@ -831,7 +833,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                       </h3>
                       {day.slots && day.slots.length > 0 && (
                         <p className="mt-2 text-sm text-muted-foreground">
-                          {day.slots.length} stops · starts {day.slots[0]?.time}
+                          {t.stopsStartsAt(day.slots.length, day.slots[0]?.time || "")}
                         </p>
                       )}
                     </div>
