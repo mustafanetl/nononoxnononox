@@ -1,53 +1,90 @@
-## Goals
+# Full A→Z Polish Pass
 
-1. **Remove stop numbers from map pins** — keep only the photo/dot, no numeric badge or fallback number.
-2. **Fix missing activity photos** in plans (Gothenburg has many slots without images).
-3. **Better city hero image** — currently Gothenburg shows a flower close-up (from Botanical Garden) instead of a recognizable city shot.
+You asked me to take full control and make the whole experience — landing → chat → plan creation → trip detail — feel smooth, correct, and enjoyable. Here's what I found and what I'll change.
 
 ---
 
-## Changes
+## Critical issues to fix
 
-### 1. `src/components/TripMap.tsx` — remove stop numbers
+1. **Landing page uses stock photos** (Unsplash) in `ProductPreview` and `DestinationsMosaic`. This breaks our own "no stock images, Google Places only" rule and looks generic.
+2. **Chat input area** has too many buttons fighting for attention (Voice, Plus, Compare, Save, Share, PDF, Currency, Sign out, Settings, Theme…). It's noisy on first visit.
+3. **Plan-crafting handoff** is now fast (6–9s) but the jump from animation → final plan still has a small flicker because `craftingActive` flips before the plan card mounts.
+4. **Trip detail page** has duplicated re-enrichment logic and shows the same fallback message twice when an image is missing.
+5. **Empty states** (no chats yet, no trips yet, error retry) are inconsistent in tone and weight.
+6. **Mobile chat header** is cramped — 5+ icons + the Jolliday wordmark wrap awkwardly under 400px.
 
-- Remove the corner number badge for activities (line ~197-199). Hotels keep the bed-icon badge.
-- Replace the numeric fallback (used when an activity has no photo) with a small white dot inside the colored circle, so pins still look intentional but never display a number.
-- Update tooltip subtitle to drop the "· Stop N" suffix; keep just `Day N` for activities and `Hotel` for hotels.
+---
 
-### 2. Activity photo coverage — backend `supabase/functions/enrich-destination/index.ts`
+## What I'll change
 
-Root cause: `searchAndValidateActivities` caps the batch at **18 venues** (`.slice(0, 18)`). A 3-day plan with breakfast/lunch/dinner + sights + neighborhoods easily exceeds this, leaving later slots photoless.
+### 1. Landing page — kill all stock images
 
-- Raise the cap from 18 → **40** activity venues (still bounded; each call is parallel and cheap).
-- Raise hotel cap from 8 → **15** for symmetry with multi-city trips.
-- Add a third fallback inside `searchAndValidateActivities`: when the strict + name-only matches fail, retry the search with **just `actName` + the country name** (when known via `geo.countryCode`) for foreign-named venues that don't surface under the city-scoped query.
-- For Swedish/foreign-character names (Gothenburg = Göteborg), also retry once with the destination wrapped as a generic `near {destination}` query if zero results came back.
+- **`ProductPreview`**: remove the 3 Unsplash photos. Replace the photo strip with 3 elegant gradient + monogram tiles ("BEL", "JER", "ALF" — the neighborhoods in the demo plan), in the same monochrome aesthetic as the rest of the site. The plan list below stays — it's the actual proof.
+- **`DestinationsMosaic`**: remove all 6 Unsplash URLs. Replace each tile with a clean black-and-white typographic card: large city name, country, a one-line "why people love it" (e.g. *"For pastries and crooked streets"*). Keeps the grid mosaic shape; removes the stock-photo guilt and loads instantly.
+- Add a tiny "Real photos appear once you start a plan" caption so users know they're not seeing the actual product photos yet.
 
-### 3. Hero image quality — `getGooglePlacePhotos` in the same edge function
+### 2. Chat — tighten the toolbar
 
-Current query is `"famous landmarks and attractions in {destination}"` with `includedType: "tourist_attraction"`. For Gothenburg the top tourist attraction is the Botanical Garden, so the hero ends up as a flower macro shot.
+- Group secondary actions (**Save**, **Share**, **PDF**, **Compare**) into a single overflow menu (3-dot dropdown). Keep the input row to: textarea + voice + send.
+- Move **CurrencyConverter** into a small "trip tools" popover at the top of an active plan, not always visible.
+- Sidebar header: keep `New Chat` button + conversation list. Move user/Settings/Sign out into a single avatar dropdown at the bottom of the sidebar (cleaner, matches ChatGPT).
+- Add a clear **empty state** when no conversation is active: large compass icon, *"Where to next?"* heading, and the same 4 starter chips from the landing hero.
 
-- Replace the hero-photo fetch path with a two-stage strategy:
-  1. **Primary**: text query `"{destination} skyline cityscape"` with NO `includedType` filter — surfaces wide city shots from photographers/landmarks.
-  2. **Fallback**: existing query if the primary returns nothing.
-- Filter out photos with extreme aspect ratios (height > width) which are typically portrait/macro shots, not cityscapes — keep only landscape (`widthPx >= heightPx * 1.2`) for the first hero slot, then fill remaining slots normally.
-- Bump `maxWidthPx` for the primary hero photo to `1920` for crisper full-bleed display.
+### 3. Plan-creation flow — smoother handoff
 
-### 4. Front-end hero selection — `src/pages/TripDetail.tsx`
+- Wait for the plan card to mount before clearing `craftingActive`. I'll do this by reading a `planReady` ref the `TripSummaryCard`/`PlanPreviewGate` sets on first render, instead of a fixed 350ms timeout — eliminates the flicker.
+- Replace the generic *"Crafting your plan…"* line with a single rotating subline tied to the actual streamed signal: `"Pinning Day 2 stops…"`, `"Matching photos to venues…"`, `"Finalizing your route…"` — feels alive, not faked.
+- Add a subtle skeleton row for the day-cards underneath the map while we wait, so the page doesn't visibly "jump" when the real plan slides in.
 
-- When picking `heroImg` (line ~264), prefer the first image whose dimensions look landscape (`width > height`) over raw `[0]`. This guarantees a banner-friendly photo even if the API still returns one portrait shot.
+### 4. Trip detail page — clean & deduplicate
+
+- Collapse the two image-fallback messages into one consistent placeholder (gradient + venue initials).
+- Remove the large `ArrowLeft` back button (the header already has one) — saves vertical space.
+- Make the "Save trip" / "Share" / "Download PDF" row sticky on scroll for desktop, so users don't lose actions on long itineraries.
+- For shared trips viewed by guests: show a clean "Sign in to save this trip" inline card after Day 1 instead of the current floating prompt.
+
+### 5. Map polish (carry-over)
+
+- Make sure the changes from the last round (no stop numbers, bed icon for hotels) apply to both the chat-view map *and* the trip-detail map. There's a small inconsistency: the chat map still renders a tiny dot for activities without photos, while trip-detail uses a different style. I'll unify them.
+
+### 6. Mobile cleanups
+
+- Chat header on `<400px`: hide the Jolliday wordmark, keep only the compass mark; collapse all top-right icons under a single hamburger.
+- Landing nav on `<640px`: hide the "Sign in" text label, keep just the user icon.
+- Larger tap targets on quick-reply chips (min 44px height).
+
+### 7. Small correctness fixes
+
+- `Index.tsx` "closing CTA" form re-implements what `HeroSection` already does — same input, same handler. I'll extract a tiny shared `<HeroSearch />` component so behavior stays identical.
+- The `DialogContent` accessibility warnings flooding the console (visible in your logs) — add `DialogTitle` (visually hidden where needed) to `ActivityDetailModal`, `HotelDetailModal`, `FlightDetailModal`, `ComparisonModal`, `PaywallModal`.
+- `useRzumaChat.ts`: when the reviewer passes back an `enrichedPlan`, the assistant message content is replaced but a stale streaming assistant message can briefly show empty. I'll guard against the empty flash.
+
+---
+
+## Out of scope (intentionally)
+
+- No changes to AI prompts, model choice, or backend `enrich-destination` logic — those were tuned in the last few rounds and are working well.
+- No pricing/paywall changes.
+- No schema or migrations.
+- No new routes or features beyond what's listed.
 
 ---
 
 ## Technical notes
 
-- No DB changes, no new secrets.
-- Edge function `enrich-destination` redeployed automatically.
-- Existing trips: hero won't change retroactively because `enrichedImages` is cached in `sessionStorage`/`tripData`. New plans (and any plan re-opened after a "Refresh" or hard reload that triggers re-enrichment) will get the better hero.
-- Map pin change is purely visual — no data shape changes.
+Files to be edited:
 
-## Files touched
+- `src/components/landing/ProductPreview.tsx` — remove Unsplash, typographic tiles
+- `src/components/landing/DestinationsMosaic.tsx` — remove Unsplash, typographic city cards
+- `src/components/HeroSection.tsx` + `src/pages/Index.tsx` — extract shared `HeroSearch`
+- `src/pages/Chat.tsx` — toolbar grouping, empty state, mobile header, smoother crafting handoff
+- `src/components/PlanCraftingMap.tsx` — rotating sublines tied to stream signal, skeleton rows
+- `src/pages/TripDetail.tsx` — sticky actions, single fallback, drop redundant back button
+- `src/components/TripMap.tsx` — unify activity-without-photo style
+- `src/components/{Activity,Hotel,Flight,Comparison,Paywall}DetailModal.tsx` — add hidden DialogTitle
+- `src/hooks/useRzumaChat.ts` — guard empty-flash on enrichedPlan swap
+- A new tiny `src/components/landing/HeroSearch.tsx`
 
-- `src/components/TripMap.tsx`
-- `src/pages/TripDetail.tsx`
-- `supabase/functions/enrich-destination/index.ts`
+No new dependencies. No backend deploys.
+
+After implementation I'll do a manual QA pass: load `/`, `/chat`, generate a 3-day plan, open the trip detail, share it, and check the console for any remaining warnings.
