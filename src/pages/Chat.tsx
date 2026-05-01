@@ -402,9 +402,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     try {
       const raw = localStorage.getItem("jolliday-preferences");
       const p = raw ? JSON.parse(raw) : {};
-      return (p?.homeCity as string) || "Home";
+      // Empty string signals "no known origin" — the map will skip the flight
+      // phase instead of pretending the user is in London.
+      return (p?.homeCity as string)?.trim() || "";
     } catch {
-      return "Home";
+      return "";
     }
   }, []);
 
