@@ -83,46 +83,72 @@ async function getExchangeRate(currencyCode: string): Promise<any> {
 async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any[]> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey) return [];
-  try {
-    const searchRes = await fetchWithTimeout(
-      "https://places.googleapis.com/v1/places:searchText",
-      {
+  // Two-stage strategy:
+  //   1) Cityscape/skyline query (no type filter) → wide landscape city shots.
+  //   2) Fall back to landmarks/attractions if stage 1 yields nothing.
+  const runQuery = async (textQuery: string, includedType?: string, maxResultCount = 3) => {
+    const body: any = { textQuery, maxResultCount };
+    if (includedType) body.includedType = includedType;
+    try {
+      const res = await fetchWithTimeout("https://places.googleapis.com/v1/places:searchText", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": apiKey,
           "X-Goog-FieldMask": "places.id,places.photos,places.displayName",
         },
-        body: JSON.stringify({
-          textQuery: `famous landmarks and attractions in ${destination}`,
-          maxResultCount: 3,
-          includedType: "tourist_attraction",
-        }),
-      }
-    );
-    if (!searchRes.ok) return [];
-    const searchData = await searchRes.json();
-    const places = searchData.places || [];
-    if (places.length === 0) return [];
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.places || [];
+    } catch (e) {
+      console.error("Google Places photos query error:", e);
+      return [];
+    }
+  };
 
-    const allPhotos: any[] = [];
+  const collectPhotos = (places: any[], landscapeOnly = false): any[] => {
+    const out: any[] = [];
     for (const place of places) {
       if (!place.photos?.length) continue;
-      for (const photo of place.photos.slice(0, Math.ceil(limit / places.length))) {
-        allPhotos.push({
-          url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=1600&key=${apiKey}`,
+      for (const photo of place.photos) {
+        const w = photo.widthPx || 800;
+        const h = photo.heightPx || 600;
+        if (landscapeOnly && w < h * 1.2) continue;
+        out.push({
+          url: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=1920&key=${apiKey}`,
           thumbUrl: `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=400&key=${apiKey}`,
-          width: photo.widthPx || 800,
-          height: photo.heightPx || 600,
+          width: w,
+          height: h,
           attributions: photo.authorAttributions || [],
         });
       }
     }
-    return allPhotos.slice(0, limit);
-  } catch (e) {
-    console.error("Google Places photos error:", e);
-    return [];
-  }
+    return out;
+  };
+
+  // Stage 1 — wide cityscape, prefer landscape photos for hero
+  const cityscapePlaces = await runQuery(`${destination} skyline cityscape`, undefined, 3);
+  const cityscapePhotos = collectPhotos(cityscapePlaces, true);
+
+  // Stage 2 — landmarks fallback
+  const landmarkPlaces = await runQuery(
+    `famous landmarks and attractions in ${destination}`,
+    "tourist_attraction",
+    3
+  );
+  const landmarkPhotos = collectPhotos(landmarkPlaces, false);
+
+  const merged = [...cityscapePhotos, ...landmarkPhotos];
+  // De-dup by photo URL
+  const seen = new Set<string>();
+  const unique = merged.filter((p) => {
+    if (seen.has(p.url)) return false;
+    seen.add(p.url);
+    return true;
+  });
+  return unique.slice(0, limit);
 }
 
 // Normalize name for fuzzy matching
@@ -168,7 +194,7 @@ async function searchAndValidateActivities(
   if (!apiKey || activities.length === 0) return {};
 
   const results: Record<string, any> = {};
-  const batch = Array.from(new Set(activities.filter(Boolean))).slice(0, 18);
+  const batch = Array.from(new Set(activities.filter(Boolean))).slice(0, 40);
   const promises = batch.map(async (actName) => {
     try {
       // ALWAYS scope the lookup to the destination city so we don't pull
