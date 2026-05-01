@@ -9,6 +9,7 @@ import { TravelInfoData } from "@/components/TravelInfoCard";
 import { TimelineLeg } from "@/components/TripTimeline";
 import { useSubscription } from "@/hooks/useSubscription";
 import PaywallModal from "@/components/PaywallModal";
+import { getStockCityImage } from "@/utils/cityImages";
 
 export type TripPlanData = {
   flights: FlightData[];
@@ -37,6 +38,10 @@ const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlan
 
   const occasion = data.activities[0]?.occasion;
   const days = data.itinerary.length;
+  const heroImg =
+    getStockCityImage(destination) ||
+    enrichedImages?.[0]?.thumbUrl ||
+    enrichedImages?.[0]?.url;
 
   return (
     <>
@@ -45,9 +50,9 @@ const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlan
         className="mt-4 w-full max-w-sm rounded-2xl border border-border bg-card overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
       >
         <div className="relative h-32">
-          {(enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl) ? (
+          {heroImg ? (
             <img
-              src={enrichedImages[0].thumbUrl || enrichedImages[0].url}
+              src={heroImg}
               alt={destination}
               className="w-full h-full object-cover"
             />
