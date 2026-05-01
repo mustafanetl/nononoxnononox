@@ -1,43 +1,38 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { ArrowUpRight } from "lucide-react";
 
-type Dest = { name: string; country: string; image: string };
+type Dest = { name: string; country: string; tagline: string };
 
 const destinations: Dest[] = [
-  { name: "Paris", country: "France", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1200&h=900&fit=crop&q=80" },
-  { name: "Tokyo", country: "Japan", image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=900&h=900&fit=crop&q=80" },
-  { name: "Bali", country: "Indonesia", image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=900&h=900&fit=crop&q=80" },
-  { name: "Maldives", country: "Indian Ocean", image: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=1200&h=900&fit=crop&q=80" },
-  { name: "Barcelona", country: "Spain", image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=900&h=900&fit=crop&q=80" },
-  { name: "Dubai", country: "UAE", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&h=900&fit=crop&q=80" },
+  { name: "Paris", country: "France", tagline: "For long lunches and slow walks." },
+  { name: "Tokyo", country: "Japan", tagline: "For neon, noodles, neighborhoods." },
+  { name: "Bali", country: "Indonesia", tagline: "For warm water and quiet mornings." },
+  { name: "Maldives", country: "Indian Ocean", tagline: "For doing absolutely nothing, well." },
+  { name: "Barcelona", country: "Spain", tagline: "For tapas and tiled rooftops." },
+  { name: "Dubai", country: "UAE", tagline: "For skylines and desert nights." },
 ];
 
-const Card = ({ d, className = "" }: { d: Dest; className?: string }) => {
-  const [failed, setFailed] = useState(false);
-  return (
-    <Link
-      to={`/chat?q=Plan a trip to ${d.name}`}
-      className={`group relative block overflow-hidden bg-gradient-to-br from-muted to-muted-foreground/20 ${className}`}
-    >
-      {!failed && (
-        <img
-          src={d.image}
-          alt={d.name}
-          loading="lazy"
-          onError={() => setFailed(true)}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-        />
-      )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-      <div className="absolute inset-x-4 sm:inset-x-6 bottom-4 sm:bottom-6 text-white">
-        <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.2em] opacity-80">{d.country}</div>
-        <div className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight mt-1 group-hover:underline underline-offset-[6px] decoration-2">
-          {d.name}
-        </div>
+const Card = ({ d, className = "" }: { d: Dest; className?: string }) => (
+  <Link
+    to={`/chat?q=Plan a trip to ${d.name}`}
+    className={`group relative block overflow-hidden rounded-lg border border-border bg-card hover:bg-muted/40 transition-colors ${className}`}
+  >
+    <div className="absolute top-4 right-4 sm:top-5 sm:right-5 opacity-40 group-hover:opacity-100 transition-opacity">
+      <ArrowUpRight className="h-5 w-5 text-foreground" />
+    </div>
+    <div className="absolute inset-x-4 sm:inset-x-6 bottom-4 sm:bottom-6">
+      <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        {d.country}
       </div>
-    </Link>
-  );
-};
+      <div className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight mt-1 text-foreground group-hover:underline underline-offset-[6px] decoration-2">
+        {d.name}
+      </div>
+      <div className="mt-2 text-xs sm:text-sm text-muted-foreground max-w-[18rem]">
+        {d.tagline}
+      </div>
+    </div>
+  </Link>
+);
 
 const DestinationsMosaic = () => {
   return (
