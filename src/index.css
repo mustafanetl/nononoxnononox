@@ -233,3 +233,14 @@
   }
 
 }
+
+/* Keep Leaflet map layers below Radix Dialog (z-50) so detail modals
+   open above the map instead of being covered by it. */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1 !important;
+}
+.leaflet-control {
+  z-index: 2 !important;
+}
