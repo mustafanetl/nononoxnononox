@@ -154,6 +154,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
   // rAF state
   const rafRef = useRef<number | null>(null);
   const displayedProgressRef = useRef(0);
+  const lastTickRef = useRef<number | null>(null);
   const targetProgressRef = useRef(0);
   const currentViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   // Precomputed view targets so the rAF loop never recomputes bounds per frame
