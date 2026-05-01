@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown } from "lucide-react";
+import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown, MoreHorizontal } from "lucide-react";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { useAuth } from "@/hooks/useAuth";
 import FlightCard, { FlightData } from "@/components/FlightCard";
@@ -29,6 +29,13 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
 import { shareTripSummary } from "@/utils/tripSummary";
 import { exportTripPDF } from "@/utils/pdfExport";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { setWikimediaImage } from "@/utils/cityImages";
 import { Link, useSearchParams } from "react-router-dom";
