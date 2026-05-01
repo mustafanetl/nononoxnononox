@@ -664,6 +664,23 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
   const shouldShowCraftingMap = isCraftingPlan && !!craftingPlan;
 
+  // When the crafting map first appears, gently scroll it into view so the
+  // user actually sees the animation instead of a static prompt above the fold.
+  const craftingScrollFiredRef = useRef(false);
+  useEffect(() => {
+    if (shouldShowCraftingMap && !craftingScrollFiredRef.current) {
+      craftingScrollFiredRef.current = true;
+      requestAnimationFrame(() => {
+        try {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        } catch {}
+      });
+    }
+    if (!shouldShowCraftingMap) {
+      craftingScrollFiredRef.current = false;
+    }
+  }, [shouldShowCraftingMap]);
+
   // Eager enrichment during crafting so the map shows real photos in real time.
   // Fires whenever we have a destination + at least one activity name and we haven't
   // already enriched this destination. Premium-only (matches main enrichment policy).
