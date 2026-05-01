@@ -1,10 +1,9 @@
 import { MapPin, Clock } from "lucide-react";
-import { useState } from "react";
 
-const lisbonPhotos = [
-  "https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=600&h=600&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1558370781-d6196949e317?w=600&h=600&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1513735492246-483525079686?w=600&h=600&fit=crop&q=80",
+const previewTiles = [
+  { code: "BEL", label: "Belém" },
+  { code: "JER", label: "Jerónimos" },
+  { code: "ALF", label: "Alfama" },
 ];
 
 const day1 = [
@@ -15,22 +14,16 @@ const day1 = [
   { time: "20:30", title: "Fado at Mesa de Frades", note: "Reservation recommended" },
 ];
 
-const PhotoTile = ({ src, i }: { src: string; i: number }) => {
-  const [failed, setFailed] = useState(false);
-  return (
-    <div className="aspect-square rounded-lg overflow-hidden bg-gradient-to-br from-muted to-muted-foreground/10">
-      {!failed && (
-        <img
-          src={src}
-          alt={`Lisbon ${i + 1}`}
-          loading="lazy"
-          onError={() => setFailed(true)}
-          className="w-full h-full object-cover"
-        />
-      )}
+const PreviewTile = ({ code, label }: { code: string; label: string }) => (
+  <div className="aspect-square rounded-lg overflow-hidden bg-gradient-to-br from-muted via-muted/60 to-background border border-border flex flex-col items-center justify-center text-center px-2">
+    <div className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground/90">
+      {code}
     </div>
-  );
-};
+    <div className="mt-1 text-[10px] sm:text-xs uppercase tracking-[0.18em] text-muted-foreground">
+      {label}
+    </div>
+  </div>
+);
 
 const ProductPreview = () => {
   return (
@@ -72,12 +65,15 @@ const ProductPreview = () => {
               <h3 className="text-3xl md:text-5xl font-bold tracking-tight">Lisbon</h3>
               <p className="text-muted-foreground mt-2 text-sm md:text-base">4 days · for two · easy pace</p>
 
-              {/* Photos row */}
+              {/* Neighborhood preview tiles (real photos appear in your trip) */}
               <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6 md:mt-8">
-                {lisbonPhotos.map((src, i) => (
-                  <PhotoTile key={i} src={src} i={i} />
+                {previewTiles.map((t) => (
+                  <PreviewTile key={t.code} code={t.code} label={t.label} />
                 ))}
               </div>
+              <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                Real photos appear once you start planning
+              </p>
 
               {/* Day 1 */}
               <div className="mt-8 md:mt-10 pt-6 md:pt-8 border-t border-border">
