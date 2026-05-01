@@ -1,6 +1,6 @@
 import { Plane, Hotel, Sparkles, MapPin, Calendar, ArrowRight, Check, Lock, Star, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { getCityImage } from "@/utils/cityImages";
+import { getCityImage, getStockCityImage } from "@/utils/cityImages";
 import { TripPlanData } from "@/components/TripSummaryCard";
 import { getCurrencyPrices } from "@/utils/currencyLocale";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,7 +27,11 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
   const { user } = useAuth();
   const navigate = useNavigate();
   const days = data.itinerary.length;
-  const heroImg = enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl || getCityImage(destination, 800, 500);
+  const heroImg =
+    getStockCityImage(destination) ||
+    enrichedImages?.[0]?.url ||
+    enrichedImages?.[0]?.thumbUrl ||
+    getCityImage(destination, 800, 500);
   const prices = getCurrencyPrices();
 
   // Show 2-3 activity names as teaser
