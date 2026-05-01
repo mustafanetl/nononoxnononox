@@ -531,7 +531,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     const nextDestination = structuredDestination || fallback;
     if (!nextDestination) return;
 
-    if (isLoading && !craftingIntervalRef.current && lastIdx !== lastCraftedMsgIndex.current) {
+    // Only START a new crafting session here if the early-start effect didn't
+    // already kick one off for the current user turn. Otherwise we'd show the
+    // animation twice (once on send, once when structured blocks stream in).
+    if (
+      isLoading &&
+      !craftingIntervalRef.current &&
+      !pendingCraftSeedRef.current &&
+      lastIdx !== lastCraftedMsgIndex.current
+    ) {
       lastCraftedMsgIndex.current = lastIdx;
       startCrafting(nextDestination, craftingOriginCity || originCity, content);
       return;
