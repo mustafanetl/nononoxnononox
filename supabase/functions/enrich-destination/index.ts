@@ -496,7 +496,9 @@ serve(async (req) => {
     // imageOnly mode: just fetch Google Places photos, skip everything else
     if (imageOnly) {
       console.log(`Image-only enrichment for: ${destination}`);
-      const images = await getGooglePlacePhotos(destination, 3);
+      // Request a wider pool so the landscape-strict hero candidates dominate
+      // (filler/portrait photos only kick in if the pool is exhausted).
+      const images = await getGooglePlacePhotos(destination, 8);
       return new Response(JSON.stringify({ destination, images }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
