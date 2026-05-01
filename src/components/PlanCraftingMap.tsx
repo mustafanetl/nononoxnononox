@@ -385,40 +385,31 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
     const map = mapRef.current;
 
     const tick = () => {
-      // Smoothly chase the target progress (~12% of remaining distance per frame ≈ 250ms time-constant)
+      // Smoothly chase the target progress (~10% of remaining distance per frame).
+      // Soft easing so the first frames are buttery, never stuck at zero.
       const target = targetProgressRef.current;
       const current = displayedProgressRef.current;
       const diff = target - current;
-      const next = Math.abs(diff) < 0.01 ? target : current + diff * 0.12;
+      const next = Math.abs(diff) < 0.005 ? target : current + diff * 0.10;
       displayedProgressRef.current = next;
 
       const p = next;
-
-      // Compute target view for the city (used in phases 2 + 3)
+      const flightView = flightViewRef.current;
+      const cityView = cityViewRef.current;
       const acts = geometryPoints.activities;
-      const cityPts: [number, number][] = [
-        [geometryPoints.destination.lat, geometryPoints.destination.lng],
-        ...acts.map((a) => [a.lat, a.lng] as [number, number]),
-      ];
-      const cityBounds = L.latLngBounds(cityPts as any);
-      const fitInfo = (map as any)._getBoundsCenterZoom
-        ? (map as any)._getBoundsCenterZoom(cityBounds, { padding: [60, 60], maxZoom: 14 })
-        : { center: cityBounds.getCenter(), zoom: 13 };
-      const targetCityCenter: [number, number] = [fitInfo.center.lat, fitInfo.center.lng];
-      const targetCityZoom = clamp(fitInfo.zoom ?? 13, 11, 14);
 
-      const flightBounds = L.latLngBounds([
-        [geometryPoints.origin.lat, geometryPoints.origin.lng],
-        [geometryPoints.destination.lat, geometryPoints.destination.lng],
-      ]);
-      const flightFit = (map as any)._getBoundsCenterZoom
-        ? (map as any)._getBoundsCenterZoom(flightBounds, { padding: [60, 60], maxZoom: 5 })
-        : { center: flightBounds.getCenter(), zoom: 4 };
-      const flightCenter: [number, number] = [flightFit.center.lat, flightFit.center.lng];
-      const flightZoom = clamp(flightFit.zoom ?? 4, 2, 5);
-
-      // === PHASE 1: Flight (0-40) ===
+      // === PHASE 1: Flight (0 -> P_FLIGHT_END) ===
       if (p < P_FLIGHT_END) {
+        if (phaseRef.current !== 1) {
+          phaseRef.current = 1;
+          flyStartedRef.current = false;
+          // Snap to the world flight view immediately so the first frame isn't half-zoomed
+          if (flightView) {
+            try { (map as any).stop?.(); } catch {}
+            map.setView(flightView.center, flightView.zoom, { animate: false });
+            currentViewRef.current = { ...flightView };
+          }
+        }
         const t = easeInOut(clamp(p / P_FLIGHT_END, 0, 1));
         const { traveled, position } = sliceArc(flightArc, t);
         flightRouteRef.current.setLatLngs(traveled as any);
@@ -430,51 +421,58 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
           destinationMarkerRef.current.setOpacity(fadeIn);
         }
         pointMarkersRef.current.forEach((m) => m.setOpacity(0));
-
-        // Lock flight view (set once, no per-frame movement during phase 1)
-        const cur = currentViewRef.current;
-        if (!cur || cur.zoom > flightZoom + 0.5) {
-          map.setView(flightCenter, flightZoom, { animate: false });
-          currentViewRef.current = { center: flightCenter, zoom: flightZoom };
-        }
-
-        setCaption(`Flying to ${destinationCity || "your destination"}…`);
+        setCaption(`Airplane to ${destinationCity || "your destination"}…`);
       }
-      // === PHASE 2: Zoom into city (40-55) ===
+      // === PHASE 2: Cinematic flyTo into the city ===
       else if (p < P_ZOOM_END) {
-        const t = easeInOut(clamp((p - P_FLIGHT_END) / (P_ZOOM_END - P_FLIGHT_END), 0, 1));
+        const t = clamp((p - P_FLIGHT_END) / (P_ZOOM_END - P_FLIGHT_END), 0, 1);
         flightRouteRef.current.setLatLngs(flightArc as any);
         planeMarkerRef.current.setLatLng(flightArc[flightArc.length - 1]);
-        planeMarkerRef.current.setOpacity(1 - t);
+        planeMarkerRef.current.setOpacity(clamp(1 - t * 1.5, 0, 1));
         if (destinationMarkerRef.current) destinationMarkerRef.current.setOpacity(1);
         pointMarkersRef.current.forEach((m) => m.setOpacity(0));
         tourRouteRef.current.setLatLngs([] as any);
 
-        const cur = currentViewRef.current ?? { center: flightCenter, zoom: flightZoom };
-        const newCenter: [number, number] = [
-          lerp(cur.center[0], targetCityCenter[0], t),
-          lerp(cur.center[1], targetCityCenter[1], t),
-        ];
-        const newZoom = lerp(cur.zoom, targetCityZoom, t);
-        map.setView(newCenter, newZoom, { animate: false });
-        if (t >= 0.999) currentViewRef.current = { center: targetCityCenter, zoom: targetCityZoom };
-
+        // Kick off ONE flyTo with parabolic easing — Leaflet handles all in-between frames
+        if (phaseRef.current !== 2) {
+          phaseRef.current = 2;
+          flyStartedRef.current = false;
+        }
+        if (!flyStartedRef.current && cityView) {
+          flyStartedRef.current = true;
+          try {
+            map.flyTo(cityView.center, cityView.zoom, {
+              duration: 2.4,
+              easeLinearity: 0.25,
+              animate: true,
+              noMoveStart: true,
+            });
+          } catch {
+            map.setView(cityView.center, cityView.zoom, { animate: false });
+          }
+          currentViewRef.current = { ...cityView };
+        }
         setCaption(`Arrived in ${destinationCity || "your destination"}`);
       }
-      // === PHASE 3: City tour — pins & dashed route reveal (55-92) ===
+      // === PHASE 3: City tour — pins & dashed route reveal ===
       else {
+        if (phaseRef.current !== 3) {
+          phaseRef.current = 3;
+        }
         flightRouteRef.current.setLatLngs([] as any);
         if (destinationMarkerRef.current) destinationMarkerRef.current.setOpacity(1);
         planeMarkerRef.current.setOpacity(0);
 
-        // Lock map to city view — no chasing
-        const cur = currentViewRef.current;
-        if (!cur ||
-            Math.abs(cur.zoom - targetCityZoom) > 0.05 ||
-            Math.abs(cur.center[0] - targetCityCenter[0]) > 0.0005 ||
-            Math.abs(cur.center[1] - targetCityCenter[1]) > 0.0005) {
-          map.setView(targetCityCenter, targetCityZoom, { animate: false });
-          currentViewRef.current = { center: targetCityCenter, zoom: targetCityZoom };
+        // Snap to city view ONLY if Leaflet's flyTo isn't currently animating
+        if (cityView && !(map as any)._animatingZoom) {
+          const cur = currentViewRef.current;
+          if (!cur ||
+              Math.abs(cur.zoom - cityView.zoom) > 0.05 ||
+              Math.abs(cur.center[0] - cityView.center[0]) > 0.0005 ||
+              Math.abs(cur.center[1] - cityView.center[1]) > 0.0005) {
+            map.setView(cityView.center, cityView.zoom, { animate: false });
+            currentViewRef.current = { ...cityView };
+          }
         }
 
         const tourT = clamp((p - P_ZOOM_END) / (P_TOUR_END - P_ZOOM_END), 0, 1);
