@@ -518,7 +518,23 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       {/* ── Map (if available) ── */}
       {mapPoints.length > 0 && (
         <div className="max-w-4xl mx-auto px-4 sm:px-8 mb-12">
-          <TripMap points={mapPoints} activeDay={null} onMarkerClick={() => {}} />
+          <TripMap
+            points={mapPoints}
+            activeDay={null}
+            onMarkerClick={(name) => {
+              const hotel = data.hotels.find((h: any) => h.name === name);
+              if (hotel) {
+                setSelectedHotel(hotel);
+                setHotelModalOpen(true);
+                return;
+              }
+              const activity = data.activities.find((a: any) => a.name === name);
+              if (activity) {
+                setSelectedActivity(activity);
+                setActivityModalOpen(true);
+              }
+            }}
+          />
         </div>
       )}
 
