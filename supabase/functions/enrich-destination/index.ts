@@ -314,7 +314,7 @@ async function searchAndValidateHotels(
   if (!apiKey || hotelNames.length === 0) return {};
 
   const results: Record<string, any> = {};
-  const batch = hotelNames.slice(0, 8);
+  const batch = hotelNames.slice(0, 15);
   const promises = batch.map(async (name) => {
     try {
       const cityScopedQuery = `${name} hotel, ${destination}`;
