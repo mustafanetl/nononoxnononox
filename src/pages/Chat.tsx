@@ -415,6 +415,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [craftingCompleted, setCraftingCompleted] = useState(false);
   const lastCraftedMsgIndex = useRef(-1);
   const craftingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const craftingFinalizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const craftingProgressRef = useRef(0);
   const streamingDoneRef = useRef(false);
   const craftingStartTimeRef = useRef(0);
@@ -427,6 +428,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     craftingProgressRef.current = 0;
     streamingDoneRef.current = false;
     setCraftingCompleted(false);
+    if (craftingFinalizeTimeoutRef.current) {
+      clearTimeout(craftingFinalizeTimeoutRef.current);
+      craftingFinalizeTimeoutRef.current = null;
+    }
     craftingStartTimeRef.current = Date.now();
     setCraftingPlanType(/```(flights|hotels)/s.test(content) ? "full" : "local");
     setCraftingOriginCity(origin.trim());
