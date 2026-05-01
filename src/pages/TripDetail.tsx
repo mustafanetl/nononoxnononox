@@ -621,17 +621,25 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         <div className="max-w-4xl mx-auto px-4 sm:px-8 mb-12">
           <TripMap
             points={mapPoints}
-            activeDay={null}
-            onMarkerClick={(name) => {
-              const hotel = data.hotels.find((h: any) => h.name === name);
-              if (hotel) {
-                setSelectedHotel(hotel);
-                setHotelModalOpen(true);
+            onMarkerClick={({ name, type, day, slotIdx }) => {
+              if (type === "hotel") {
+                const hotel = data.hotels.find((h: any) => h.name === name) || data.hotels[0];
+                if (hotel) {
+                  setSelectedHotel(hotel);
+                  setHotelModalOpen(true);
+                }
                 return;
               }
+              // Activity pin: prefer the exact slot it came from (always opens the rich card)
+              if (day != null && typeof slotIdx === "number") {
+                openSlotModal(day, slotIdx);
+                return;
+              }
+              // Fallback: top-level activity
               const activity = data.activities.find((a: any) => a.name === name);
               if (activity) {
                 setSelectedActivity(activity);
+                setActivitySource({ kind: "activity", activityId: activity.id });
                 setActivityModalOpen(true);
               }
             }}
