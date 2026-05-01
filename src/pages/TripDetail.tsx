@@ -924,7 +924,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                     <span className="text-xs font-mono font-semibold text-muted-foreground tabular-nums">{slot.time}</span>
                                     {slot.bookAhead && (
                                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                                        <Ticket className="h-3 w-3" /> Book ahead
+                                        <Ticket className="h-3 w-3" /> {t.bookAhead}
                                       </span>
                                     )}
                                   </div>
@@ -1011,7 +1011,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       {/* ── Activities gallery ── */}
       {data.activities.length > 0 && (
         <Reveal>
-          <Section eyebrow="Don't miss" title="Experiences" maxWidth="max-w-6xl">
+          <Section eyebrow={t.dontMiss} title={t.experiences} maxWidth="max-w-6xl">
             <div className="bento-grid">
               {data.activities.map((a, i) => (
                 <ActivityTile
@@ -1042,6 +1042,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
           onSave={handleSave}
           saving={saving}
           sharing={sharing}
+          t={t}
         />
       </Reveal>
 
@@ -1052,22 +1053,22 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
             {isShared ? (
               <>
                 <Button variant="outline" size="sm" onClick={handleShare} className="h-9 gap-1.5">
-                  <Link2 className="h-3.5 w-3.5" /> Copy link
+                  <Link2 className="h-3.5 w-3.5" /> {t.copyLink}
                 </Button>
                 <Button size="sm" onClick={handleImport} disabled={importing} className="gap-1.5 h-9">
-                  <LogIn className="h-3.5 w-3.5" /> {importing ? "..." : "Import"}
+                  <LogIn className="h-3.5 w-3.5" /> {importing ? "..." : t.importTrip}
                 </Button>
               </>
             ) : (
               <>
                 <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 h-9">
-                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "..." : "Save"}
+                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "..." : t.saveTrip}
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleExportPDF} className="h-9 w-9 p-0">
                   <Download className="h-3.5 w-3.5" />
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleShare} disabled={sharing} className="h-9 gap-1.5">
-                  <Link2 className="h-3.5 w-3.5" /> {sharing ? "..." : "Share"}
+                  <Link2 className="h-3.5 w-3.5" /> {sharing ? "..." : t.shareTrip}
                 </Button>
               </>
             )}
