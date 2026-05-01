@@ -34,6 +34,7 @@ const ACTIVITY_OFFSETS = [
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+const lerp = (start: number, end: number, amount: number) => start + (end - start) * amount;
 
 const initials = (name: string) =>
   name
@@ -139,6 +140,44 @@ const sliceArc = (arc: [number, number][], progress: number) => {
   const b = arc[idx + 1];
   const pos: [number, number] = [a[0] + (b[0] - a[0]) * local, a[1] + (b[1] - a[1]) * local];
   return { traveled: [...arc.slice(0, idx + 1), pos], position: pos };
+};
+
+const viewNeedsUpdate = (
+  current: { center: [number, number]; zoom: number } | null,
+  next: { center: [number, number]; zoom: number }
+) => {
+  if (!current) return true;
+  return (
+    Math.abs(current.center[0] - next.center[0]) > 0.00005 ||
+    Math.abs(current.center[1] - next.center[1]) > 0.00005 ||
+    Math.abs(current.zoom - next.zoom) > 0.01
+  );
+};
+
+const buildTourPath = (destination: Point, activities: Point[], revealProgress: number) => {
+  if (activities.length === 0 || revealProgress <= 0) {
+    return [[destination.lat, destination.lng]] as [number, number][];
+  }
+
+  const routePoints = [destination, ...activities];
+  const fullSteps = Math.floor(revealProgress);
+  const partial = revealProgress - fullSteps;
+
+  const visiblePath = routePoints
+    .slice(0, Math.min(routePoints.length, fullSteps + 1))
+    .map((point) => [point.lat, point.lng] as [number, number]);
+
+  const from = routePoints[Math.min(fullSteps, routePoints.length - 1)];
+  const to = routePoints[Math.min(fullSteps + 1, routePoints.length - 1)];
+
+  if (from && to && from !== to && partial > 0) {
+    visiblePath.push([
+      lerp(from.lat, to.lat, partial),
+      lerp(from.lng, to.lng, partial),
+    ]);
+  }
+
+  return visiblePath;
 };
 
 // Phase boundaries (out of 100)
