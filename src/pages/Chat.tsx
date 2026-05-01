@@ -541,6 +541,16 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     );
   }, [craftingPlan?.destination, enrichedData]);
 
+  const craftingDestinationGeo = useMemo<{ lat: number; lng: number } | undefined>(() => {
+    const dest = craftingPlan?.destination || "";
+    if (!dest) return undefined;
+    const geo = enrichedData[dest]?.geo;
+    if (typeof geo?.lat === "number" && typeof geo?.lng === "number") {
+      return { lat: geo.lat, lng: geo.lng };
+    }
+    return undefined;
+  }, [craftingPlan?.destination, enrichedData]);
+
   // Eager enrichment during crafting so the map shows real photos in real time.
   // Fires whenever we have a destination + at least one activity name and we haven't
   // already enriched this destination. Premium-only (matches main enrichment policy).
@@ -1201,6 +1211,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     destinationCity={craftingPlan.destination || "your destination"}
                     activities={craftingActivities}
                     destinationPhoto={craftingDestinationPhoto}
+                    destinationGeo={craftingDestinationGeo}
                     progress={craftingPlan.progress}
                   />
                 )}
