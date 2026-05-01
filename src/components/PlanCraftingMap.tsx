@@ -351,6 +351,14 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
   // Caption based on smoothed progress
   const totalActs = stableActivities.length;
   const [caption, setCaption] = useState("");
+  // Avoid re-rendering on every rAF frame: only push captions to React state
+  // when the text actually changes.
+  const lastCaptionRef = useRef("");
+  const setCaptionThrottled = (text: string) => {
+    if (text === lastCaptionRef.current) return;
+    lastCaptionRef.current = text;
+    setCaption(text);
+  };
 
   // Initialize map once
   useEffect(() => {
