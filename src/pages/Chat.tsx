@@ -672,17 +672,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   // already enriched this destination. Premium-only (matches main enrichment policy).
   const eagerEnrichRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (!craftingActive || !isPremium) return;
+    if (!craftingActive) return;
     const dest = craftingPlan?.destination || "";
     if (!dest) return;
-    if (enrichedData[dest]) return;
-    if (craftingActivities.length === 0) return;
     const names = craftingActivities.map((a) => a.name).filter(Boolean);
     // Re-fire when the set of names grows (signature changes)
-    const sig = `${dest}|${names.sort().join("|")}`;
+    const sig = `${dest}|${isPremium ? "full" : "imageOnly"}|${[...names].sort().join("|")}`;
     if (eagerEnrichRef.current.has(sig)) return;
     eagerEnrichRef.current.add(sig);
-    fetchEnrichment(dest, undefined, names, false).then((data) => {
+    fetchEnrichment(dest, undefined, names.length > 0 ? names : undefined, !isPremium).then((data) => {
       if (data) {
         warmEnrichmentAssets(data);
         setEnrichedData((prev) => ({ ...prev, [dest]: mergeEnrichmentData(prev[dest], data) }));
@@ -691,7 +689,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         }
       }
     });
-  }, [craftingActive, isPremium, craftingPlan?.destination, craftingActivities, enrichedData]);
+  }, [craftingActive, isPremium, craftingPlan?.destination, craftingActivities]);
 
   // Memoize parsed messages to avoid re-parsing on every render
   const parsedMessages = useMemo(() => {
