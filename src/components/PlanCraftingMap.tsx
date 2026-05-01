@@ -31,6 +31,144 @@ const ACTIVITY_OFFSETS = [
   { lat: 0.005, lng: -0.020 },
 ];
 
+// Lightweight built-in geocoder for common origin cities so the plane doesn't
+// always launch from London when the user's home city is something else.
+// Keys are normalized: lowercase, no diacritics, trimmed.
+const KNOWN_CITY_COORDS: Record<string, { lat: number; lng: number }> = {
+  "stockholm": { lat: 59.3293, lng: 18.0686 },
+  "gothenburg": { lat: 57.7089, lng: 11.9746 },
+  "goteborg": { lat: 57.7089, lng: 11.9746 },
+  "malmo": { lat: 55.6050, lng: 13.0038 },
+  "oslo": { lat: 59.9139, lng: 10.7522 },
+  "copenhagen": { lat: 55.6761, lng: 12.5683 },
+  "kobenhavn": { lat: 55.6761, lng: 12.5683 },
+  "helsinki": { lat: 60.1699, lng: 24.9384 },
+  "reykjavik": { lat: 64.1466, lng: -21.9426 },
+  "london": { lat: 51.5074, lng: -0.1278 },
+  "manchester": { lat: 53.4808, lng: -2.2426 },
+  "edinburgh": { lat: 55.9533, lng: -3.1883 },
+  "dublin": { lat: 53.3498, lng: -6.2603 },
+  "paris": { lat: 48.8566, lng: 2.3522 },
+  "lyon": { lat: 45.7640, lng: 4.8357 },
+  "marseille": { lat: 43.2965, lng: 5.3698 },
+  "nice": { lat: 43.7102, lng: 7.2620 },
+  "amsterdam": { lat: 52.3676, lng: 4.9041 },
+  "rotterdam": { lat: 51.9244, lng: 4.4777 },
+  "brussels": { lat: 50.8503, lng: 4.3517 },
+  "berlin": { lat: 52.5200, lng: 13.4050 },
+  "munich": { lat: 48.1351, lng: 11.5820 },
+  "munchen": { lat: 48.1351, lng: 11.5820 },
+  "hamburg": { lat: 53.5511, lng: 9.9937 },
+  "frankfurt": { lat: 50.1109, lng: 8.6821 },
+  "cologne": { lat: 50.9375, lng: 6.9603 },
+  "vienna": { lat: 48.2082, lng: 16.3738 },
+  "wien": { lat: 48.2082, lng: 16.3738 },
+  "zurich": { lat: 47.3769, lng: 8.5417 },
+  "geneva": { lat: 46.2044, lng: 6.1432 },
+  "prague": { lat: 50.0755, lng: 14.4378 },
+  "warsaw": { lat: 52.2297, lng: 21.0122 },
+  "krakow": { lat: 50.0647, lng: 19.9450 },
+  "budapest": { lat: 47.4979, lng: 19.0402 },
+  "rome": { lat: 41.9028, lng: 12.4964 },
+  "milan": { lat: 45.4642, lng: 9.1900 },
+  "venice": { lat: 45.4408, lng: 12.3155 },
+  "florence": { lat: 43.7696, lng: 11.2558 },
+  "firenze": { lat: 43.7696, lng: 11.2558 },
+  "naples": { lat: 40.8518, lng: 14.2681 },
+  "madrid": { lat: 40.4168, lng: -3.7038 },
+  "barcelona": { lat: 41.3851, lng: 2.1734 },
+  "valencia": { lat: 39.4699, lng: -0.3763 },
+  "seville": { lat: 37.3891, lng: -5.9845 },
+  "lisbon": { lat: 38.7223, lng: -9.1393 },
+  "porto": { lat: 41.1579, lng: -8.6291 },
+  "athens": { lat: 37.9838, lng: 23.7275 },
+  "istanbul": { lat: 41.0082, lng: 28.9784 },
+  "moscow": { lat: 55.7558, lng: 37.6173 },
+  "saint petersburg": { lat: 59.9311, lng: 30.3609 },
+  "kyiv": { lat: 50.4501, lng: 30.5234 },
+  "kiev": { lat: 50.4501, lng: 30.5234 },
+  "bucharest": { lat: 44.4268, lng: 26.1025 },
+  "sofia": { lat: 42.6977, lng: 23.3219 },
+  "new york": { lat: 40.7128, lng: -74.0060 },
+  "nyc": { lat: 40.7128, lng: -74.0060 },
+  "los angeles": { lat: 34.0522, lng: -118.2437 },
+  "san francisco": { lat: 37.7749, lng: -122.4194 },
+  "chicago": { lat: 41.8781, lng: -87.6298 },
+  "miami": { lat: 25.7617, lng: -80.1918 },
+  "seattle": { lat: 47.6062, lng: -122.3321 },
+  "boston": { lat: 42.3601, lng: -71.0589 },
+  "washington": { lat: 38.9072, lng: -77.0369 },
+  "atlanta": { lat: 33.7490, lng: -84.3880 },
+  "dallas": { lat: 32.7767, lng: -96.7970 },
+  "houston": { lat: 29.7604, lng: -95.3698 },
+  "denver": { lat: 39.7392, lng: -104.9903 },
+  "las vegas": { lat: 36.1699, lng: -115.1398 },
+  "toronto": { lat: 43.6532, lng: -79.3832 },
+  "vancouver": { lat: 49.2827, lng: -123.1207 },
+  "montreal": { lat: 45.5017, lng: -73.5673 },
+  "mexico city": { lat: 19.4326, lng: -99.1332 },
+  "buenos aires": { lat: -34.6037, lng: -58.3816 },
+  "sao paulo": { lat: -23.5505, lng: -46.6333 },
+  "rio de janeiro": { lat: -22.9068, lng: -43.1729 },
+  "lima": { lat: -12.0464, lng: -77.0428 },
+  "santiago": { lat: -33.4489, lng: -70.6693 },
+  "bogota": { lat: 4.7110, lng: -74.0721 },
+  "tokyo": { lat: 35.6762, lng: 139.6503 },
+  "osaka": { lat: 34.6937, lng: 135.5023 },
+  "kyoto": { lat: 35.0116, lng: 135.7681 },
+  "seoul": { lat: 37.5665, lng: 126.9780 },
+  "beijing": { lat: 39.9042, lng: 116.4074 },
+  "shanghai": { lat: 31.2304, lng: 121.4737 },
+  "hong kong": { lat: 22.3193, lng: 114.1694 },
+  "taipei": { lat: 25.0330, lng: 121.5654 },
+  "singapore": { lat: 1.3521, lng: 103.8198 },
+  "bangkok": { lat: 13.7563, lng: 100.5018 },
+  "kuala lumpur": { lat: 3.1390, lng: 101.6869 },
+  "jakarta": { lat: -6.2088, lng: 106.8456 },
+  "manila": { lat: 14.5995, lng: 120.9842 },
+  "ho chi minh city": { lat: 10.8231, lng: 106.6297 },
+  "hanoi": { lat: 21.0285, lng: 105.8542 },
+  "delhi": { lat: 28.7041, lng: 77.1025 },
+  "new delhi": { lat: 28.6139, lng: 77.2090 },
+  "mumbai": { lat: 19.0760, lng: 72.8777 },
+  "bangalore": { lat: 12.9716, lng: 77.5946 },
+  "bengaluru": { lat: 12.9716, lng: 77.5946 },
+  "dubai": { lat: 25.2048, lng: 55.2708 },
+  "abu dhabi": { lat: 24.4539, lng: 54.3773 },
+  "doha": { lat: 25.2854, lng: 51.5310 },
+  "riyadh": { lat: 24.7136, lng: 46.6753 },
+  "tel aviv": { lat: 32.0853, lng: 34.7818 },
+  "jerusalem": { lat: 31.7683, lng: 35.2137 },
+  "cairo": { lat: 30.0444, lng: 31.2357 },
+  "casablanca": { lat: 33.5731, lng: -7.5898 },
+  "marrakech": { lat: 31.6295, lng: -7.9811 },
+  "cape town": { lat: -33.9249, lng: 18.4241 },
+  "johannesburg": { lat: -26.2041, lng: 28.0473 },
+  "nairobi": { lat: -1.2921, lng: 36.8219 },
+  "lagos": { lat: 6.5244, lng: 3.3792 },
+  "sydney": { lat: -33.8688, lng: 151.2093 },
+  "melbourne": { lat: -37.8136, lng: 144.9631 },
+  "brisbane": { lat: -27.4698, lng: 153.0251 },
+  "auckland": { lat: -36.8485, lng: 174.7633 },
+  "baghdad": { lat: 33.3152, lng: 44.3661 },
+};
+
+const normalizeCityKey = (s: string) =>
+  s.trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // strip diacritics
+    .replace(/[,.;].*$/, "") // drop everything after first comma (e.g. "Paris, France")
+    .replace(/\s+/g, " ").trim();
+
+const lookupCityCoords = (name: string): { lat: number; lng: number } | null => {
+  const key = normalizeCityKey(name);
+  if (!key) return null;
+  if (KNOWN_CITY_COORDS[key]) return KNOWN_CITY_COORDS[key];
+  // try first token (e.g. "Stockholm Arlanda" -> "stockholm")
+  const first = key.split(" ")[0];
+  if (first && KNOWN_CITY_COORDS[first]) return KNOWN_CITY_COORDS[first];
+  return null;
+};
+
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -69,8 +207,18 @@ const buildPoints = (
   destinationGeo: CraftGeo | undefined,
   activities: CraftActivity[]
 ) => {
-  const origin = hashCoords(originCity, DEFAULT_ORIGIN, { lat: 0.4, lng: 0.6 });
-  const destination = destinationGeo || hashCoords(destinationCity, DEFAULT_DESTINATION, { lat: 32, lng: 70 });
+  // Prefer a real lookup over hashing so the plane actually launches from the
+  // user's home city (Stockholm, NYC, Tokyo…) instead of always around London.
+  const originLookup = lookupCityCoords(originCity);
+  const origin = originLookup
+    ? { ...originLookup }
+    // For unknown origins, spread globally instead of jittering around London.
+    : hashCoords(originCity, { lat: 20, lng: 0 }, { lat: 50, lng: 140 });
+  const destinationLookup = !destinationGeo ? lookupCityCoords(destinationCity) : null;
+  const destination =
+    destinationGeo ||
+    destinationLookup ||
+    hashCoords(destinationCity, DEFAULT_DESTINATION, { lat: 50, lng: 140 });
   const activityPoints = activities.slice(0, 5).map((activity, index) => {
     const offset = ACTIVITY_OFFSETS[index] || ACTIVITY_OFFSETS[ACTIVITY_OFFSETS.length - 1];
     const lngScale = Math.max(0.45, Math.cos((destination.lat * Math.PI) / 180));
@@ -203,6 +351,14 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
   // Caption based on smoothed progress
   const totalActs = stableActivities.length;
   const [caption, setCaption] = useState("");
+  // Avoid re-rendering on every rAF frame: only push captions to React state
+  // when the text actually changes.
+  const lastCaptionRef = useRef("");
+  const setCaptionThrottled = (text: string) => {
+    if (text === lastCaptionRef.current) return;
+    lastCaptionRef.current = text;
+    setCaption(text);
+  };
 
   // Initialize map once
   useEffect(() => {
@@ -462,7 +618,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
           destinationMarkerRef.current.setOpacity(fadeIn);
         }
         pointMarkersRef.current.forEach((m) => m.setOpacity(0));
-        setCaption(`Plotting your route to ${destinationCity || "your destination"}…`);
+        setCaptionThrottled(`Plotting your route to ${destinationCity || "your destination"}…`);
       }
       // === PHASE 2: Cinematic flyTo into the city ===
       else if (p < P_ZOOM_END) {
@@ -493,7 +649,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
           }
           currentViewRef.current = { ...cityView };
         }
-        setCaption(`Touching down in ${destinationCity || "your destination"}…`);
+        setCaptionThrottled(`Touching down in ${destinationCity || "your destination"}…`);
       }
       // === PHASE 3: City tour — pins & dashed route reveal ===
       else {
@@ -520,7 +676,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
         const totalActsLocal = acts.length;
         if (totalActsLocal === 0) {
           tourRouteRef.current.setLatLngs([] as any);
-          setCaption(p >= 92 ? "Wrapping up your itinerary…" : `Scouting the best spots in ${destinationCity || "the city"}…`);
+          setCaptionThrottled(p >= 92 ? "Wrapping up your itinerary…" : `Scouting the best spots in ${destinationCity || "the city"}…`);
         } else {
           // Continuous reveal: each pin fades in over its slice; route grows progressively
           const eased = easeInOut(tourT);
@@ -547,11 +703,11 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
           tourRouteRef.current.setLatLngs(route as any);
 
           if (p >= 92) {
-            setCaption("Polishing your itinerary…");
+            setCaptionThrottled("Polishing your itinerary…");
           } else {
             const visibleIdx = clamp(Math.ceil(exact) - 1, 0, totalActsLocal - 1);
             const current = stableActivities[visibleIdx];
-            setCaption(current?.name
+            setCaptionThrottled(current?.name
               ? `Adding ${current.name}  ·  ${Math.min(totalActsLocal, Math.ceil(exact))}/${totalActsLocal}`
               : `Pinning your stops  ·  ${Math.min(totalActsLocal, Math.ceil(exact))}/${totalActsLocal}`);
           }
