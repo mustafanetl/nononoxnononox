@@ -45,6 +45,7 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
   const polylinesRef = useRef<any[]>([]);
   const disposedRef = useRef(false);
   const LRef = useRef<any>(null);
+  const roRef = useRef<ResizeObserver | null>(null);
   const onClickRef = useRef(onMarkerClick);
   const fittedRef = useRef(false);
   const [activeDay, setActiveDay] = useState<number | null>(null);
