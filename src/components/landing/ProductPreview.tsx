@@ -4,17 +4,17 @@ const previewTiles = [
   {
     code: "BEL",
     label: "Belém",
-    image: "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=800&q=80&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1588535533061-87ad58dac1f6?w=800&q=80&auto=format&fit=crop",
   },
   {
     code: "JER",
     label: "Jerónimos",
-    image: "https://images.unsplash.com/photo-1588535533061-87ad58dac1f6?w=800&q=80&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1568849676085-51415703900f?w=800&q=80&auto=format&fit=crop",
   },
   {
     code: "ALF",
     label: "Alfama",
-    image: "https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=800&q=80&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1513735492246-483525079686?w=800&q=80&auto=format&fit=crop",
   },
 ];
 
