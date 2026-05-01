@@ -617,16 +617,18 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
           </div>
         </div>
       </div>
-      {/* ── Magazine Hero ── */}
-      <div className="relative h-[58vh] min-h-[420px] max-h-[640px] overflow-hidden">
+      {/* ── Cinematic Hero ── */}
+      <div className="relative h-[62vh] min-h-[460px] max-h-[680px] overflow-hidden">
         {heroImgFinal ? (
-          <img src={heroImgFinal} alt={destination} className="w-full h-full object-cover scale-105" />
+          <img src={heroImgFinal} alt={destination}
+            className="w-full h-full object-cover animate-ken-burns" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30 flex items-center justify-center">
             <MapPin className="h-20 w-20 text-muted-foreground/30" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/15 to-background" />
+        <div className="absolute inset-0 noise-overlay" />
 
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 px-4 sm:px-8 pt-4 flex items-center justify-between z-10">
@@ -662,133 +664,181 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         </div>
 
         {/* Hero title */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-10 pb-10">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-xs sm:text-sm uppercase tracking-[0.25em] text-white/80 mb-3">Your Jolliday</p>
-            <h1 className="text-5xl sm:text-7xl font-bold text-white tracking-tight leading-[0.95] drop-shadow-lg">
+        <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-10 pb-12">
+          <div className="max-w-5xl mx-auto">
+            <p
+              className="text-[11px] sm:text-xs uppercase tracking-[0.35em] text-white/85 mb-4 animate-hero-rise inline-flex items-center gap-2"
+              style={{ animationDelay: "0.05s" }}
+            >
+              <Compass className="h-3.5 w-3.5" /> Your Jolliday
+            </p>
+            <h1
+              className="text-5xl sm:text-7xl lg:text-[88px] font-bold text-white tracking-tight leading-[0.95] drop-shadow-2xl animate-hero-rise"
+              style={{ animationDelay: "0.18s" }}
+            >
               {destination}
             </h1>
-            <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-white/90 text-sm">
-              {data.itinerary.length > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <span className="font-semibold text-white">{data.itinerary.length}</span> days
-                </span>
-              )}
-              {data.activities.length > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <span className="font-semibold text-white">{data.activities.length}</span> experiences
-                </span>
-              )}
-              {data.hotels.length > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <span className="font-semibold text-white">{data.hotels.length}</span> stays
-                </span>
-              )}
-              {totalBudget > 0 && (
-                <span className="flex items-center gap-1.5">
-                  from <span className="font-semibold text-white">{currency}{totalBudget.toLocaleString()}</span>
-                </span>
-              )}
+            <p
+              className="mt-5 max-w-xl text-white/85 text-base sm:text-lg leading-relaxed animate-hero-rise"
+              style={{ animationDelay: "0.32s" }}
+            >
+              A {days}-day plan, hand-built around the moments worth remembering.
+            </p>
+          </div>
+        </div>
+        {/* Scroll cue */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/70 text-[10px] tracking-[0.3em] uppercase animate-hero-rise hidden sm:block"
+             style={{ animationDelay: "0.5s" }}>
+          scroll
+        </div>
+      </div>
+
+      {/* ── At-a-glance stats ── */}
+      <Reveal>
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 -mt-12 sm:-mt-16 relative z-10 mb-14 sm:mb-20">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <StatTile label="Days" value={data.itinerary.length || days} icon={<CalendarDays className="h-3.5 w-3.5" />} />
+            <StatTile label="Stops" value={
+              data.itinerary.reduce((s: number, d: any) => s + (Array.isArray(d?.slots) ? d.slots.length : 0), 0)
+              || data.activities.length
+            } icon={<MapPin className="h-3.5 w-3.5" />} />
+            <StatTile label="Stays" value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} />
+            <StatTile label="From" value={totalBudget > 0 ? `${currency}${totalBudget.toLocaleString()}` : "—"} icon={<Sparkles className="h-3.5 w-3.5" />} />
+          </div>
+        </div>
+      </Reveal>
+
+      {/* ── Map + intro quote ── */}
+      {mapPoints.length > 0 && (
+        <Reveal>
+          <div className="max-w-5xl mx-auto px-4 sm:px-8 mb-16">
+            <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6 items-stretch">
+              <div className="relative rounded-3xl overflow-hidden border border-border">
+                <TripMap
+                  points={mapPoints}
+                  onMarkerClick={({ name, type, day, slotIdx }) => {
+                    if (type === "hotel") {
+                      const hotel = data.hotels.find((h: any) => h.name === name) || data.hotels[0];
+                      if (hotel) { setSelectedHotel(hotel); setHotelModalOpen(true); }
+                      return;
+                    }
+                    if (day != null && typeof slotIdx === "number") { openSlotModal(day, slotIdx); return; }
+                    const activity = data.activities.find((a: any) => a.name === name);
+                    if (activity) {
+                      setSelectedActivity(activity);
+                      setActivitySource({ kind: "activity", activityId: activity.id });
+                      setActivityModalOpen(true);
+                    }
+                  }}
+                />
+              </div>
+              <div className="rounded-3xl border border-border bg-card p-6 sm:p-7 flex flex-col justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-3">The story</p>
+                  <p className="text-lg sm:text-xl font-semibold text-foreground leading-snug tracking-tight">
+                    {data.text?.split("\n").find(l => l.trim().length > 30)?.slice(0, 220)
+                      || `A handcrafted ${days}-day plan in ${destination}.`}
+                  </p>
+                </div>
+                <p className="mt-6 text-xs text-muted-foreground flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3" /> Tap a pin on the map to open that stop.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* ── Pull-quote intro ── */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-8 -mt-2 mb-10 sm:mb-14">
-        {data.text && (
-          <p className="text-xl sm:text-2xl font-semibold text-foreground leading-snug tracking-tight">
-            {data.text.split("\n").find(l => l.trim().length > 30)?.slice(0, 240) || `A handcrafted ${days}-day plan in ${destination}.`}
-          </p>
-        )}
-      </div>
-
-      {/* ── Map (if available) ── */}
-      {mapPoints.length > 0 && (
-        <div className="max-w-4xl mx-auto px-4 sm:px-8 mb-12">
-          <TripMap
-            points={mapPoints}
-            onMarkerClick={({ name, type, day, slotIdx }) => {
-              if (type === "hotel") {
-                const hotel = data.hotels.find((h: any) => h.name === name) || data.hotels[0];
-                if (hotel) {
-                  setSelectedHotel(hotel);
-                  setHotelModalOpen(true);
-                }
-                return;
-              }
-              // Activity pin: prefer the exact slot it came from (always opens the rich card)
-              if (day != null && typeof slotIdx === "number") {
-                openSlotModal(day, slotIdx);
-                return;
-              }
-              // Fallback: top-level activity
-              const activity = data.activities.find((a: any) => a.name === name);
-              if (activity) {
-                setSelectedActivity(activity);
-                setActivitySource({ kind: "activity", activityId: activity.id });
-                setActivityModalOpen(true);
-              }
-            }}
-          />
-        </div>
+        </Reveal>
       )}
 
-      {/* ── Flights ── */}
-      {data.flights.length > 0 && (
-        <Section eyebrow="Getting there" title="Flights" maxWidth="max-w-3xl">
-          <div className="space-y-3">
-            {data.flights.map((f, i) => (
-              <FlightRow key={f.id || i} flight={f}
-                onClick={() => { setSelectedFlight(f); setFlightModalOpen(true); }} />
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* ── Hotels ── */}
-      {data.hotels.length > 0 && (
-        <Section eyebrow="Where you'll stay" title="Hotels" maxWidth="max-w-5xl">
-          <div className="grid gap-5 sm:grid-cols-2">
-            {data.hotels.map((h, i) => (
-              <HotelCardBig key={h.id || i} hotel={h}
-                onClick={() => { setSelectedHotel(h); setHotelModalOpen(true); }} />
-            ))}
-          </div>
-        </Section>
+      {/* ── Logistics: Flights + Hotels side-by-side ── */}
+      {(data.flights.length > 0 || data.hotels.length > 0) && (
+        <Reveal>
+          <Section eyebrow="Logistics" title="Getting there & where you'll sleep" maxWidth="max-w-6xl">
+            <div className="grid lg:grid-cols-2 gap-6">
+              {data.flights.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                    <Plane className="h-3.5 w-3.5" /> Flights
+                  </div>
+                  <div className="space-y-3">
+                    {data.flights.map((f, i) => (
+                      <FlightRow key={f.id || i} flight={f}
+                        onClick={() => { setSelectedFlight(f); setFlightModalOpen(true); }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {data.hotels.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                    <Hotel className="h-3.5 w-3.5" /> Hotels
+                  </div>
+                  <div className="space-y-3">
+                    {data.hotels.map((h, i) => (
+                      <HotelRow key={h.id || i} hotel={h}
+                        onClick={() => { setSelectedHotel(h); setHotelModalOpen(true); }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Section>
+        </Reveal>
       )}
 
       {/* ── Day-by-day itinerary (the centerpiece) ── */}
       {data.itinerary.length > 0 && (
-        <Section eyebrow="The plan" title="Day by day" maxWidth="max-w-4xl">
-          <div className="space-y-14">
-            {data.itinerary.map((day) => {
+        <Section eyebrow="The plan" title="Day by day" maxWidth="max-w-5xl">
+          {/* Sticky day rail */}
+          <DayRail days={data.itinerary.map((d: any) => ({ day: d.day, title: d.title }))} />
+          <div className="space-y-20 sm:space-y-24 mt-10">
+            {data.itinerary.map((day, dayIdx) => {
               const dayPhoto = photoForDay(day.day);
+              const reverse = dayIdx % 2 === 1;
               return (
-                <article key={day.day} className="group">
-                  {/* Day banner */}
-                  <div className="relative h-56 sm:h-72 rounded-3xl overflow-hidden mb-5">
-                    {dayPhoto ? (
-                      <img src={dayPhoto} alt={day.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6">
-                      <p className="text-xs uppercase tracking-[0.2em] text-white/80">Day {day.day}</p>
-                      <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mt-1 leading-tight">
+                <Reveal key={day.day}>
+                <article id={`day-${day.day}`} className="group scroll-mt-24">
+                  {/* Day banner with big outlined number */}
+                  <div className={`grid gap-5 lg:gap-7 mb-6 ${reverse ? "lg:grid-cols-[1fr_1.4fr]" : "lg:grid-cols-[1.4fr_1fr]"}`}>
+                    <div className={`relative h-56 sm:h-72 lg:h-80 rounded-3xl overflow-hidden ${reverse ? "lg:order-2" : ""}`}>
+                      {dayPhoto ? (
+                        <img src={dayPhoto} alt={day.title}
+                          className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
+                      <div className="absolute top-4 left-5">
+                        <span className="px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[10px] font-bold tracking-[0.2em] uppercase text-foreground">
+                          Day {day.day}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={`flex flex-col justify-center ${reverse ? "lg:order-1 lg:items-end lg:text-right" : ""}`}>
+                      <p
+                        className="text-[100px] sm:text-[140px] font-bold leading-none tracking-tighter text-transparent"
+                        style={{ WebkitTextStroke: "1.5px hsl(var(--foreground))" }}
+                      >
+                        {String(day.day).padStart(2, "0")}
+                      </p>
+                      <h3 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mt-2 leading-tight">
                         {day.title}
                       </h3>
+                      {day.slots && day.slots.length > 0 && (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {day.slots.length} stops · starts {day.slots[0]?.time}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {/* Slots */}
                   {day.slots && day.slots.length > 0 ? (
-                    <ol className="relative pl-6 sm:pl-8 border-l-2 border-border space-y-5">
+                    <ol className="relative pl-7 sm:pl-9 border-l-2 border-border space-y-7">
                       {day.slots.map((slot, sIdx) => (
                         <li key={sIdx} className="relative">
-                          <span className="absolute -left-[33px] sm:-left-[37px] top-1.5 w-3.5 h-3.5 rounded-full bg-foreground ring-4 ring-background" />
+                          <span className="absolute -left-[34px] sm:-left-[42px] top-1 w-7 h-7 rounded-full bg-foreground text-background ring-4 ring-background flex items-center justify-center text-[11px] font-bold tabular-nums">
+                            {sIdx + 1}
+                          </span>
                           {(() => {
                             const matched = matchActivity(slot.venue);
                             const slotPhotoMatch = resolveVenuePhotoMatch(slot.venue, tripData.itineraryVenuePhotos);
@@ -831,18 +881,18 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                               setActivityModalOpen(true);
                             };
                             return (
-                              <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-4 sm:gap-5 transition-transform duration-300 hover:-translate-y-0.5">
                                 {/* Hero photo column */}
                                 <button
                                   type="button"
                                   onClick={openModal}
-                                  className="relative h-44 sm:h-40 sm:w-40 rounded-2xl overflow-hidden group/photo bg-gradient-to-br from-primary/15 via-muted to-accent/15"
+                                  className="relative h-44 sm:h-44 sm:w-[180px] rounded-2xl overflow-hidden group/photo bg-gradient-to-br from-primary/15 via-muted to-accent/15 ring-1 ring-border hover:ring-foreground/30 transition"
                                 >
                                   {heroPhoto ? (
                                     <img
                                       src={heroPhoto}
                                       alt={slot.venue}
-                                      className="w-full h-full object-cover transition-transform duration-500 group-hover/photo:scale-105"
+                                      className="w-full h-full object-cover transition-transform duration-700 group-hover/photo:scale-110"
                                     />
                                   ) : (
                                     <div className="w-full h-full flex items-center justify-center">
@@ -926,9 +976,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                   )}
 
                                   {slot.transitNext && slot.transitNext !== "—" && sIdx < day.slots!.length - 1 && (
-                                    <div className="flex items-center gap-1.5 mt-3 text-[11px] italic text-muted-foreground/80">
-                                      <ArrowRight className="h-3 w-3" /> {slot.transitNext}
-                                    </div>
+                                    <TransitPill text={slot.transitNext} />
                                   )}
                                 </div>
                               </div>
@@ -945,6 +993,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                     </div>
                   )}
                 </article>
+                </Reveal>
               );
             })}
           </div>
@@ -953,32 +1002,40 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
       {/* ── Activities gallery ── */}
       {data.activities.length > 0 && (
-        <Section eyebrow="Don't miss" title="Experiences" maxWidth="max-w-5xl">
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {data.activities.map((a, i) => (
-              <ActivityTile key={a.id || i} activity={a}
-                onClick={() => {
-                  setSelectedActivity(a);
-                  setActivitySource({ kind: "activity", activityId: a.id });
-                  setActivityModalOpen(true);
-                }} />
-            ))}
-          </div>
-        </Section>
+        <Reveal>
+          <Section eyebrow="Don't miss" title="Experiences" maxWidth="max-w-6xl">
+            <div className="bento-grid">
+              {data.activities.map((a, i) => (
+                <ActivityTile
+                  key={a.id || i}
+                  activity={a}
+                  variant={i === 0 ? "feature" : i % 4 === 1 ? "tall" : "regular"}
+                  onClick={() => {
+                    setSelectedActivity(a);
+                    setActivitySource({ kind: "activity", activityId: a.id });
+                    setActivityModalOpen(true);
+                  }}
+                />
+              ))}
+            </div>
+          </Section>
+        </Reveal>
       )}
 
-      {/* ── Closing strip ── */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-8 mt-16 pt-10 border-t border-border text-center">
-        {secondaryImg && (
-          <div className="relative h-40 sm:h-56 rounded-2xl overflow-hidden mb-6">
-            <img src={secondaryImg} alt="" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-          </div>
-        )}
-        <p className="text-sm text-muted-foreground">
-          Crafted by Jolliday · prices are estimates · enjoy the trip ✦
-        </p>
-      </div>
+      {/* ── Closing share card ── */}
+      <Reveal>
+        <ClosingCard
+          destination={destination}
+          days={days}
+          backgroundImage={secondaryImg}
+          isShared={isShared}
+          onShare={handleShare}
+          onExportPDF={handleExportPDF}
+          onSave={handleSave}
+          saving={saving}
+          sharing={sharing}
+        />
+      </Reveal>
 
       {/* ── Floating mobile actions ── */}
       <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden">
