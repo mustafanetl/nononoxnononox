@@ -1,421 +1,402 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plane, MapPin } from "lucide-react";
+import { MapPin, Plane } from "lucide-react";
 
 export type CraftActivity = { name: string; photo?: string };
+export type CraftGeo = { lat: number; lng: number };
 
 type Props = {
   originCity: string;
   destinationCity: string;
   activities: CraftActivity[];
   destinationPhoto?: string;
-  /** 0–100 — drives sequencing. */
+  destinationGeo?: CraftGeo;
   progress: number;
 };
 
-/**
- * Animated "trip being plotted on a world map" loader.
- * - Phase 1: flight arc draws from origin to destination, plane glides along it.
- * - Phase 2: activity photo pins drop in one by one, each connected by a drawn line.
- * - Phase 3: full route settles.
- *
- * Stability rules to avoid flicker:
- * - Activity slots are reserved up-front based on the highest count seen so far,
- *   so already-shown pins never disappear when the streamed list changes length.
- * - Pin keys are based on slot index (not name), so swapping a name in-place doesn't
- *   cause a remount/replay of the line-draw animation.
- */
-const PlanCraftingMap = ({
-  originCity,
-  destinationCity,
-  activities,
-  destinationPhoto,
-  progress,
-}: Props) => {
-  // ----- Stable slot count -----
-  // Once we've shown N activity pins, never go below N for this crafting cycle.
-  const maxSeenRef = useRef(0);
-  const stableLen = Math.max(maxSeenRef.current, Math.min(activities.length, 5));
-  if (stableLen > maxSeenRef.current) maxSeenRef.current = stableLen;
-
-  // Pad activities to stableLen so layout is fixed; later names just fill in.
-  const acts: CraftActivity[] = useMemo(() => {
-    const out: CraftActivity[] = [];
-    for (let i = 0; i < stableLen; i++) {
-      out.push(activities[i] || { name: "" });
-    }
-    return out;
-  }, [activities, stableLen]);
-
-  // ----- Layout -----
-  const VB_W = 800;
-  const VB_H = 360;
-  const origin = { x: 130, y: 150 };
-  const destination = { x: 430, y: 150 };
-
-  // Spread activity slots in a controlled cluster around the destination.
-  // Pre-computed offsets so positions are stable regardless of count.
-  const slotOffsets = useMemo(
-    () => [
-      { dx: 110, dy: 70 },
-      { dx: 180, dy: -40 },
-      { dx: 70, dy: -90 },
-      { dx: 220, dy: 110 },
-      { dx: -30, dy: 110 },
-    ],
-    []
-  );
-
-  const activityPoints = useMemo(
-    () =>
-      acts.map((_, i) => ({
-        x: destination.x + slotOffsets[i].dx,
-        y: destination.y + slotOffsets[i].dy,
-      })),
-    [acts, slotOffsets, destination.x, destination.y]
-  );
-
-  // ----- Phase progression (monotonic, never backs up) -----
-  const destinationDropped = progress >= 22;
-  const totalSlots = Math.max(1, acts.length);
-  // Activities revealed evenly between progress 30 and 88.
-  const rawVisible = Math.floor(((progress - 30) / 58) * totalSlots);
-  const computedVisible = Math.max(0, Math.min(totalSlots, rawVisible));
-  const visibleRef = useRef(0);
-  if (computedVisible > visibleRef.current) visibleRef.current = computedVisible;
-  // Reset when destination resets (new crafting cycle)
-  useEffect(() => {
-    if (progress < 5) {
-      visibleRef.current = 0;
-      maxSeenRef.current = 0;
-    }
-  }, [progress]);
-  const visibleActivityCount = visibleRef.current;
-
-  // ----- Caption -----
-  const caption = useMemo(() => {
-    if (progress < 22) return `Plotting your route to ${destinationCity || "your destination"}…`;
-    if (progress >= 90) return "Almost ready…";
-    if (visibleActivityCount === 0) return `Arrived in ${destinationCity || "your destination"}…`;
-    const current = acts[Math.max(0, visibleActivityCount - 1)];
-    const name = current?.name?.trim();
-    return name
-      ? `Pinning ${name} (${visibleActivityCount} of ${totalSlots})`
-      : `Pinning your stops (${visibleActivityCount} of ${totalSlots})`;
-  }, [progress, visibleActivityCount, acts, destinationCity, totalSlots]);
-
-  return (
-    <div className="w-full max-w-2xl mx-auto py-8 animate-fade-in">
-      <div className="relative rounded-2xl border border-border bg-[hsl(var(--card))] overflow-hidden shadow-sm">
-        {/* Map paper background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-secondary/40 via-card to-secondary/30" />
-
-        {/* Grid overlay (latitude/longitude feel) */}
-        <svg
-          aria-hidden
-          className="absolute inset-0 w-full h-full opacity-[0.18]"
-          viewBox={`0 0 ${VB_W} ${VB_H}`}
-          preserveAspectRatio="none"
-        >
-          {[...Array(9)].map((_, i) => (
-            <line
-              key={`v-${i}`}
-              x1={(VB_W / 8) * i}
-              y1={0}
-              x2={(VB_W / 8) * i}
-              y2={VB_H}
-              stroke="hsl(var(--foreground))"
-              strokeWidth="0.5"
-            />
-          ))}
-          {[...Array(7)].map((_, i) => (
-            <line
-              key={`h-${i}`}
-              x1={0}
-              y1={(VB_H / 6) * i}
-              x2={VB_W}
-              y2={(VB_H / 6) * i}
-              stroke="hsl(var(--foreground))"
-              strokeWidth="0.5"
-            />
-          ))}
-        </svg>
-
-        {/* World continents silhouette — stylised, evokes a map */}
-        <svg
-          aria-hidden
-          className="absolute inset-0 w-full h-full"
-          viewBox="0 0 800 360"
-          preserveAspectRatio="xMidYMid slice"
-        >
-          <g fill="hsl(var(--muted-foreground))" fillOpacity="0.18">
-            {/* North America */}
-            <path d="M40,80 C70,60 130,55 170,70 C210,80 230,110 215,140 C205,165 175,180 140,180 C110,180 80,170 60,150 C40,130 30,100 40,80 Z" />
-            {/* South America */}
-            <path d="M180,200 C200,195 220,210 225,240 C230,275 215,310 195,325 C180,335 165,325 165,300 C165,270 170,225 180,200 Z" />
-            {/* Europe */}
-            <path d="M340,75 C370,65 410,70 425,90 C435,110 420,130 395,135 C370,140 345,130 335,110 C328,95 330,82 340,75 Z" />
-            {/* Africa */}
-            <path d="M360,150 C395,145 430,160 440,195 C448,230 430,275 400,295 C375,310 355,295 350,265 C345,225 348,180 360,150 Z" />
-            {/* Asia */}
-            <path d="M450,70 C520,55 620,65 690,90 C730,105 740,135 710,155 C670,175 600,180 540,170 C490,160 450,140 445,110 C443,95 445,80 450,70 Z" />
-            {/* Australia */}
-            <path d="M620,250 C660,245 700,255 715,275 C725,295 710,315 680,320 C645,325 615,315 605,295 C598,278 605,258 620,250 Z" />
-          </g>
-        </svg>
-
-        {/* Animation SVG layer */}
-        <svg
-          viewBox={`0 0 ${VB_W} ${VB_H}`}
-          className="relative w-full h-[260px] sm:h-[320px]"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          {/* Flight arc */}
-          <FlightArc from={origin} to={destination} active={progress > 0} />
-
-          {/* Activity connecting lines */}
-          {activityPoints.slice(0, visibleActivityCount).map((pt, i) => {
-            const prev = i === 0 ? destination : activityPoints[i - 1];
-            return <DrawingLine key={`line-${i}`} from={prev} to={pt} />;
-          })}
-
-          {/* Origin marker */}
-          <g>
-            <circle cx={origin.x} cy={origin.y} r="14" fill="hsl(var(--background))" stroke="hsl(var(--foreground))" strokeWidth="2" />
-            <circle cx={origin.x} cy={origin.y} r="6" fill="hsl(var(--foreground))" />
-            <text
-              x={origin.x}
-              y={origin.y + 32}
-              textAnchor="middle"
-              fontSize="12"
-              fill="hsl(var(--foreground))"
-              fontWeight={600}
-            >
-              {originCity || "Home"}
-            </text>
-          </g>
-        </svg>
-
-        {/* Photo pin overlays — outside the SVG so we can use real <img> */}
-        {destinationDropped && (
-          <PhotoPin
-            xPct={(destination.x / VB_W) * 100}
-            yPct={(destination.y / VB_H) * 100}
-            label={destinationCity || "Destination"}
-            photo={destinationPhoto}
-            primary
-          />
-        )}
-        {activityPoints.slice(0, visibleActivityCount).map((pt, i) => (
-          <PhotoPin
-            key={`pin-${i}`}
-            xPct={(pt.x / VB_W) * 100}
-            yPct={(pt.y / VB_H) * 100}
-            label={acts[i]?.name || `Stop ${i + 1}`}
-            photo={acts[i]?.photo}
-          />
-        ))}
-
-        {/* Plane glyph */}
-        {progress > 0 && progress < 30 && (
-          <FlyingPlane from={origin} to={destination} vbW={VB_W} vbH={VB_H} />
-        )}
-      </div>
-
-      <p className="text-center text-sm text-muted-foreground mt-4 font-medium">
-        {caption}
-      </p>
-    </div>
-  );
+type Point = {
+  lat: number;
+  lng: number;
+  label: string;
+  photo?: string;
+  primary?: boolean;
 };
 
-/* ---------- Sub-components ---------- */
+const DEFAULT_ORIGIN = { lat: 51.5074, lng: -0.1278 };
+const DEFAULT_DESTINATION = { lat: 59.3293, lng: 18.0686 };
+const ACTIVITY_OFFSETS = [
+  { lat: 0.024, lng: 0.02 },
+  { lat: -0.012, lng: 0.042 },
+  { lat: 0.035, lng: -0.015 },
+  { lat: -0.028, lng: -0.025 },
+  { lat: 0.01, lng: -0.045 },
+];
 
-const FlightArc = ({
-  from,
-  to,
-  active,
-}: {
-  from: { x: number; y: number };
-  to: { x: number; y: number };
-  active: boolean;
-}) => {
-  const midX = (from.x + to.x) / 2;
-  const midY = Math.min(from.y, to.y) - 70;
-  const d = `M ${from.x} ${from.y} Q ${midX} ${midY} ${to.x} ${to.y}`;
-  // Approximate path length
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const len = Math.hypot(dx, dy) + 80;
-  return (
-    <path
-      d={d}
-      fill="none"
-      stroke="hsl(var(--foreground))"
-      strokeWidth="2"
-      strokeDasharray={`6 6`}
-      strokeLinecap="round"
-      pathLength={100}
-      style={{
-        strokeDasharray: "100",
-        strokeDashoffset: active ? 0 : 100,
-        transition: "stroke-dashoffset 3.2s ease-out",
-      }}
-    />
-  );
-};
-
-const DrawingLine = ({
-  from,
-  to,
-}: {
-  from: { x: number; y: number };
-  to: { x: number; y: number };
-}) => {
-  const [drawn, setDrawn] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setDrawn(true), 30);
-    return () => clearTimeout(t);
-  }, []);
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const len = Math.hypot(dx, dy);
-  return (
-    <line
-      x1={from.x}
-      y1={from.y}
-      x2={to.x}
-      y2={to.y}
-      stroke="hsl(var(--foreground))"
-      strokeOpacity="0.7"
-      strokeWidth="1.75"
-      strokeDasharray={`${len}`}
-      strokeLinecap="round"
-      style={{
-        strokeDashoffset: drawn ? 0 : len,
-        transition: "stroke-dashoffset 0.7s ease-out",
-      }}
-    />
-  );
-};
-
-const FlyingPlane = ({
-  from,
-  to,
-  vbW,
-  vbH,
-}: {
-  from: { x: number; y: number };
-  to: { x: number; y: number };
-  vbW: number;
-  vbH: number;
-}) => {
-  const [t, setT] = useState(0);
-  useEffect(() => {
-    const start = Date.now();
-    const dur = 3200;
-    let raf = 0;
-    const tick = () => {
-      const elapsed = Date.now() - start;
-      const k = Math.min(1, elapsed / dur);
-      setT(k);
-      if (k < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // Intentionally no deps — single play per mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const midX = (from.x + to.x) / 2;
-  const midY = Math.min(from.y, to.y) - 70;
-  const x = (1 - t) * (1 - t) * from.x + 2 * (1 - t) * t * midX + t * t * to.x;
-  const y = (1 - t) * (1 - t) * from.y + 2 * (1 - t) * t * midY + t * t * to.y;
-
-  const dx = 2 * (1 - t) * (midX - from.x) + 2 * t * (to.x - midX);
-  const dy = 2 * (1 - t) * (midY - from.y) + 2 * t * (to.y - midY);
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-
-  const xPct = (x / vbW) * 100;
-  const yPct = (y / vbH) * 100;
-
-  return (
-    <div
-      className="absolute pointer-events-none z-20"
-      style={{
-        left: `${xPct}%`,
-        top: `${yPct}%`,
-        transform: `translate(-50%, -50%) rotate(${angle}deg)`,
-      }}
-    >
-      <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg ring-2 ring-background">
-        <Plane className="h-4 w-4" />
-      </div>
-    </div>
-  );
-};
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const initials = (name: string) =>
   name
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
+    .map((word) => word[0]?.toUpperCase())
     .join("") || "•";
 
-const PhotoPin = ({
-  xPct,
-  yPct,
-  label,
-  photo,
-  primary = false,
-}: {
-  xPct: number;
-  yPct: number;
-  label: string;
-  photo?: string;
-  primary?: boolean;
-}) => {
-  const size = primary ? 72 : 52;
-  const [imgError, setImgError] = useState(false);
+const hashCoords = (input: string, fallback: { lat: number; lng: number }) => {
+  const source = input.trim().toLowerCase();
+  if (!source) return fallback;
+  let hash = 0;
+  for (let i = 0; i < source.length; i++) {
+    hash = (hash * 31 + source.charCodeAt(i)) >>> 0;
+  }
+  const latOffset = ((hash % 1600) / 10000) - 0.08;
+  const lngOffset = ((((hash / 1600) | 0) % 2200) / 10000) - 0.11;
+  return {
+    lat: fallback.lat + latOffset,
+    lng: fallback.lng + lngOffset,
+  };
+};
+
+const buildPoints = (
+  originCity: string,
+  destinationCity: string,
+  destinationPhoto: string | undefined,
+  destinationGeo: CraftGeo | undefined,
+  activities: CraftActivity[]
+) => {
+  const origin = hashCoords(originCity, DEFAULT_ORIGIN);
+  const destination = destinationGeo || hashCoords(destinationCity, DEFAULT_DESTINATION);
+
+  const activityPoints = activities.slice(0, 5).map((activity, index) => {
+    const offset = ACTIVITY_OFFSETS[index] || ACTIVITY_OFFSETS[ACTIVITY_OFFSETS.length - 1];
+    return {
+      lat: destination.lat + offset.lat,
+      lng: destination.lng + offset.lng,
+      label: activity.name || `Stop ${index + 1}`,
+      photo: activity.photo,
+    } satisfies Point;
+  });
+
+  return {
+    origin: { ...origin, label: originCity || "Home" },
+    destination: {
+      ...destination,
+      label: destinationCity || "Destination",
+      photo: destinationPhoto,
+      primary: true,
+    } satisfies Point,
+    activities: activityPoints,
+  };
+};
+
+const progressToVisibleCount = (progress: number, total: number) => {
+  if (total <= 0) return 0;
+  const raw = Math.floor(((progress - 32) / 54) * total);
+  return clamp(raw, 0, total);
+};
+
+const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationPhoto, destinationGeo, progress }: Props) => {
+  const mapElRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
+  const guideRouteRef = useRef<any>(null);
+  const routeRef = useRef<any>(null);
+  const planeMarkerRef = useRef<any>(null);
+  const destinationMarkerRef = useRef<any>(null);
+  const pointMarkersRef = useRef<any[]>([]);
+  const visibleCountRef = useRef(0);
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [activitySlots, setActivitySlots] = useState<CraftActivity[]>([]);
+  const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => {
+    if (progress < 5) {
+      visibleCountRef.current = 0;
+      setVisibleCount(0);
+      setActivitySlots([]);
+      return;
+    }
+
+    setActivitySlots((prev) => {
+      const incoming = activities.filter((a) => a.name?.trim()).slice(0, 5);
+      const nextLen = Math.max(prev.length, incoming.length);
+      return Array.from({ length: nextLen }, (_, index) => incoming[index] || prev[index] || { name: "" });
+    });
+  }, [activities, progress]);
+
+  const stableActivities = useMemo(() => activitySlots.filter((a) => a.name?.trim()).slice(0, 5), [activitySlots]);
+  const points = useMemo(
+    () => buildPoints(originCity, destinationCity, destinationPhoto, destinationGeo, stableActivities),
+    [originCity, destinationCity, destinationPhoto, destinationGeo, stableActivities]
+  );
+
+  const caption = useMemo(() => {
+    if (progress < 22) return `Plotting your route to ${destinationCity || "your destination"}…`;
+    if (progress >= 90) return "Finalizing your itinerary…";
+    const visible = visibleCount;
+    if (visible === 0) return `Arriving in ${destinationCity || "your destination"}…`;
+    const current = stableActivities[Math.max(0, visible - 1)];
+    return current?.name ? `Adding ${current.name}` : `Pinning your stops (${visible}/${Math.max(1, stableActivities.length)})`;
+  }, [progress, destinationCity, stableActivities, visibleCount]);
+
+  useEffect(() => {
+    let disposed = false;
+
+    const init = async () => {
+      if (!mapElRef.current || mapRef.current) return;
+      const L = await import("leaflet");
+      await import("leaflet/dist/leaflet.css");
+      if (disposed || !mapElRef.current) return;
+
+      const map = L.map(mapElRef.current, {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        touchZoom: false,
+        zoomSnap: 0.25,
+        zoomDelta: 0.25,
+        fadeAnimation: false,
+        markerZoomAnimation: false,
+      });
+
+      tileLayerRef.current = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        subdomains: "abcd",
+        maxZoom: 19,
+      }).addTo(map);
+
+      mapRef.current = map;
+      setMapReady(true);
+    };
+
+    init();
+
+    return () => {
+      disposed = true;
+      pointMarkersRef.current.forEach((marker) => {
+        try { marker.remove(); } catch {}
+      });
+      pointMarkersRef.current = [];
+      try { planeMarkerRef.current?.remove(); } catch {}
+      try { guideRouteRef.current?.remove(); } catch {}
+      try { routeRef.current?.remove(); } catch {}
+      try { destinationMarkerRef.current?.remove(); } catch {}
+      try { tileLayerRef.current?.remove(); } catch {}
+      try { mapRef.current?.remove(); } catch {}
+      planeMarkerRef.current = null;
+      destinationMarkerRef.current = null;
+      guideRouteRef.current = null;
+      routeRef.current = null;
+      tileLayerRef.current = null;
+      mapRef.current = null;
+      visibleCountRef.current = 0;
+      setVisibleCount(0);
+      setMapReady(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+
+    let cancelled = false;
+
+    const render = async () => {
+      const L = await import("leaflet");
+      if (cancelled || !mapRef.current) return;
+
+      const map = mapRef.current;
+      pointMarkersRef.current.forEach((marker) => {
+        try { marker.remove(); } catch {}
+      });
+      pointMarkersRef.current = [];
+      visibleCountRef.current = 0;
+      setVisibleCount(0);
+      try { destinationMarkerRef.current?.remove(); } catch {}
+      destinationMarkerRef.current = null;
+
+      const routeLatLngs = [
+        [points.origin.lat, points.origin.lng],
+        [points.destination.lat, points.destination.lng],
+      ];
+
+      if (!guideRouteRef.current) {
+        guideRouteRef.current = L.polyline(routeLatLngs as any, {
+          color: "hsl(var(--border))",
+          weight: 3,
+          opacity: 0.8,
+        }).addTo(map);
+      } else {
+        guideRouteRef.current.setLatLngs(routeLatLngs);
+      }
+
+      if (!routeRef.current) {
+        routeRef.current = L.polyline([[points.origin.lat, points.origin.lng]] as any, {
+          color: "hsl(var(--foreground))",
+          weight: 3,
+          opacity: 1,
+          dashArray: "10 10",
+        }).addTo(map);
+      } else {
+        routeRef.current.setLatLngs(routeLatLngs);
+      }
+
+      if (!planeMarkerRef.current) {
+        planeMarkerRef.current = L.marker([points.origin.lat, points.origin.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: `<div style="width:34px;height:34px;border-radius:9999px;background:hsl(var(--foreground));color:hsl(var(--background));display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,0.2);border:2px solid hsl(var(--background));"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 2 11 13\"></path><path d=\"M22 2 15 22 11 13 2 9 22 2z\"></path></svg></div>`,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+          }),
+        }).addTo(map);
+      }
+
+      const bounds = L.latLngBounds(routeLatLngs as any);
+      const allPoints = [points.destination, ...points.activities];
+      allPoints.forEach((point) => bounds.extend([point.lat, point.lng]));
+      map.fitBounds(bounds, { padding: [48, 48], maxZoom: 5 });
+    };
+
+    render();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mapReady, points]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !routeRef.current || !planeMarkerRef.current) return;
+
+    const map = mapRef.current;
+    const origin = points.origin;
+    const destination = points.destination;
+
+    const flightProgress = clamp(progress / 24, 0, 1);
+    const planeLat = origin.lat + (destination.lat - origin.lat) * flightProgress;
+    const planeLng = origin.lng + (destination.lng - origin.lng) * flightProgress;
+    planeMarkerRef.current.setLatLng([planeLat, planeLng]);
+    const targetVisible = Math.max(visibleCountRef.current, progressToVisibleCount(progress, points.activities.length));
+    const routePoints: [number, number][] = progress >= 24
+      ? [
+          [origin.lat, origin.lng],
+          [destination.lat, destination.lng],
+          ...points.activities.slice(0, targetVisible).map((point) => [point.lat, point.lng] as [number, number]),
+        ]
+      : [
+          [origin.lat, origin.lng],
+          [planeLat, planeLng],
+        ];
+    routeRef.current.setLatLngs(routePoints as any);
+
+    if (progress >= 24) {
+      planeMarkerRef.current.setLatLng([destination.lat, destination.lng]);
+      if (!destinationMarkerRef.current) {
+        import("leaflet").then((L) => {
+          if (!mapRef.current || destinationMarkerRef.current) return;
+          destinationMarkerRef.current = L.marker([destination.lat, destination.lng], {
+            icon: L.divIcon({
+              className: "",
+              html: destination.photo
+                ? `<div style="width:58px;height:58px;border-radius:9999px;overflow:hidden;border:3px solid hsl(var(--background));box-shadow:0 14px 34px rgba(0,0,0,0.22);background:hsl(var(--muted));"><img src=\"${destination.photo}\" alt=\"${destination.label.replace(/"/g, "&quot;")}\" style=\"width:100%;height:100%;object-fit:cover;display:block;\" /></div>`
+                : `<div style="width:58px;height:58px;border-radius:9999px;display:flex;align-items:center;justify-content:center;border:3px solid hsl(var(--background));box-shadow:0 14px 34px rgba(0,0,0,0.22);background:hsl(var(--foreground));color:hsl(var(--background));font-size:16px;font-weight:700;">${initials(destination.label)}</div>`,
+              iconSize: [58, 58],
+              iconAnchor: [29, 29],
+            }),
+          }).addTo(mapRef.current);
+        });
+      }
+    }
+
+    if (targetVisible <= visibleCountRef.current) return;
+
+    let cancelled = false;
+
+    const addMarkers = async () => {
+      const L = await import("leaflet");
+      if (cancelled || !mapRef.current) return;
+
+      for (let i = visibleCountRef.current; i < targetVisible; i++) {
+        const point = points.activities[i];
+        if (!point) continue;
+
+        const nextMarker = L.marker([point.lat, point.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: point.photo
+              ? `<div style="width:46px;height:46px;border-radius:9999px;overflow:hidden;border:3px solid hsl(var(--background));box-shadow:0 10px 28px rgba(0,0,0,0.18);background:hsl(var(--muted));"><img src=\"${point.photo}\" alt=\"${point.label.replace(/"/g, "&quot;")}\" style=\"width:100%;height:100%;object-fit:cover;display:block;\" /></div>`
+              : `<div style="width:46px;height:46px;border-radius:9999px;display:flex;align-items:center;justify-content:center;border:3px solid hsl(var(--background));box-shadow:0 10px 28px rgba(0,0,0,0.18);background:hsl(var(--foreground));color:hsl(var(--background));font-size:12px;font-weight:700;">${initials(point.label)}</div>`,
+            iconSize: [46, 46],
+            iconAnchor: [23, 23],
+          }),
+        }).addTo(map);
+
+        nextMarker.bindTooltip(point.label, {
+          permanent: false,
+          direction: "top",
+          offset: [0, -18],
+          opacity: 0.95,
+        });
+
+        pointMarkersRef.current.push(nextMarker);
+      }
+
+      visibleCountRef.current = targetVisible;
+      setVisibleCount(targetVisible);
+    };
+
+    addMarkers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mapReady, progress, points]);
+
   return (
-    <div
-      className="absolute pointer-events-none animate-scale-in z-10"
-      style={{
-        left: `${xPct}%`,
-        top: `${yPct}%`,
-        transform: "translate(-50%, -50%)",
-      }}
-    >
-      <div className="flex flex-col items-center">
-        <div
-          className={`rounded-full overflow-hidden ring-[3px] shadow-xl flex items-center justify-center bg-muted ${
-            primary ? "ring-foreground" : "ring-background"
-          }`}
-          style={{ width: size, height: size }}
-        >
-          {photo && !imgError ? (
-            <img
-              src={photo}
-              alt={label}
-              className="w-full h-full object-cover"
-              loading="eager"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-foreground font-semibold text-xs bg-gradient-to-br from-secondary to-muted">
-              {primary ? <MapPin className="h-6 w-6" /> : initials(label)}
-            </div>
-          )}
+    <div className="w-full max-w-3xl mx-auto py-8 animate-fade-in">
+      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-card/95">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">{destinationCity || "Building your trip"}</p>
+            <p className="text-xs text-muted-foreground truncate">{originCity || "Home"} → {destinationCity || "Destination"}</p>
+          </div>
+          <div className="inline-flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+            <Plane className="h-3.5 w-3.5" />
+            {Math.round(progress)}%
+          </div>
         </div>
-        {label && (
-          <span
-            className="mt-1.5 px-2 py-0.5 text-[10px] font-semibold text-foreground bg-background/95 backdrop-blur-sm rounded-md max-w-[120px] truncate shadow-md border border-border"
-            title={label}
-          >
-            {label}
-          </span>
+
+        <div className="relative">
+          <div ref={mapElRef} className="w-full h-[320px] sm:h-[380px]" />
+
+          <div className="pointer-events-none absolute top-4 left-4 flex flex-col gap-2 max-w-[220px]">
+            <MapBadge label={originCity || "Home"} subtle />
+            <MapBadge label={destinationCity || "Destination"} photo={destinationPhoto} />
+          </div>
+        </div>
+      </div>
+
+      <p className="text-center text-sm text-muted-foreground mt-4 font-medium">{caption}</p>
+    </div>
+  );
+};
+
+const MapBadge = ({ label, photo, subtle = false }: { label: string; photo?: string; subtle?: boolean }) => {
+  const [imgError, setImgError] = useState(false);
+
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/92 backdrop-blur-sm px-2.5 py-1.5 shadow-sm w-fit">
+      <div className="w-8 h-8 rounded-full overflow-hidden bg-muted flex items-center justify-center shrink-0">
+        {photo && !imgError ? (
+          <img src={photo} alt={label} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+        ) : subtle ? (
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <span className="text-[10px] font-semibold text-foreground">{initials(label)}</span>
         )}
       </div>
+      <span className="text-xs font-medium text-foreground truncate max-w-[150px]">{label}</span>
     </div>
   );
 };
