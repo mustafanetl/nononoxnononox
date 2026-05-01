@@ -412,6 +412,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [craftingActive, setCraftingActive] = useState(false);
   const [craftingPlanType, setCraftingPlanType] = useState<"full" | "local">("full");
   const [craftingOriginCity, setCraftingOriginCity] = useState<string>("");
+  const [craftingCompleted, setCraftingCompleted] = useState(false);
   const lastCraftedMsgIndex = useRef(-1);
   const craftingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const craftingProgressRef = useRef(0);
@@ -425,6 +426,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
     craftingProgressRef.current = 0;
     streamingDoneRef.current = false;
+    setCraftingCompleted(false);
     craftingStartTimeRef.current = Date.now();
     setCraftingPlanType(/```(flights|hotels)/s.test(content) ? "full" : "local");
     setCraftingOriginCity(origin.trim());
@@ -452,6 +454,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         setTimeout(() => {
           pendingCraftSeedRef.current = "";
           setCraftingActive(false);
+          setCraftingCompleted(false);
           setCraftingPlan(null);
           setCraftingOriginCity("");
         }, 600);
@@ -519,6 +522,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       if (lastMsg?.role === "assistant") {
         const hasFlightsOrHotels = /```(flights|hotels)/s.test(lastMsg.content);
         setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
+        if (hasRenderableFullPlan(lastMsg.content)) {
+          setCraftingCompleted(true);
+          craftingProgressRef.current = 100;
+          setCraftingPlan((prev) => prev ? { ...prev, progress: 100 } : prev);
+          if (craftingIntervalRef.current) {
+            clearInterval(craftingIntervalRef.current);
+            craftingIntervalRef.current = null;
+          }
+        }
       }
     }
   }, [isLoading, messages]);
@@ -690,6 +702,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       setLastFailedMessage(null);
       setPlanGenerated(false);
       setCraftingActive(false);
+      setCraftingCompleted(false);
       setCraftingPlan(null);
       if (craftingIntervalRef.current) {
         clearInterval(craftingIntervalRef.current);
