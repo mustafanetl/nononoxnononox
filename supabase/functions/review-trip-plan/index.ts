@@ -81,7 +81,39 @@ function collectVenues(blocks: Block[]): { name: string; kind: "activity" | "hot
   return venues;
 }
 
-async function verifyVenue(name: string, destination: string, apiKey: string): Promise<{ matched: boolean; lat?: number; lng?: number; placeId?: string; matchedName?: string } > {
+async function geocodeCountry(destination: string): Promise<{ countryCode: string; lat: number; lng: number } | null> {
+  if (!destination) return null;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 6000);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1&accept-language=en&addressdetails=1`,
+      { signal: ctrl.signal, headers: { "User-Agent": "Jolliday-TravelApp/1.0 (contact@jolliday.online)" } }
+    );
+    clearTimeout(t);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    const place = data[0];
+    const cc = (place.address?.country_code || "").toUpperCase();
+    return { countryCode: cc, lat: parseFloat(place.lat), lng: parseFloat(place.lon) };
+  } catch {
+    return null;
+  }
+}
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+async function verifyVenue(name: string, destination: string, apiKey: string): Promise<{ matched: boolean; lat?: number; lng?: number; placeId?: string; matchedName?: string; countryCode?: string } > {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 5000);
@@ -91,7 +123,7 @@ async function verifyVenue(name: string, destination: string, apiKey: string): P
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.location,places.formattedAddress",
+        "X-Goog-FieldMask": "places.id,places.displayName,places.location,places.formattedAddress,places.addressComponents",
       },
       body: JSON.stringify({
         textQuery: destination ? `${name} ${destination}` : name,
@@ -115,12 +147,17 @@ async function verifyVenue(name: string, destination: string, apiKey: string): P
       for (const w of wantedTokens) if (haveTokens.has(w)) overlap++;
       const ok = wantedTokens.size > 0 && overlap >= Math.min(1, wantedTokens.size);
       if (ok) {
+        const countryComp = (p.addressComponents || []).find((c: any) =>
+          Array.isArray(c.types) && c.types.includes("country")
+        );
+        const countryCode = (countryComp?.shortText || "").toUpperCase();
         return {
           matched: true,
           lat: p.location?.latitude,
           lng: p.location?.longitude,
           placeId: p.id,
           matchedName: dn,
+          countryCode,
         };
       }
     }
@@ -181,6 +218,10 @@ serve(async (req) => {
     const uniqueNames = Array.from(new Set(venues.map(v => v.name)));
     console.log(`Verifying ${uniqueNames.length} unique venues for "${destination}"`);
 
+    // Resolve destination country once so we can reject out-of-country venues.
+    const destGeo = await geocodeCountry(destination);
+    const destCountry = destGeo?.countryCode || "";
+
     const verifications: Record<string, Awaited<ReturnType<typeof verifyVenue>>> = {};
     const CONCURRENCY = 6;
     for (let i = 0; i < uniqueNames.length; i += CONCURRENCY) {
@@ -194,6 +235,29 @@ serve(async (req) => {
     for (const v of venues) {
       const r = verifications[v.name];
       if (r?.matched) {
+        // Country enforcement: reject venues that resolve outside the
+        // destination country. Use ISO country code first, fall back to
+        // a 300km radius check from the city center if Google didn't
+        // return address components.
+        let outsideCountry = false;
+        if (destCountry && r.countryCode && r.countryCode !== destCountry) {
+          outsideCountry = true;
+        } else if (
+          destGeo &&
+          typeof r.lat === "number" &&
+          typeof r.lng === "number" &&
+          haversineKm(destGeo.lat, destGeo.lng, r.lat, r.lng) > 300
+        ) {
+          outsideCountry = true;
+        }
+
+        if (outsideCountry) {
+          issues.push(
+            `${v.kind === "hotel" ? "Hotel" : v.kind === "activity" ? "Activity" : "Itinerary venue"} "${v.name}" is OUTSIDE ${destination}${destCountry ? ` (${destCountry})` : ""} — Google placed it in ${r.countryCode || "another region"}. Replace with a real venue physically located IN ${destination}.`
+          );
+          continue;
+        }
+
         // Use real coords + matched display name
         if (typeof r.lat === "number" && typeof r.lng === "number") {
           v.ref.lat = r.lat;
