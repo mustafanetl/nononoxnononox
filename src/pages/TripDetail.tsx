@@ -267,6 +267,9 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripData?.destination]);
 
+  // Hook must be called unconditionally — call before any early return.
+  const stockHeroImg = useCityHeroImage(tripData?.destination || "");
+
   if (!tripData) return null;
   const { data, destination } = tripData;
 
@@ -282,9 +285,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
   // Hero photo: prefer a curated stock photo (instant), fall back to
   // Wikipedia's lead image (always actually the right city), and only then
-  // to a Google Places photo. This guarantees Baghdad shows Baghdad, not
-  // a random skyline from the generic pool.
-  const stockHeroImg = useCityHeroImage(destination);
+  // to a Google Places photo.
   const heroImgFinal = stockHeroImg || heroImg;
 
   const days = data.itinerary.length || 1;
