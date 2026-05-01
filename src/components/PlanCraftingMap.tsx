@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, Plane } from "lucide-react";
 
 export type CraftActivity = { name: string; photo?: string };
+export type CraftGeo = { lat: number; lng: number };
 
 type Props = {
   originCity: string;
   destinationCity: string;
   activities: CraftActivity[];
   destinationPhoto?: string;
+  destinationGeo?: CraftGeo;
   progress: number;
 };
 
@@ -54,9 +56,15 @@ const hashCoords = (input: string, fallback: { lat: number; lng: number }) => {
   };
 };
 
-const buildPoints = (originCity: string, destinationCity: string, destinationPhoto: string | undefined, activities: CraftActivity[]) => {
+const buildPoints = (
+  originCity: string,
+  destinationCity: string,
+  destinationPhoto: string | undefined,
+  destinationGeo: CraftGeo | undefined,
+  activities: CraftActivity[]
+) => {
   const origin = hashCoords(originCity, DEFAULT_ORIGIN);
-  const destination = hashCoords(destinationCity, DEFAULT_DESTINATION);
+  const destination = destinationGeo || hashCoords(destinationCity, DEFAULT_DESTINATION);
 
   const activityPoints = activities.slice(0, 5).map((activity, index) => {
     const offset = ACTIVITY_OFFSETS[index] || ACTIVITY_OFFSETS[ACTIVITY_OFFSETS.length - 1];
@@ -86,31 +94,49 @@ const progressToVisibleCount = (progress: number, total: number) => {
   return clamp(raw, 0, total);
 };
 
-const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationPhoto, progress }: Props) => {
+const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationPhoto, destinationGeo, progress }: Props) => {
   const mapElRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
+  const guideRouteRef = useRef<any>(null);
   const routeRef = useRef<any>(null);
-  const completedRouteRef = useRef<any>(null);
   const planeMarkerRef = useRef<any>(null);
+  const destinationMarkerRef = useRef<any>(null);
   const pointMarkersRef = useRef<any[]>([]);
   const visibleCountRef = useRef(0);
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [activitySlots, setActivitySlots] = useState<CraftActivity[]>([]);
   const [mapReady, setMapReady] = useState(false);
 
-  const stableActivities = useMemo(() => activities.filter((a) => a.name?.trim()).slice(0, 5), [activities]);
+  useEffect(() => {
+    if (progress < 5) {
+      visibleCountRef.current = 0;
+      setVisibleCount(0);
+      setActivitySlots([]);
+      return;
+    }
+
+    setActivitySlots((prev) => {
+      const incoming = activities.filter((a) => a.name?.trim()).slice(0, 5);
+      const nextLen = Math.max(prev.length, incoming.length);
+      return Array.from({ length: nextLen }, (_, index) => incoming[index] || prev[index] || { name: "" });
+    });
+  }, [activities, progress]);
+
+  const stableActivities = useMemo(() => activitySlots.filter((a) => a.name?.trim()).slice(0, 5), [activitySlots]);
   const points = useMemo(
-    () => buildPoints(originCity, destinationCity, destinationPhoto, stableActivities),
-    [originCity, destinationCity, destinationPhoto, stableActivities]
+    () => buildPoints(originCity, destinationCity, destinationPhoto, destinationGeo, stableActivities),
+    [originCity, destinationCity, destinationPhoto, destinationGeo, stableActivities]
   );
 
   const caption = useMemo(() => {
     if (progress < 22) return `Plotting your route to ${destinationCity || "your destination"}…`;
     if (progress >= 90) return "Finalizing your itinerary…";
-    const visible = visibleCountRef.current;
+    const visible = visibleCount;
     if (visible === 0) return `Arriving in ${destinationCity || "your destination"}…`;
     const current = stableActivities[Math.max(0, visible - 1)];
     return current?.name ? `Adding ${current.name}` : `Pinning your stops (${visible}/${Math.max(1, stableActivities.length)})`;
-  }, [progress, destinationCity, stableActivities]);
+  }, [progress, destinationCity, stableActivities, visibleCount]);
 
   useEffect(() => {
     let disposed = false;
@@ -154,16 +180,19 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
       });
       pointMarkersRef.current = [];
       try { planeMarkerRef.current?.remove(); } catch {}
+      try { guideRouteRef.current?.remove(); } catch {}
       try { routeRef.current?.remove(); } catch {}
-      try { completedRouteRef.current?.remove(); } catch {}
+      try { destinationMarkerRef.current?.remove(); } catch {}
       try { tileLayerRef.current?.remove(); } catch {}
       try { mapRef.current?.remove(); } catch {}
       planeMarkerRef.current = null;
+      destinationMarkerRef.current = null;
+      guideRouteRef.current = null;
       routeRef.current = null;
-      completedRouteRef.current = null;
       tileLayerRef.current = null;
       mapRef.current = null;
       visibleCountRef.current = 0;
+      setVisibleCount(0);
       setMapReady(false);
     };
   }, []);
@@ -178,23 +207,32 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
       if (cancelled || !mapRef.current) return;
 
       const map = mapRef.current;
+      pointMarkersRef.current.forEach((marker) => {
+        try { marker.remove(); } catch {}
+      });
+      pointMarkersRef.current = [];
+      visibleCountRef.current = 0;
+      setVisibleCount(0);
+      try { destinationMarkerRef.current?.remove(); } catch {}
+      destinationMarkerRef.current = null;
+
       const routeLatLngs = [
         [points.origin.lat, points.origin.lng],
         [points.destination.lat, points.destination.lng],
       ];
 
-      if (!completedRouteRef.current) {
-        completedRouteRef.current = L.polyline(routeLatLngs as any, {
+      if (!guideRouteRef.current) {
+        guideRouteRef.current = L.polyline(routeLatLngs as any, {
           color: "hsl(var(--border))",
           weight: 3,
           opacity: 0.8,
         }).addTo(map);
       } else {
-        completedRouteRef.current.setLatLngs(routeLatLngs);
+        guideRouteRef.current.setLatLngs(routeLatLngs);
       }
 
       if (!routeRef.current) {
-        routeRef.current = L.polyline(routeLatLngs as any, {
+        routeRef.current = L.polyline([[points.origin.lat, points.origin.lng]] as any, {
           color: "hsl(var(--foreground))",
           weight: 3,
           opacity: 1,
@@ -229,7 +267,7 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
   }, [mapReady, points]);
 
   useEffect(() => {
-    if (!mapReady || !mapRef.current || !completedRouteRef.current || !routeRef.current || !planeMarkerRef.current) return;
+    if (!mapReady || !mapRef.current || !routeRef.current || !planeMarkerRef.current) return;
 
     const map = mapRef.current;
     const origin = points.origin;
@@ -239,16 +277,38 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
     const planeLat = origin.lat + (destination.lat - origin.lat) * flightProgress;
     const planeLng = origin.lng + (destination.lng - origin.lng) * flightProgress;
     planeMarkerRef.current.setLatLng([planeLat, planeLng]);
-    routeRef.current.setLatLngs([
-      [origin.lat, origin.lng],
-      [planeLat, planeLng],
-    ]);
+    const targetVisible = Math.max(visibleCountRef.current, progressToVisibleCount(progress, points.activities.length));
+    const routePoints: [number, number][] = progress >= 24
+      ? [
+          [origin.lat, origin.lng],
+          [destination.lat, destination.lng],
+          ...points.activities.slice(0, targetVisible).map((point) => [point.lat, point.lng] as [number, number]),
+        ]
+      : [
+          [origin.lat, origin.lng],
+          [planeLat, planeLng],
+        ];
+    routeRef.current.setLatLngs(routePoints as any);
 
     if (progress >= 24) {
       planeMarkerRef.current.setLatLng([destination.lat, destination.lng]);
+      if (!destinationMarkerRef.current) {
+        import("leaflet").then((L) => {
+          if (!mapRef.current || destinationMarkerRef.current) return;
+          destinationMarkerRef.current = L.marker([destination.lat, destination.lng], {
+            icon: L.divIcon({
+              className: "",
+              html: destination.photo
+                ? `<div style="width:58px;height:58px;border-radius:9999px;overflow:hidden;border:3px solid hsl(var(--background));box-shadow:0 14px 34px rgba(0,0,0,0.22);background:hsl(var(--muted));"><img src=\"${destination.photo}\" alt=\"${destination.label.replace(/"/g, "&quot;")}\" style=\"width:100%;height:100%;object-fit:cover;display:block;\" /></div>`
+                : `<div style="width:58px;height:58px;border-radius:9999px;display:flex;align-items:center;justify-content:center;border:3px solid hsl(var(--background));box-shadow:0 14px 34px rgba(0,0,0,0.22);background:hsl(var(--foreground));color:hsl(var(--background));font-size:16px;font-weight:700;">${initials(destination.label)}</div>`,
+              iconSize: [58, 58],
+              iconAnchor: [29, 29],
+            }),
+          }).addTo(mapRef.current);
+        });
+      }
     }
 
-    const targetVisible = progressToVisibleCount(progress, points.activities.length);
     if (targetVisible <= visibleCountRef.current) return;
 
     let cancelled = false;
@@ -280,12 +340,10 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
         });
 
         pointMarkersRef.current.push(nextMarker);
-
-        completedRouteRef.current.addLatLng([point.lat, point.lng]);
-        routeRef.current.addLatLng([point.lat, point.lng]);
       }
 
       visibleCountRef.current = targetVisible;
+      setVisibleCount(targetVisible);
     };
 
     addMarkers();
