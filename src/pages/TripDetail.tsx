@@ -571,6 +571,42 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
           </Button>
         </div>
       )}
+      {/* Desktop sticky action bar — appears after user scrolls past hero */}
+      <div
+        className={`hidden sm:block sticky top-0 z-40 bg-background/85 backdrop-blur-md border-b border-border transition-all duration-200 ${
+          showStickyBar ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
+        }`}
+      >
+        <div className="max-w-5xl mx-auto px-6 py-2.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Button variant="ghost" size="icon" onClick={() => navigate(isShared ? "/" : "/chat")} className="h-8 w-8">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <span className="font-semibold tracking-tight text-foreground truncate">{destination}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {!isShared && (
+              <>
+                <Button size="sm" variant="default" onClick={handleSave} disabled={saving} className="h-8 gap-1.5">
+                  <Bookmark className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleExportPDF} className="h-8 gap-1.5">
+                  <Download className="h-3.5 w-3.5" /> PDF
+                </Button>
+              </>
+            )}
+            <Button size="sm" variant="outline" onClick={handleShare} disabled={sharing} className="h-8 gap-1.5">
+              {isShared ? <Link2 className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
+              {isShared ? "Copy link" : sharing ? "Creating..." : "Share"}
+            </Button>
+            {isShared && (
+              <Button size="sm" onClick={handleImport} disabled={importing} className="h-8 gap-1.5">
+                <LogIn className="h-3.5 w-3.5" /> {importing ? "..." : "Import"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
       {/* ── Magazine Hero ── */}
       <div className="relative h-[58vh] min-h-[420px] max-h-[640px] overflow-hidden">
         {heroImg ? (
