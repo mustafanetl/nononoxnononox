@@ -36,6 +36,8 @@ type VenuePhotoMatch = {
   verified: boolean;
   matchedName: string | null;
   hasRealPhoto?: boolean;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 const VENUE_STOP = new Set(["the", "a", "an", "of", "and", "in", "at", "on", "to", "for", "by", "de", "la", "le", "el", "il", "du", "des"]);
@@ -355,6 +357,12 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
   // Coordinates for a slot, sourced from the matched activity card.
   const slotCoords = (slot: any): { lat: number; lng: number } | null => {
+    // Prefer Google Places coords from the venue-photo enrichment
+    const pm = resolveVenuePhotoMatch(slot?.venue, tripData?.itineraryVenuePhotos);
+    if (pm && typeof pm.lat === "number" && typeof pm.lng === "number") {
+      return { lat: pm.lat, lng: pm.lng };
+    }
+    // Fallback to a matched activity card
     const m = matchActivity(slot?.venue);
     if (m && typeof m.lat === "number" && typeof m.lng === "number") {
       return { lat: m.lat, lng: m.lng };
@@ -405,8 +413,18 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       });
   }
   const hotelPins: MapPoint[] = data.hotels
-    .filter((h: any) => typeof h.lat === "number" && typeof h.lng === "number")
     .map((h: any) => {
+      // Resolve coords: hotel object first, then Places photo-match
+      let lat: number | null = typeof h.lat === "number" ? h.lat : null;
+      let lng: number | null = typeof h.lng === "number" ? h.lng : null;
+      if (lat == null || lng == null) {
+        const pm = resolveVenuePhotoMatch(h.name, tripData?.itineraryVenuePhotos);
+        if (pm && typeof pm.lat === "number" && typeof pm.lng === "number") {
+          lat = pm.lat;
+          lng = pm.lng;
+        }
+      }
+      if (lat == null || lng == null) return null;
       const photo =
         (typeof h.realPhoto === "string" && h.realPhoto) ||
         (Array.isArray(h.realPhotos) && h.realPhotos.find((p: any) => typeof p === "string" && p)) ||
@@ -415,12 +433,13 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         undefined;
       return {
         name: h.name,
-        lat: h.lat,
-        lng: h.lng,
+        lat,
+        lng,
         type: "hotel" as const,
         photo: photo || undefined,
-      };
-    });
+      } as MapPoint;
+    })
+    .filter((x: MapPoint | null): x is MapPoint => x !== null);
   const mapPoints: MapPoint[] = [...slotPins, ...hotelPins];
 
   const handleShare = async () => {

@@ -181,7 +181,7 @@ async function searchAndValidateActivities(
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress",
+            "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress,places.location",
           },
           body: JSON.stringify({
             textQuery: cityScopedQuery,
@@ -266,6 +266,8 @@ async function searchAndValidateActivities(
         verified: hasRealPhoto,
         hasRealPhoto,
         matchedName: bestPlace.displayName?.text || null,
+        lat: typeof bestPlace.location?.latitude === "number" ? bestPlace.location.latitude : null,
+        lng: typeof bestPlace.location?.longitude === "number" ? bestPlace.location.longitude : null,
       };
     } catch (e) {
       console.error(`Activity validation error for "${actName}":`, e);
@@ -297,7 +299,7 @@ async function searchAndValidateHotels(
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress",
+            "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress,places.location",
           },
           body: JSON.stringify({
             textQuery: cityScopedQuery,
@@ -374,6 +376,8 @@ async function searchAndValidateHotels(
         verified: true,
         hasRealPhoto: true,
         matchedName: bestPlace.displayName?.text || null,
+        lat: typeof bestPlace.location?.latitude === "number" ? bestPlace.location.latitude : null,
+        lng: typeof bestPlace.location?.longitude === "number" ? bestPlace.location.longitude : null,
       };
     } catch (e) {
       console.error(`Hotel validation error for "${name}":`, e);
