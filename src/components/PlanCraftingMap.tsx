@@ -454,8 +454,8 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
           flyStartedRef.current = true;
           try {
             map.flyTo(cityView.center, cityView.zoom, {
-              duration: 2.4,
-              easeLinearity: 0.25,
+              duration: 1.8,
+              easeLinearity: 0.3,
               animate: true,
               noMoveStart: true,
             });
