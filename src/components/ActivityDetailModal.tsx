@@ -1,4 +1,5 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { Clock, DollarSign, Lightbulb, PlusCircle, CheckCircle, Camera, MapPin, Star, CheckCircle2, ChevronLeft, ChevronRight, Shuffle, Loader2, ArrowLeft } from "lucide-react";
 import { ActivityData } from "./ActivityCard";
@@ -89,6 +90,10 @@ const ActivityDetailModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 overflow-hidden">
+        <VisuallyHidden>
+          <DialogTitle>{activity.name}</DialogTitle>
+          <DialogDescription>Activity details and options.</DialogDescription>
+        </VisuallyHidden>
         {showAlternatives ? (
           <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center gap-2">
