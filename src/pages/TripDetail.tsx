@@ -25,6 +25,7 @@ import { getSkyscannerUrl, getBookingDotComUrl } from "@/utils/bookingLinks";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { detectLang, extractTripLangSample, getTripStrings, type TripStrings } from "@/utils/tripI18n";
 
 /* ═══════════════════════════════════════════
    Editorial-style trip view
