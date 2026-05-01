@@ -731,6 +731,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         clearInterval(craftingIntervalRef.current);
         craftingIntervalRef.current = null;
       }
+      if (craftingFinalizeTimeoutRef.current) {
+        clearTimeout(craftingFinalizeTimeoutRef.current);
+        craftingFinalizeTimeoutRef.current = null;
+      }
       craftingProgressRef.current = 0;
       streamingDoneRef.current = false;
       lastCraftedMsgIndex.current = -1;
