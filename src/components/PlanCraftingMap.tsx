@@ -443,6 +443,16 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
         tourRouteRef.current.setLatLngs([] as any);
         planeMarkerRef.current.setLatLng(position);
         planeMarkerRef.current.setOpacity(1);
+        // Rotate plane to face flight direction
+        {
+          const scaled = clamp(t, 0, 1) * (flightArc.length - 1);
+          const i = Math.min(Math.floor(scaled), flightArc.length - 2);
+          const ahead = flightArc[Math.min(i + 2, flightArc.length - 1)];
+          const bearing = bearingDeg(position, ahead);
+          const el = (planeMarkerRef.current as any)?.getElement?.();
+          const rot = el?.querySelector?.(".plan-plane-rot") as HTMLElement | null;
+          if (rot) rot.style.transform = `rotate(${bearing}deg)`;
+        }
         if (destinationMarkerRef.current) {
           const fadeIn = clamp((t - 0.85) / 0.15, 0, 1);
           destinationMarkerRef.current.setOpacity(fadeIn);
