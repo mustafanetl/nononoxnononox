@@ -269,17 +269,59 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   const totalBudget = flightsCost + hotelsCost + activitiesCost;
   const currency = data.flights[0]?.currency || data.hotels[0]?.currency || data.activities[0]?.currency || "$";
 
-  const mapPoints: MapPoint[] = [
-    ...data.hotels.filter((h: any) => h.lat && h.lng).map((h: any) => ({
-      name: h.name, lat: h.lat, lng: h.lng, type: "hotel" as const,
+  // Build map pins from the actual itinerary slots (the source of truth the user sees).
+  // Each slot becomes one numbered pin on its real day, in slot order.
+  const slotPins: MapPoint[] = [];
+  for (const day of data.itinerary as any[]) {
+    const slots = day?.slots || [];
+    let order = 0;
+    slots.forEach((slot: any, slotIdx: number) => {
+      const coords = slotCoords(slot);
+      if (!coords) return;
+      order += 1;
+      const matched = matchActivity(slot?.venue);
+      const slotPhotoMatch = resolveVenuePhotoMatch(slot?.venue, tripData.itineraryVenuePhotos);
+      const photo =
+        slotPhotoMatch?.thumbPhoto ||
+        slotPhotoMatch?.photo ||
+        matched?.realPhoto;
+      slotPins.push({
+        name: slot.venue,
+        lat: coords.lat,
+        lng: coords.lng,
+        type: "activity",
+        day: day.day,
+        order,
+        slotIdx,
+        photo,
+      });
+    });
+  }
+  // Fallback: if itinerary has no resolvable coords, fall back to top-level activities.
+  if (slotPins.length === 0) {
+    data.activities
+      .filter((a: any) => typeof a.lat === "number" && typeof a.lng === "number")
+      .forEach((a: any, i: number) => {
+        slotPins.push({
+          name: a.name,
+          lat: a.lat,
+          lng: a.lng,
+          type: "activity",
+          order: i + 1,
+          photo: a.realPhoto || (Array.isArray(a.realPhotos) ? a.realPhotos[0] : undefined),
+        });
+      });
+  }
+  const hotelPins: MapPoint[] = data.hotels
+    .filter((h: any) => typeof h.lat === "number" && typeof h.lng === "number")
+    .map((h: any) => ({
+      name: h.name,
+      lat: h.lat,
+      lng: h.lng,
+      type: "hotel" as const,
       photo: (h as any).realPhoto || (h as any).image,
-    })),
-    ...data.activities.filter((a: any) => a.lat && a.lng).map((a: any, i: number) => ({
-      name: a.name, lat: a.lat, lng: a.lng, type: "activity" as const,
-      day: data.itinerary.length > 0 ? ((i % data.itinerary.length) + 1) : undefined,
-      photo: (a as any).realPhoto || (Array.isArray((a as any).realPhotos) ? (a as any).realPhotos[0] : undefined),
-    })),
-  ];
+    }));
+  const mapPoints: MapPoint[] = [...slotPins, ...hotelPins];
 
   // pick a photo for each day from venues actually scheduled on that day
   const photoForDay = (dayNum: number): string | undefined => {
@@ -313,6 +355,65 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       }
     }
     return bestScore >= 0.9 ? best : null;
+  };
+
+  // Resolve a slot to a renderable ActivityData (matched activity OR synthetic).
+  // Used by both the day-by-day timeline AND the map-marker click.
+  const resolveSlotActivity = (
+    slot: any,
+    dayNum: number,
+    slotIdx: number
+  ): { activity: ActivityData; matched: any | null; reels: string[] } => {
+    const matched = matchActivity(slot?.venue);
+    const slotPhotoMatch = resolveVenuePhotoMatch(slot?.venue, tripData!.itineraryVenuePhotos);
+    const heroPhoto: string | undefined =
+      slotPhotoMatch?.photo || slotPhotoMatch?.thumbPhoto || matched?.realPhoto;
+    const reels = createDistinctPhotoGallery({
+      primary: heroPhoto,
+      sources: [slotPhotoMatch?.photos, matched?.realPhotos],
+      limit: 4,
+    });
+    if (matched) {
+      return { activity: matched, matched, reels };
+    }
+    const synthetic: ActivityData = {
+      id: `${dayNum}-${slotIdx}-${slot?.venue || "stop"}`,
+      name: slot?.venue || "Stop",
+      category: "sightseeing",
+      duration: slot?.duration || "",
+      price: slot?.cost || 0,
+      currency,
+      image: heroPhoto || "",
+      occasion: "",
+      description: slot?.activity || `A highlighted stop in your ${destination} plan.`,
+      neighborhood: slotPhotoMatch?.address || slot?.neighborhood,
+      bookAhead: slot?.bookAhead,
+      realPhoto: heroPhoto,
+      realPhotos: reels,
+      verified: !!slotPhotoMatch?.verified,
+      verifiedAddress: slotPhotoMatch?.address || slot?.neighborhood,
+      verifiedRating: slotPhotoMatch?.rating || null,
+    } as ActivityData;
+    return { activity: synthetic, matched: null, reels };
+  };
+
+  const openSlotModal = (dayNum: number, slotIdx: number) => {
+    const day = data.itinerary.find((d: any) => d.day === dayNum);
+    const slot = day?.slots?.[slotIdx];
+    if (!slot) return;
+    const { activity } = resolveSlotActivity(slot, dayNum, slotIdx);
+    setSelectedActivity(activity);
+    setActivitySource({ kind: "slot", dayNum, slotIdx });
+    setActivityModalOpen(true);
+  };
+
+  // Coordinates for a slot, sourced from the matched activity card.
+  const slotCoords = (slot: any): { lat: number; lng: number } | null => {
+    const m = matchActivity(slot?.venue);
+    if (m && typeof m.lat === "number" && typeof m.lng === "number") {
+      return { lat: m.lat, lng: m.lng };
+    }
+    return null;
   };
 
   const handleShare = async () => {
@@ -520,17 +621,25 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         <div className="max-w-4xl mx-auto px-4 sm:px-8 mb-12">
           <TripMap
             points={mapPoints}
-            activeDay={null}
-            onMarkerClick={(name) => {
-              const hotel = data.hotels.find((h: any) => h.name === name);
-              if (hotel) {
-                setSelectedHotel(hotel);
-                setHotelModalOpen(true);
+            onMarkerClick={({ name, type, day, slotIdx }) => {
+              if (type === "hotel") {
+                const hotel = data.hotels.find((h: any) => h.name === name) || data.hotels[0];
+                if (hotel) {
+                  setSelectedHotel(hotel);
+                  setHotelModalOpen(true);
+                }
                 return;
               }
+              // Activity pin: prefer the exact slot it came from (always opens the rich card)
+              if (day != null && typeof slotIdx === "number") {
+                openSlotModal(day, slotIdx);
+                return;
+              }
+              // Fallback: top-level activity
               const activity = data.activities.find((a: any) => a.name === name);
               if (activity) {
                 setSelectedActivity(activity);
+                setActivitySource({ kind: "activity", activityId: activity.id });
                 setActivityModalOpen(true);
               }
             }}
