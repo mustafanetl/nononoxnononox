@@ -195,18 +195,35 @@ const parseMessageContent = (content: string) => {
   return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich, placeImages, places };
 };
 
+const cleanTripLocation = (value: string) =>
+  value
+    .replace(/\b(?:for\s+)?\d+\s*(?:day|days|night|nights|week|weeks)\b.*$/i, "")
+    .replace(/\b(?:solo traveler|with a partner|with friends|with family|mid-range|budget|luxury|architecture-focused|foodie)\b.*$/i, "")
+    .replace(/[.,]$/, "")
+    .trim();
+
 const inferCitiesFromPrompt = (text: string) => {
   const source = text || "";
+  const routeMatch = source.match(/\bfrom\s+([^,.\n]+?)\s+to\s+([^,.\n]+?)(?:\s+(?:for\s+)?\d+\s*(?:day|days|night|nights|week|weeks)\b|\s+for\s+|\s+on\s+|\.|,|$)/i);
+  const shorthandRouteMatch = source.match(/^\s*([^,.\n]+?)\s+to\s+([^,.\n]+?)(?:\s+(?:for\s+)?\d+\s*(?:day|days|night|nights|week|weeks)\b|\s+for\s+|\s+on\s+|\.|,|$)/i);
+
   const destinationMatch =
-    source.match(/\btrip to\s+([^,.\n]+?)(?:\s+from\s+|\s+for\s+|\s+on\s+|\s+leaving\s+|\.|,|$)/i) ||
-    source.match(/\bto\s+([^,.\n]+?)(?:\s+from\s+|\s+for\s+|\s+on\s+|\s+leaving\s+|\.|,|$)/i);
+    routeMatch?.[2] ||
+    shorthandRouteMatch?.[2] ||
+    source.match(/\btrip to\s+([^,.\n]+?)(?:\s+from\s+|\s+for\s+|\s+on\s+|\s+leaving\s+|\.|,|$)/i)?.[1] ||
+    source.match(/\bto\s+([^,.\n]+?)(?:\s+from\s+|\s+for\s+|\s+on\s+|\s+leaving\s+|\.|,|$)/i)?.[1] ||
+    "";
+
   const originMatch =
-    source.match(/\bfrom\s+([^,.\n]+?)(?:\s+for\s+|\s+on\s+|\s+to\s+|\.|,|$)/i) ||
-    source.match(/\bdeparting from\s+([^,.\n]+?)(?:\s+for\s+|\s+on\s+|\s+to\s+|\.|,|$)/i);
+    routeMatch?.[1] ||
+    shorthandRouteMatch?.[1] ||
+    source.match(/\bfrom\s+([^,.\n]+?)(?:\s+for\s+|\s+on\s+|\s+to\s+|\.|,|$)/i)?.[1] ||
+    source.match(/\bdeparting from\s+([^,.\n]+?)(?:\s+for\s+|\s+on\s+|\s+to\s+|\.|,|$)/i)?.[1] ||
+    "";
 
   return {
-    destination: destinationMatch?.[1]?.trim() || "",
-    origin: originMatch?.[1]?.trim() || "",
+    destination: cleanTripLocation(destinationMatch),
+    origin: cleanTripLocation(originMatch),
   };
 };
 
@@ -526,8 +543,16 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       return place?.photo || place?.image || place?.thumbUrl || undefined;
     };
 
-    return names.slice(0, 5).map((n) => ({ name: n, photo: photoFor(n) }));
-  }, [craftingActive, messages, enrichedData, craftingPlan?.destination]);
+    const parsedNames = names.slice(0, 5).map((n) => ({ name: n, photo: photoFor(n) }));
+    const placeholderCount = craftingPlan?.progress ? Math.min(5, Math.max(0, Math.ceil((craftingPlan.progress - 24) / 14))) : 0;
+    const targetCount = Math.max(parsedNames.length, placeholderCount);
+
+    return Array.from({ length: targetCount }, (_, index) => {
+      const existing = parsedNames[index];
+      if (existing) return existing;
+      return { name: `Planned stop ${index + 1}` };
+    });
+  }, [craftingActive, messages, enrichedData, craftingPlan?.destination, craftingPlan?.progress]);
 
   // Destination photo for the crafting map (uses cached city image if present)
   const craftingDestinationPhoto = useMemo<string | undefined>(() => {
@@ -1064,8 +1089,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   }
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
-                  // Hide the latest assistant response entirely while streaming or crafting (free users only)
-                  const hideLatestResponse = isLastAssistant && !isPremium && (isLoading || isCraftingPlan);
+                  // Hide the latest assistant response entirely while streaming or crafting so only the map loader is visible.
+                  const hideLatestResponse = isLastAssistant && (isLoading || isCraftingPlan);
 
                   // Determine if this is a "full trip plan" (has multiple card types)
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
@@ -1216,7 +1241,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   />
                 )}
 
-                {isLoading && !isCraftingPlan && (!isPremium || !hasStreamedContent) && (
+                {isLoading && !isCraftingPlan && !hasStreamedContent && (
                   <div className="flex gap-3 animate-fade-in">
                     <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0 animate-pulse">
                       <Compass className="h-4 w-4 text-background" />
