@@ -259,7 +259,15 @@ const PlanCraftingMap = ({ originCity, destinationCity, activities, destinationP
       };
 
       mapRef.current = map;
-      setMapReady(true);
+      // Wait for the first tiles to paint before starting the rAF loop —
+      // otherwise the first 200-400ms of animation runs while tiles are still
+      // loading, which looks like a stutter/lag at the very start.
+      const ready = () => { if (!disposed) setMapReady(true); };
+      let readyFired = false;
+      const fire = () => { if (readyFired) return; readyFired = true; ready(); };
+      tileLayerRef.current?.once?.("load", fire);
+      // Hard fallback in case "load" never fires (cached tiles, offline, etc.)
+      setTimeout(fire, 600);
     };
 
     init();
