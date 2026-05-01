@@ -6,6 +6,21 @@ const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
 type Cached = { images: string[]; ts: number };
 
+/** The edge function returns image objects: { url, thumbUrl, ... }. Normalize to URL strings. */
+function extractUrls(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") {
+        const r = item as { url?: string; thumbUrl?: string };
+        return r.thumbUrl || r.url || "";
+      }
+      return "";
+    })
+    .filter((u): u is string => typeof u === "string" && u.length > 0);
+}
+
 function readCache(key: string): string[] | null {
   try {
     const raw = localStorage.getItem(CACHE_PREFIX + key);
@@ -50,7 +65,7 @@ export function useCityImage(destination: string | null | undefined) {
         const { data } = await supabase.functions.invoke("enrich-destination", {
           body: { destination, imageOnly: true },
         });
-        const images: string[] = Array.isArray(data?.images) ? data.images : [];
+        const images = extractUrls(data?.images);
         if (!cancelled && images.length) {
           writeCache(key, images);
           setImage(images[0]);
@@ -88,7 +103,7 @@ export function useCityImages(destination: string | null | undefined, count = 3)
         const { data } = await supabase.functions.invoke("enrich-destination", {
           body: { destination, imageOnly: true },
         });
-        const fetched: string[] = Array.isArray(data?.images) ? data.images : [];
+        const fetched = extractUrls(data?.images);
         if (!cancelled && fetched.length) {
           writeCache(key, fetched);
           setImages(Array.from({ length: count }, (_, i) => fetched[i] ?? null));
