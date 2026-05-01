@@ -86,8 +86,17 @@ const PhotoLightbox = ({
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
+          {/* Blurred ambient backdrop derived from the current photo — fills the void */}
+          <div
+            key={`bg-${idx}`}
+            className="absolute inset-0 bg-center bg-cover scale-110 opacity-50 transition-opacity duration-500"
+            style={{ backgroundImage: `url(${photos[idx]})`, filter: "blur(40px) saturate(1.2)" }}
+            aria-hidden
+          />
+          <div className="absolute inset-0 bg-black/55" aria-hidden />
+
           {/* Top bar */}
-          <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-6 py-4 bg-gradient-to-b from-black/70 to-transparent">
+          <div className="relative z-20 flex items-center justify-between px-4 sm:px-6 py-4 bg-gradient-to-b from-black/60 to-transparent">
             <div className="min-w-0 text-white">
               {venueName && (
                 <h3 className="text-sm sm:text-base font-semibold truncate max-w-[60vw]">
@@ -109,14 +118,16 @@ const PhotoLightbox = ({
           </div>
 
           {/* Main image */}
-          <div className="flex-1 flex items-center justify-center relative overflow-hidden">
-            <img
-              key={idx}
-              src={photos[idx]}
-              alt={venueName ? `${venueName} – photo ${idx + 1}` : `Photo ${idx + 1}`}
-              className="max-w-full max-h-full object-contain select-none animate-in fade-in duration-200"
-              draggable={false}
-            />
+          <div className="relative z-10 flex-1 flex items-center justify-center px-3 sm:px-6 py-2 overflow-hidden">
+            <div className="relative max-w-[min(96vw,1100px)] max-h-full w-full h-full flex items-center justify-center">
+              <img
+                key={idx}
+                src={photos[idx]}
+                alt={venueName ? `${venueName} – photo ${idx + 1}` : `Photo ${idx + 1}`}
+                className="max-w-full max-h-full object-contain rounded-2xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] select-none animate-in fade-in zoom-in-95 duration-300"
+                draggable={false}
+              />
+            </div>
 
             {photos.length > 1 && (
               <>
@@ -143,7 +154,7 @@ const PhotoLightbox = ({
           </div>
 
           {/* Bottom: thumbnails + CTA */}
-          <div className="relative z-20 bg-gradient-to-t from-black via-black/80 to-transparent pt-6 pb-4 px-3 sm:px-6 space-y-3">
+          <div className="relative z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-6 pb-4 px-3 sm:px-6 space-y-3">
             {photos.length > 1 && (
               <div
                 ref={thumbsRef}
