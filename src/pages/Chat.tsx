@@ -645,6 +645,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     return undefined;
   }, [craftingPlan?.destination, enrichedData]);
 
+  const shouldShowCraftingMap = isCraftingPlan && craftingPlan && !craftingCompleted;
+
   // Eager enrichment during crafting so the map shows real photos in real time.
   // Fires whenever we have a destination + at least one activity name and we haven't
   // already enriched this destination. Premium-only (matches main enrichment policy).
@@ -662,7 +664,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     eagerEnrichRef.current.add(sig);
     fetchEnrichment(dest, undefined, names, false).then((data) => {
       if (data) {
-        setEnrichedData((prev) => ({ ...prev, [dest]: data }));
+        warmEnrichmentAssets(data);
+        setEnrichedData((prev) => ({ ...prev, [dest]: mergeEnrichmentData(prev[dest], data) }));
         if (data.images && data.images.length > 0) {
           setWikimediaImage(dest, data.images[0].thumbUrl || data.images[0].url);
         }
@@ -716,7 +719,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
   // Detect when a full plan has been generated for free users
   useEffect(() => {
-    if (isPremium || isLoading || isCraftingPlan) return;
+    if (isPremium || isLoading || shouldShowCraftingMap) return;
     const hasFullPlan = parsedMessages.some((msg) => {
       if (msg.role !== "assistant") return false;
       const p = msg.parsed;
@@ -728,7 +731,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       return blockTypes >= 2;
     });
     if (hasFullPlan) setPlanGenerated(true);
-  }, [parsedMessages, isLoading, isPremium, isCraftingPlan]);
+  }, [parsedMessages, isLoading, isPremium, shouldShowCraftingMap]);
 
   // Auto-enrich destinations when streaming is done
   // Premium: full enrichment. Free: imageOnly (1 Google photo for the paywall card)
@@ -743,7 +746,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           const hotelNamesList = msg.parsed.hotels.map((h: any) => h.name).filter(Boolean);
           fetchEnrichment(destination, travelMonth, activityNames, false, hotelNamesList).then((data) => {
             if (data) {
-              setEnrichedData((prev) => ({ ...prev, [destination]: data }));
+              warmEnrichmentAssets(data);
+              setEnrichedData((prev) => ({ ...prev, [destination]: mergeEnrichmentData(prev[destination], data) }));
               if (data.images && data.images.length > 0) {
                 setWikimediaImage(destination, data.images[0].thumbUrl || data.images[0].url);
               }
@@ -753,7 +757,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           // Free users: just fetch 1 real Google image for the paywall card
           fetchEnrichment(destination, undefined, undefined, true).then((data) => {
             if (data) {
-              setEnrichedData((prev) => ({ ...prev, [destination]: data }));
+              warmEnrichmentAssets(data);
+              setEnrichedData((prev) => ({ ...prev, [destination]: mergeEnrichmentData(prev[destination], data) }));
             }
           });
         }
@@ -1160,7 +1165,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
                   // Hide the latest assistant response entirely while streaming or crafting so only the map loader is visible.
-                  const hideLatestResponse = isLastAssistant && (isLoading || isCraftingPlan);
+                  const hideLatestResponse = isLastAssistant && (isLoading || shouldShowCraftingMap);
 
                   // Determine if this is a "full trip plan" (has multiple card types)
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
@@ -1300,7 +1305,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 })}
 
                 {/* Plan crafting animation — full width, prominent */}
-                {isCraftingPlan && craftingPlan && (
+                {shouldShowCraftingMap && (
                   <PlanCraftingMap
                     originCity={craftingOriginCity || originCity}
                     destinationCity={craftingPlan.destination || "your destination"}
