@@ -169,34 +169,43 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
       const focused = activeDay != null && p.day === activeDay;
       const dim = activeDay != null && !isHotel && p.day !== activeDay;
       const accent = isHotel ? "hsl(var(--primary))" : colorForDay(p.day);
-      const size = focused ? 56 : 48;
-      const opacity = dim ? 0.35 : 1;
+      // Calmer, smaller, more consistent sizing
+      const baseSize = isHotel ? 40 : 36;
+      const size = focused && !isHotel ? 42 : baseSize;
+      const opacity = dim ? 0.4 : 1;
+      const photoUrl = typeof p.photo === "string" && p.photo.trim() ? escapeHtml(p.photo) : "";
 
-      // Photo-as-pin (with fallback to colored dot + initial/order)
-      const photoUrl = p.photo ? escapeHtml(p.photo) : "";
+      const hotelIconSvg = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>`;
+
+      // Inner content: photo if available, otherwise solid accent + icon/number
       const fallbackInner = isHotel
-        ? `<div style="width:100%;height:100%;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg></div>`
-        : `<div style="width:100%;height:100%;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;">${p.order ?? ""}</div>`;
-      const photoInner = `<div style="width:100%;height:100%;border-radius:9999px;background:url('${photoUrl}') center/cover no-repeat;"></div>`;
+        ? `<div style="width:100%;height:100%;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;">${hotelIconSvg}</div>`
+        : `<div style="width:100%;height:100%;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;line-height:1;">${p.order ?? ""}</div>`;
+      const photoInner = `<div style="width:100%;height:100%;border-radius:9999px;background:#eee url('${photoUrl}') center/cover no-repeat;"></div>`;
       const inner = photoUrl ? photoInner : fallbackInner;
 
-      // Number badge for activities (only when photo present, else number is in fallback)
-      const badge = !isHotel && p.order != null && photoUrl
-        ? `<div style="position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:9999px;background:${accent};color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.25);">${p.order}</div>`
-        : "";
+      // Corner badge: number for activity-with-photo, bed icon for hotel-with-photo
+      let badge = "";
+      if (photoUrl) {
+        if (isHotel) {
+          badge = `<div style="position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-radius:9999px;background:${accent};display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.2);"><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg></div>`;
+        } else if (p.order != null) {
+          badge = `<div style="position:absolute;bottom:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:9999px;background:${accent};color:white;font-size:10px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.2);">${p.order}</div>`;
+        }
+      }
 
-      const ringWidth = focused ? 3 : 2.5;
+      const shadow = dim ? "none" : "0 4px 12px rgba(0,0,0,0.18)";
       const html = `
         <div class="trip-map-pin" style="
           position:relative;
           width:${size}px;height:${size}px;
           border-radius:9999px;
           background:white;
-          padding:${ringWidth}px;
-          box-shadow:0 6px 18px rgba(0,0,0,0.22), 0 0 0 1px ${accent};
+          padding:2px;
+          box-shadow:${shadow};
           cursor:pointer;
           opacity:${opacity};
-          transition:transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+          transition:transform 160ms ease, opacity 160ms ease;
           will-change:transform;
         ">${inner}${badge}</div>
       `;
@@ -218,7 +227,7 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
       // Tooltip — Leaflet's built-in, no flicker
       marker.bindTooltip(
         `<div style="font-family:'DM Sans',Inter,sans-serif;font-weight:600;font-size:12px;color:#111;">${escapeHtml(p.name)}<div style="font-weight:400;font-size:10px;color:#666;margin-top:2px;">${isHotel ? "Hotel" : `Day ${p.day ?? "—"}${p.order ? ` · Stop ${p.order}` : ""}`}</div></div>`,
-        { direction: "top", offset: [0, -size / 2 - 4], opacity: 1, sticky: false }
+        { direction: "top", offset: [0, -size / 2 + 4], opacity: 1, sticky: false }
       );
 
       marker.on("click", (e: any) => {
