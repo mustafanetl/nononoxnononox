@@ -279,9 +279,11 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
     enrichedImgs.find((i: any) => i && i !== heroPick)?.url ||
     enrichedImgs.find((i: any) => i && i !== heroPick)?.thumbUrl;
 
-  // Stock photo fallback per city — used when Google Places enrichment hasn't returned anything yet.
+  // Hero photo: prefer the curated city stock photo so every trip gets a
+  // recognizable, high-quality skyline/landmark shot. Google Places photos
+  // are great inside the plan but often pick a random close-up for the hero.
   const stockHeroImg = getStockCityImage(destination);
-  const heroImgFinal = heroImg || stockHeroImg;
+  const heroImgFinal = stockHeroImg || heroImg;
 
   const days = data.itinerary.length || 1;
   const flightsCost = data.flights.reduce((s, f) => s + f.price, 0);
