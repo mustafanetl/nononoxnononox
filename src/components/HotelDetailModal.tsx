@@ -1,5 +1,4 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { Star, MapPin, ExternalLink, Lightbulb, PlusCircle, CheckCircle, Hotel, CheckCircle2 } from "lucide-react";
 import { HotelData } from "@/contexts/TripContext";
@@ -31,10 +30,8 @@ const HotelDetailModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 overflow-hidden">
-        <VisuallyHidden>
-          <DialogTitle>{hotel.name}</DialogTitle>
-          <DialogDescription>Hotel details and booking link.</DialogDescription>
-        </VisuallyHidden>
+        <DialogTitle className="sr-only">{hotel.name}</DialogTitle>
+        <DialogDescription className="sr-only">Hotel details and booking link.</DialogDescription>
         <div className="relative h-48">
           {hasImage ? (
             <img src={hotel.realImage} alt={hotel.name} className="w-full h-full object-cover" />
