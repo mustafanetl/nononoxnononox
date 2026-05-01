@@ -525,7 +525,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         const hasFlightsOrHotels = /```(flights|hotels)/s.test(lastMsg.content);
         setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
         if (hasRenderableFullPlan(lastMsg.content)) {
-          setCraftingCompleted(true);
           craftingProgressRef.current = Math.max(craftingProgressRef.current, 58);
           setCraftingPlan((prev) => prev ? { ...prev, progress: Math.max(prev.progress, 58) } : prev);
           if (craftingIntervalRef.current) {
@@ -538,7 +537,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           craftingFinalizeTimeoutRef.current = setTimeout(() => {
             pendingCraftSeedRef.current = "";
             setCraftingActive(false);
-            setCraftingCompleted(false);
             setCraftingPlan(null);
             setCraftingOriginCity("");
             craftingFinalizeTimeoutRef.current = null;
@@ -720,7 +718,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       setLastFailedMessage(null);
       setPlanGenerated(false);
       setCraftingActive(false);
-      setCraftingCompleted(false);
       setCraftingPlan(null);
       if (craftingIntervalRef.current) {
         clearInterval(craftingIntervalRef.current);
