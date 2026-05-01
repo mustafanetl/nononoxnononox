@@ -1,9 +1,10 @@
 import { MapPin, Clock } from "lucide-react";
+import { useCityImages } from "@/hooks/useCityImages";
 
 const previewTiles = [
-  { code: "BEL", label: "Belém" },
-  { code: "JER", label: "Jerónimos" },
-  { code: "ALF", label: "Alfama" },
+  { code: "BEL", label: "Belém", query: "Belém Lisbon" },
+  { code: "JER", label: "Jerónimos", query: "Jerónimos Monastery Lisbon" },
+  { code: "ALF", label: "Alfama", query: "Alfama Lisbon" },
 ];
 
 const day1 = [
@@ -14,18 +15,34 @@ const day1 = [
   { time: "20:30", title: "Fado at Mesa de Frades", note: "Reservation recommended" },
 ];
 
-const PreviewTile = ({ code, label }: { code: string; label: string }) => (
-  <div className="aspect-square rounded-lg overflow-hidden bg-gradient-to-br from-muted via-muted/60 to-background border border-border flex flex-col items-center justify-center text-center px-2">
-    <div className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground/90">
-      {code}
-    </div>
-    <div className="mt-1 text-[10px] sm:text-xs uppercase tracking-[0.18em] text-muted-foreground">
-      {label}
+const PreviewTile = ({ code, label, image }: { code: string; label: string; image: string | null }) => (
+  <div className="relative aspect-square rounded-lg overflow-hidden bg-gradient-to-br from-muted via-muted/60 to-background border border-border">
+    {image && (
+      <img
+        src={image}
+        alt={label}
+        loading="lazy"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+    )}
+    {image && <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />}
+    <div className="absolute inset-0 flex flex-col items-center justify-end pb-3 text-center px-2">
+      <div className={`text-xl sm:text-2xl md:text-3xl font-bold tracking-tight ${image ? "text-white" : "text-foreground/90"}`}>
+        {code}
+      </div>
+      <div className={`mt-0.5 text-[10px] sm:text-xs uppercase tracking-[0.18em] ${image ? "text-white/80" : "text-muted-foreground"}`}>
+        {label}
+      </div>
     </div>
   </div>
 );
 
 const ProductPreview = () => {
+  // Fetch one image per neighborhood (Google Places via edge function)
+  const belemImg = useCityImages("Belém Lisbon", 1)[0];
+  const jeronimosImg = useCityImages("Jerónimos Monastery Lisbon", 1)[0];
+  const alfamaImg = useCityImages("Alfama Lisbon", 1)[0];
+  const tileImages = [belemImg, jeronimosImg, alfamaImg];
   return (
     <section id="examples" className="container mx-auto px-4 py-20 md:py-24 border-t border-border">
       <div className="max-w-6xl mx-auto">
@@ -67,13 +84,10 @@ const ProductPreview = () => {
 
               {/* Neighborhood preview tiles (real photos appear in your trip) */}
               <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6 md:mt-8">
-                {previewTiles.map((t) => (
-                  <PreviewTile key={t.code} code={t.code} label={t.label} />
+                {previewTiles.map((t, i) => (
+                  <PreviewTile key={t.code} code={t.code} label={t.label} image={tileImages[i] ?? null} />
                 ))}
               </div>
-              <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                Real photos appear once you start planning
-              </p>
 
               {/* Day 1 */}
               <div className="mt-8 md:mt-10 pt-6 md:pt-8 border-t border-border">
