@@ -16,7 +16,7 @@ import { FlightData } from "@/components/FlightCard";
 import { ActivityData } from "@/components/ActivityCard";
 import { TripPlanData } from "@/components/TripSummaryCard";
 import { shareTripSummary } from "@/utils/tripSummary";
-import { setWikimediaImage } from "@/utils/cityImages";
+import { setWikimediaImage, getStockCityImage } from "@/utils/cityImages";
 import { exportTripPlanPDF } from "@/utils/pdfExport";
 import { createDistinctPhotoGallery } from "@/utils/photoGallery";
 import { getSkyscannerUrl, getBookingDotComUrl } from "@/utils/bookingLinks";
@@ -278,6 +278,10 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   const secondaryImg =
     enrichedImgs.find((i: any) => i && i !== heroPick)?.url ||
     enrichedImgs.find((i: any) => i && i !== heroPick)?.thumbUrl;
+
+  // Stock photo fallback per city — used when Google Places enrichment hasn't returned anything yet.
+  const stockHeroImg = getStockCityImage(destination);
+  const heroImgFinal = heroImg || stockHeroImg;
 
   const days = data.itinerary.length || 1;
   const flightsCost = data.flights.reduce((s, f) => s + f.price, 0);
@@ -609,8 +613,8 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       </div>
       {/* ── Magazine Hero ── */}
       <div className="relative h-[58vh] min-h-[420px] max-h-[640px] overflow-hidden">
-        {heroImg ? (
-          <img src={heroImg} alt={destination} className="w-full h-full object-cover scale-105" />
+        {heroImgFinal ? (
+          <img src={heroImgFinal} alt={destination} className="w-full h-full object-cover scale-105" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30 flex items-center justify-center">
             <MapPin className="h-20 w-20 text-muted-foreground/30" />
