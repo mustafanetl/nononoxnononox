@@ -1,8 +1,8 @@
-import { Plane, Hotel, Sparkles, MapPin, Calendar, ArrowRight, Check, Lock, Star, Loader2 } from "lucide-react";
+import { Plane, Hotel, Sparkles, MapPin, Calendar, ArrowRight, Check, Lock, Star, Loader2, Compass, CalendarDays } from "lucide-react";
 import { useState } from "react";
 import { getCityImage } from "@/utils/cityImages";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
-import { TripPlanData } from "@/components/TripSummaryCard";
+import { TripPlanData, StatTile, DayRailMini } from "@/components/TripSummaryCard";
 import { getCurrencyPrices } from "@/utils/currencyLocale";
 import { useAuth } from "@/hooks/useAuth";
 import { startCheckout } from "@/lib/stripeCheckout";
@@ -28,6 +28,10 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
   const { user } = useAuth();
   const navigate = useNavigate();
   const days = data.itinerary.length;
+  const stops = data.itinerary.reduce(
+    (s: number, d: any) => s + (Array.isArray(d?.slots) ? d.slots.length : 0),
+    0,
+  ) || data.activities.length;
   const stockHero = useCityHeroImage(destination);
   const heroImg =
     stockHero ||
@@ -36,47 +40,71 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
     getCityImage(destination, 800, 500);
   const prices = getCurrencyPrices();
 
-  // Show 2-3 activity names as teaser
-  const teaserActivities = data.activities.slice(0, 3);
-
   return (
-    <div className="mt-4 w-full max-w-sm rounded-2xl border border-border bg-card overflow-hidden shadow-xl">
-      {/* Hero image */}
-      <div className="relative h-56">
-        <img src={heroImg} alt={destination} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <MapPin className="h-4 w-4 text-white/90" />
-            <h3 className="text-xl font-bold text-white">{destination}</h3>
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-white/80">
-            {days > 0 && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{days} days</span>}
-            <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" />{data.activities.length} experiences</span>
-            {data.hotels.length > 0 && <span className="flex items-center gap-1"><Hotel className="h-3 w-3" />{data.hotels.length} hotels</span>}
-            {data.flights.length > 0 && <span className="flex items-center gap-1"><Plane className="h-3 w-3" />{data.flights.length} flights</span>}
-          </div>
+    <div className="mt-4 w-full max-w-md rounded-3xl border border-border bg-card overflow-hidden shadow-xl animate-stagger-in">
+      {/* ── Cinematic hero ── */}
+      <div className="relative h-64 overflow-hidden">
+        <img
+          src={heroImg}
+          alt={destination}
+          className="w-full h-full object-cover animate-ken-burns animate-punch-in"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/80" />
+        <div className="absolute inset-0 noise-overlay opacity-40" />
+        <div className="absolute bottom-0 left-0 right-0 p-5">
+          <p
+            className="text-[10px] uppercase tracking-[0.35em] text-white/85 mb-3 inline-flex items-center gap-2 animate-hero-rise"
+            style={{ animationDelay: "0.05s" }}
+          >
+            <Compass className="h-3 w-3" /> Your Jolliday
+          </p>
+          <h3
+            className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-[0.95] drop-shadow-lg"
+            aria-label={destination}
+          >
+            {destination.split("").map((ch, i) => (
+              <span
+                key={i}
+                className="letter-rise"
+                style={{ animationDelay: `${0.18 + i * 0.04}s` }}
+              >
+                {ch === " " ? "\u00A0" : ch}
+              </span>
+            ))}
+          </h3>
+          {days > 0 && (
+            <p
+              className="mt-2 text-white/80 text-sm animate-hero-rise"
+              style={{ animationDelay: "0.32s" }}
+            >
+              {days} {days === 1 ? "day" : "days"} crafted just for you
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Blurred activity teaser */}
-      <div className="relative px-4 pt-4 pb-0">
-        {teaserActivities.map((act, i) => (
-          <div
-            key={i}
-            className={`flex items-center gap-2 py-2 border-b border-border/50 last:border-0 ${i >= 1 ? "opacity-60" : ""} ${i >= 2 ? "blur-[2px]" : ""}`}
-          >
-            <Star className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span className="text-sm text-foreground truncate">{act.name}</span>
-            {act.duration && <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{act.duration}</span>}
-          </div>
-        ))}
-        {/* Blur overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-card to-transparent" />
+      {/* ── Stat tiles overlapping hero ── */}
+      <div className="px-4 -mt-6 relative z-10">
+        <div className="grid grid-cols-4 gap-2">
+          <StatTile label="Days" value={days} icon={<CalendarDays className="h-3 w-3" />} delay="0.4s" />
+          <StatTile label="Stops" value={stops} icon={<MapPin className="h-3 w-3" />} delay="0.45s" />
+          <StatTile label="Stays" value={data.hotels.length} icon={<Hotel className="h-3 w-3" />} delay="0.5s" />
+          <StatTile label="Flights" value={data.flights.length} icon={<Plane className="h-3 w-3" />} delay="0.55s" />
+        </div>
       </div>
 
+      {/* ── Day rail teaser ── */}
+      {days > 0 && (
+        <div className="px-5 pt-5 animate-hero-rise" style={{ animationDelay: "0.6s" }}>
+          <DayRailMini itinerary={data.itinerary} />
+        </div>
+      )}
+
+      {/* divider */}
+      <div className="mx-5 mt-5 border-t border-border" />
+
       {/* Paywall section */}
-      <div className="px-4 pt-2 pb-5">
+      <div className="px-5 pt-4 pb-5">
         <div className="text-center mb-3">
           <h4 className="text-base font-bold text-foreground">Your trip, complete. ✨</h4>
           <p className="text-xs text-muted-foreground mt-0.5">Unlock everything and start planning for real</p>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plane, Hotel, Sparkles, MapPin, ArrowRight } from "lucide-react";
+import { Plane, Hotel, Sparkles, MapPin, ArrowRight, Compass, CalendarDays } from "lucide-react";
 import { FlightData } from "@/components/FlightCard";
 import { HotelData } from "@/contexts/TripContext";
 import { ActivityData } from "@/components/ActivityCard";
@@ -36,74 +36,95 @@ const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlan
     navigate("/trip/view");
   };
 
-  const occasion = data.activities[0]?.occasion;
   const days = data.itinerary.length;
+  const stops = data.itinerary.reduce(
+    (s: number, d: any) => s + (Array.isArray(d?.slots) ? d.slots.length : 0),
+    0,
+  ) || data.activities.length;
   const stockHero = useCityHeroImage(destination);
-  const heroImg =
-    stockHero ||
-    enrichedImages?.[0]?.thumbUrl ||
-    enrichedImages?.[0]?.url;
+  const heroImg = stockHero || enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl;
 
   return (
     <>
       <div
         onClick={handleClick}
-        className="mt-4 w-full max-w-sm rounded-2xl border border-border bg-card overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+        className="mt-4 w-full max-w-md rounded-3xl border border-border bg-card overflow-hidden cursor-pointer shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300 animate-stagger-in"
       >
-        <div className="relative h-32">
+        {/* ── Cinematic hero ── */}
+        <div className="relative h-64 overflow-hidden">
           {heroImg ? (
             <img
               src={heroImg}
               alt={destination}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover animate-ken-burns animate-punch-in"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
-              <MapPin className="h-10 w-10 text-muted-foreground/40" />
+            <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30 flex items-center justify-center">
+              <MapPin className="h-12 w-12 text-muted-foreground/30" />
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <div className="absolute bottom-3 left-3 right-3">
-            <div className="flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5 text-white/90" />
-              <h3 className="text-lg font-bold text-white">{destination}</h3>
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              {occasion && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm text-white capitalize">
-                  {occasion}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/80" />
+          <div className="absolute inset-0 noise-overlay opacity-40" />
+
+          <div className="absolute bottom-0 left-0 right-0 p-5">
+            <p
+              className="text-[10px] uppercase tracking-[0.35em] text-white/85 mb-3 inline-flex items-center gap-2 animate-hero-rise"
+              style={{ animationDelay: "0.05s" }}
+            >
+              <Compass className="h-3 w-3" /> Your Jolliday
+            </p>
+            <h3
+              className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-[0.95] drop-shadow-lg"
+              aria-label={destination}
+            >
+              {destination.split("").map((ch, i) => (
+                <span
+                  key={i}
+                  className="letter-rise"
+                  style={{ animationDelay: `${0.18 + i * 0.04}s` }}
+                >
+                  {ch === " " ? "\u00A0" : ch}
                 </span>
-              )}
-              {days > 0 && (
-                <span className="text-[10px] text-white/80">{days} days</span>
-              )}
-            </div>
+              ))}
+            </h3>
+            {days > 0 && (
+              <p
+                className="mt-2 text-white/80 text-sm animate-hero-rise"
+                style={{ animationDelay: "0.32s" }}
+              >
+                {days} {days === 1 ? "day" : "days"} crafted just for you
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="p-3">
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            {data.flights.length > 0 && (
-              <span className="flex items-center gap-1">
-                <Plane className="h-3 w-3" /> {data.flights.length} flights
-              </span>
-            )}
-            {data.hotels.length > 0 && (
-              <span className="flex items-center gap-1">
-                <Hotel className="h-3 w-3" /> {data.hotels.length} hotels
-              </span>
-            )}
-            {data.activities.length > 0 && (
-              <span className="flex items-center gap-1">
-                <Sparkles className="h-3 w-3" /> {data.activities.length} activities
-              </span>
-            )}
+        {/* ── Stat tiles overlapping hero ── */}
+        <div className="px-4 -mt-6 relative z-10">
+          <div className="grid grid-cols-4 gap-2">
+            <StatTile label="Days" value={days} icon={<CalendarDays className="h-3 w-3" />} delay="0.4s" />
+            <StatTile label="Stops" value={stops} icon={<MapPin className="h-3 w-3" />} delay="0.45s" />
+            <StatTile label="Stays" value={data.hotels.length} icon={<Hotel className="h-3 w-3" />} delay="0.5s" />
+            <StatTile label="Flights" value={data.flights.length} icon={<Plane className="h-3 w-3" />} delay="0.55s" />
           </div>
+        </div>
 
-          <div className="flex items-center justify-end mt-3 pt-3 border-t border-border">
-            <span className="flex items-center gap-1 text-xs font-medium text-foreground">
-              View Full Plan <ArrowRight className="h-3 w-3" />
-            </span>
+        {/* ── Day rail teaser ── */}
+        {days > 0 && (
+          <div
+            className="px-5 pt-5 animate-hero-rise"
+            style={{ animationDelay: "0.6s" }}
+          >
+            <DayRailMini itinerary={data.itinerary} />
+          </div>
+        )}
+
+        {/* ── CTA ── */}
+        <div className="p-4 pt-4">
+          <div
+            className="w-full py-3 rounded-2xl bg-foreground text-background font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity animate-hero-rise"
+            style={{ animationDelay: "0.7s" }}
+          >
+            <Sparkles className="h-3.5 w-3.5" /> Open full plan <ArrowRight className="h-3.5 w-3.5" />
           </div>
         </div>
       </div>
@@ -119,6 +140,68 @@ const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlan
         }}
       />
     </>
+  );
+};
+
+export const StatTile = ({
+  label,
+  value,
+  icon,
+  delay,
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ReactNode;
+  delay?: string;
+}) => (
+  <div
+    className="rounded-xl border border-border bg-card/95 backdrop-blur p-2 text-center shadow-sm animate-hero-rise"
+    style={{ animationDelay: delay }}
+  >
+    <div className="text-base sm:text-lg font-bold text-foreground leading-none">{value}</div>
+    <div className="mt-1 text-[8.5px] uppercase tracking-[0.2em] text-muted-foreground inline-flex items-center gap-1 justify-center">
+      <span className="text-muted-foreground/70">{icon}</span>
+      {label}
+    </div>
+  </div>
+);
+
+export const DayRailMini = ({ itinerary }: { itinerary: ItineraryData[] }) => {
+  const dots = itinerary.slice(0, 8);
+  const firstSlotTitle = (d: any): string => {
+    if (Array.isArray(d?.slots) && d.slots.length > 0) {
+      return d.slots[0].title || d.slots[0].name || d.title || "";
+    }
+    return d?.title || "";
+  };
+  const teaserParts = itinerary
+    .slice(0, 3)
+    .map((d, i) => `Day ${i + 1} — ${firstSlotTitle(d)}`)
+    .filter(Boolean);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1">
+        {dots.map((_, i) => (
+          <div key={i} className="flex items-center gap-1 flex-1 last:flex-none">
+            <div
+              className={`h-2 w-2 rounded-full shrink-0 ${
+                i === 0 ? "bg-foreground" : "border border-border bg-background"
+              }`}
+            />
+            {i < dots.length - 1 && (
+              <div className="flex-1 border-t border-dashed border-border" />
+            )}
+          </div>
+        ))}
+      </div>
+      {teaserParts.length > 0 && (
+        <p className="text-[11px] text-muted-foreground truncate">
+          {teaserParts.join("  ·  ")}
+          {itinerary.length > 3 ? "  ·  …" : ""}
+        </p>
+      )}
+    </div>
   );
 };
 
