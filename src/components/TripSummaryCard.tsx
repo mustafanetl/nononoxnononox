@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plane, Hotel, Sparkles, MapPin, ArrowRight, Compass, CalendarDays } from "lucide-react";
 import { FlightData } from "@/components/FlightCard";
@@ -7,8 +7,6 @@ import { ActivityData } from "@/components/ActivityCard";
 import { ItineraryData } from "@/components/ItineraryCard";
 import { TravelInfoData } from "@/components/TravelInfoCard";
 import { TimelineLeg } from "@/components/TripTimeline";
-import { useSubscription } from "@/hooks/useSubscription";
-import PaywallModal from "@/components/PaywallModal";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
 
 export type TripPlanData = {
@@ -24,32 +22,14 @@ export type TripPlanData = {
 
 const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlanData; destination: string; enrichedImages?: any[] }) => {
   const navigate = useNavigate();
-  const { isPremium, loading: subLoading } = useSubscription();
-  const [showPaywall, setShowPaywall] = useState(false);
 
   const handleClick = () => {
-    if (!isPremium && !subLoading) {
-      setShowPaywall(true);
-      return;
-    }
-    sessionStorage.setItem("jolliday-trip-detail", JSON.stringify({ data, destination, enrichedImages }));
-    navigate("/trip/view");
-  };
-
-  // Auto-open the full trip page once the plan is ready (premium users).
-  const autoOpenedRef = useRef(false);
-  useEffect(() => {
-    if (autoOpenedRef.current) return;
-    if (subLoading) return;
-    if (!isPremium) return;
-    if (!destination || !data) return;
-    autoOpenedRef.current = true;
     sessionStorage.setItem(
       "jolliday-trip-detail",
       JSON.stringify({ data, destination, enrichedImages }),
     );
     navigate("/trip/view");
-  }, [isPremium, subLoading, destination, data, enrichedImages, navigate]);
+  };
 
   const days = data.itinerary.length;
   const stops = data.itinerary.reduce(
@@ -60,8 +40,7 @@ const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlan
   const heroImg = stockHero || enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl;
 
   return (
-    <>
-      <div
+    <div
         onClick={handleClick}
         className="mt-4 w-full max-w-md rounded-3xl border border-border bg-card overflow-hidden cursor-pointer shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300 animate-stagger-in"
       >
@@ -142,19 +121,7 @@ const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlan
             <Sparkles className="h-3.5 w-3.5" /> Open full plan <ArrowRight className="h-3.5 w-3.5" />
           </div>
         </div>
-      </div>
-
-      <PaywallModal
-        open={showPaywall}
-        onClose={() => setShowPaywall(false)}
-        destination={destination}
-        tripStats={{
-          activities: data.activities.length,
-          hotels: data.hotels.length,
-          days: data.itinerary.length,
-        }}
-      />
-    </>
+    </div>
   );
 };
 
