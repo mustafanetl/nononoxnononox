@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plane, Hotel, Sparkles, MapPin, ArrowRight, Compass, CalendarDays } from "lucide-react";
 import { FlightData } from "@/components/FlightCard";
@@ -35,6 +35,21 @@ const TripSummaryCard = ({ data, destination, enrichedImages }: { data: TripPlan
     sessionStorage.setItem("jolliday-trip-detail", JSON.stringify({ data, destination, enrichedImages }));
     navigate("/trip/view");
   };
+
+  // Auto-open the full trip page once the plan is ready (premium users).
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (autoOpenedRef.current) return;
+    if (subLoading) return;
+    if (!isPremium) return;
+    if (!destination || !data) return;
+    autoOpenedRef.current = true;
+    sessionStorage.setItem(
+      "jolliday-trip-detail",
+      JSON.stringify({ data, destination, enrichedImages }),
+    );
+    navigate("/trip/view");
+  }, [isPremium, subLoading, destination, data, enrichedImages, navigate]);
 
   const days = data.itinerary.length;
   const stops = data.itinerary.reduce(
