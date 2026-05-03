@@ -1269,10 +1269,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
                   // Determine if this is a "full trip plan" (has multiple card types)
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
-                  const isFullPlan = cardTypeCount >= 2;
+                  // Treat as a "plan" when we have an itinerary OR multiple card types — local plans (activities + itinerary, no flights/hotels) count too.
+                  const isFullPlan = cardTypeCount >= 2 || parsed.itinerary.length > 0;
+                  // Pull destination from anything available, including the user's prompt as a last resort, so local plans get a hero/title.
+                  const lastUserMsg = [...parsedMessages].reverse().find((m) => m.role === "user");
+                  const promptDest = lastUserMsg ? inferCitiesFromPrompt(lastUserMsg.content || "").destination : "";
                   const destination = parsed.travelInfo?.destination
                     || parsed.flights[0]?.cityImage
                     || parsed.hotels[0]?.location?.split(",")[0]
+                    || parsed.activities[0]?.neighborhood
+                    || craftingPlan?.destination
+                    || promptDest
                     || "";
 
                   return (
