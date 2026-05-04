@@ -123,7 +123,15 @@ export type Database = {
           id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_users_overview"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       saved_trips: {
         Row: {
@@ -159,7 +167,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "saved_trips_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users_overview"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       shared_trips: {
         Row: {
@@ -222,7 +238,15 @@ export type Database = {
           status?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_users_overview"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       suppressed_emails: {
         Row: {
@@ -288,11 +312,61 @@ export type Database = {
           user_id?: string
           visited_places?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "admin_users_overview"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users_overview"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
     }
     Views: {
-      [_ in never]: never
+      admin_users_overview: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          email: string | null
+          expires_at: string | null
+          last_sign_in_at: string | null
+          plan: string | null
+          signed_up_at: string | null
+          subscription_status: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       delete_email: {
@@ -302,6 +376,13 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       increment_shared_trip_views: {
         Args: { _slug: string }
@@ -326,7 +407,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -453,6 +534,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
