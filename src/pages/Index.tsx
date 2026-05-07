@@ -5,6 +5,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import HeroSection from "@/components/HeroSection";
 import SocialProof from "@/components/landing/SocialProof";
 import HowItWorks from "@/components/landing/HowItWorks";
+import WhyJolliday from "@/components/landing/WhyJolliday";
 import HomeFAQ from "@/components/landing/HomeFAQ";
 import ProductPreview from "@/components/landing/ProductPreview";
 import ValueRows from "@/components/landing/ValueRows";
