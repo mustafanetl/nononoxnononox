@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Compass, ArrowRight, User, Settings } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import HeroSection from "@/components/HeroSection";
+import HowItWorks from "@/components/landing/HowItWorks";
 import ProductPreview from "@/components/landing/ProductPreview";
 import ValueRows from "@/components/landing/ValueRows";
 import DestinationsMosaic from "@/components/landing/DestinationsMosaic";
@@ -76,6 +77,8 @@ const Index = () => {
 
       <main>
         <HeroSection />
+
+        <HowItWorks />
 
         <ProductPreview />
 
