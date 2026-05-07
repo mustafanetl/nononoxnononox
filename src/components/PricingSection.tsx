@@ -5,6 +5,7 @@ import { getCurrencyPrices } from "@/utils/currencyLocale";
 import { useAuth } from "@/hooks/useAuth";
 import { startCheckout } from "@/lib/stripeCheckout";
 import { useState } from "react";
+import TrustLine from "@/components/TrustLine";
 
 const PricingSection = () => {
   const prices = getCurrencyPrices();
@@ -100,9 +101,7 @@ const PricingSection = () => {
               {loadingPlan === plan.name.toLowerCase() ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {plan.cta}
             </Button>
-            <p className="text-[11px] text-muted-foreground text-center mt-2">
-              {plan.subtextCta}
-            </p>
+            <TrustLine />
           </div>
         ))}
       </div>

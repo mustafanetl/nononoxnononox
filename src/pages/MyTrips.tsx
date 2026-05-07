@@ -104,6 +104,9 @@ const MyTrips = () => {
                 <Plus className="h-4 w-4" /> Plan a Trip
               </Button>
             </Link>
+            <p className="text-center text-muted-foreground mt-2" style={{ fontSize: "12px" }}>
+              3-day free trial · Cancel anytime
+            </p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
