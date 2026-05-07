@@ -1344,6 +1344,9 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                       <Button size="sm" onClick={() => setShowPaywall(true)} className="gap-1.5">
                                         <Crown className="h-3.5 w-3.5" /> Start Free Trial
                                       </Button>
+                                      <p className="text-center text-muted-foreground mt-2" style={{ fontSize: "12px" }}>
+                                        3-day free trial · Cancel anytime
+                                      </p>
                                     </div>
                                   ) : null
                                 ) : (
@@ -1477,6 +1480,9 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   <Crown className="h-4 w-4" />
                   Start Free Trial — 3 Days Free
                 </Button>
+                <p className="text-center text-muted-foreground mt-2" style={{ fontSize: "12px" }}>
+                  3-day free trial · Cancel anytime
+                </p>
               </div>
             ) : (
               <>

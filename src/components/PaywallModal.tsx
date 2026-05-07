@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { startCheckout } from "@/lib/stripeCheckout";
 import { useNavigate } from "react-router-dom";
 import { getCurrencyPrices } from "@/utils/currencyLocale";
+import TrustLine from "./TrustLine";
 
 interface PaywallModalProps {
   open: boolean;
@@ -129,14 +130,12 @@ const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalPro
           {checkoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Start Free Trial — 3 Days Free
         </button>
+        <TrustLine />
 
         {/* Social proof + fine print */}
         <div className="mt-3 text-center space-y-1">
           <p className="text-[11px] text-muted-foreground">
             Join 2,000+ travelers planning smarter trips
-          </p>
-          <p className="text-[10px] text-muted-foreground/70">
-            Cancel anytime · No charge for 3 days · Seriously, try it risk-free
           </p>
         </div>
       </div>

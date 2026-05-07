@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Star } from "lucide-react";
+import TrustLine from "@/components/TrustLine";
 
 const HeroSection = () => {
   const [query, setQuery] = useState("");
@@ -50,6 +51,7 @@ const HeroSection = () => {
               <ArrowRight className="h-4 w-4" />
             </Button>
           </form>
+          <TrustLine className="max-w-xl" />
 
           <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
             <span>Try</span>

@@ -179,8 +179,8 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
           Start Free Trial — 3 Days Free
         </button>
 
-        <p className="text-[10px] text-muted-foreground/70 text-center mt-2">
-          Cancel anytime · No charge for 3 days
+        <p className="text-center text-muted-foreground mt-2" style={{ fontSize: "12px" }}>
+          3-day free trial · Cancel anytime
         </p>
       </div>
     </div>
