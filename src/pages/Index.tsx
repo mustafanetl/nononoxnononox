@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Compass, ArrowRight, User, Settings } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import HeroSection from "@/components/HeroSection";
+import SocialProof from "@/components/landing/SocialProof";
 import HowItWorks from "@/components/landing/HowItWorks";
 import ProductPreview from "@/components/landing/ProductPreview";
 import ValueRows from "@/components/landing/ValueRows";
@@ -77,6 +78,8 @@ const Index = () => {
 
       <main>
         <HeroSection />
+
+        <SocialProof />
 
         <HowItWorks />
 
