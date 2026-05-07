@@ -7,6 +7,7 @@ import SocialProof from "@/components/landing/SocialProof";
 import HowItWorks from "@/components/landing/HowItWorks";
 import WhyJolliday from "@/components/landing/WhyJolliday";
 import HomeFAQ from "@/components/landing/HomeFAQ";
+import MobileStickyCTA from "@/components/landing/MobileStickyCTA";
 import ProductPreview from "@/components/landing/ProductPreview";
 import ValueRows from "@/components/landing/ValueRows";
 import DestinationsMosaic from "@/components/landing/DestinationsMosaic";
@@ -155,6 +156,7 @@ const Index = () => {
           </div>
         </div>
       </footer>
+      <MobileStickyCTA />
     </div>
   );
 };
