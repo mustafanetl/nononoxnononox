@@ -7,6 +7,7 @@ import SocialProof from "@/components/landing/SocialProof";
 import HowItWorks from "@/components/landing/HowItWorks";
 import WhyJolliday from "@/components/landing/WhyJolliday";
 import HomeFAQ from "@/components/landing/HomeFAQ";
+import FinalCTA from "@/components/landing/FinalCTA";
 import MobileStickyCTA from "@/components/landing/MobileStickyCTA";
 import ProductPreview from "@/components/landing/ProductPreview";
 import ValueRows from "@/components/landing/ValueRows";
@@ -109,6 +110,8 @@ const Index = () => {
         <WhyJolliday />
 
         <HomeFAQ />
+
+        <FinalCTA />
       </main>
 
       <footer className="border-t border-border">
