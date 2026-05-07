@@ -105,6 +105,8 @@ const Index = () => {
           </div>
         </section>
 
+        <WhyJolliday />
+
         <HomeFAQ />
       </main>
 
