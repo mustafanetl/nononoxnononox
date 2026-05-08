@@ -83,11 +83,11 @@ const Index = () => {
       <main>
         <HeroSection />
 
+        <ProductPreview />
+
         <SocialProof />
 
         <HowItWorks />
-
-        <ProductPreview />
 
         <div id="destinations">
           <DestinationsMosaic />
