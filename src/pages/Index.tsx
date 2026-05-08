@@ -89,9 +89,7 @@ const Index = () => {
 
         <HowItWorks />
 
-        <div id="destinations">
-          <DestinationsMosaic />
-        </div>
+        <WhyJolliday />
 
         <ValueRows />
 
@@ -107,7 +105,9 @@ const Index = () => {
           </div>
         </section>
 
-        <WhyJolliday />
+        <div id="destinations">
+          <DestinationsMosaic />
+        </div>
 
         <HomeFAQ />
 
