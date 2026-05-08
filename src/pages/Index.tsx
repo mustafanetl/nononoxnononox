@@ -31,7 +31,7 @@ const Index = () => {
           </div>
 
           <div className="hidden lg:flex items-center gap-8 text-sm text-muted-foreground">
-            <a href="#examples" className="hover:text-foreground transition-colors">Example</a>
+            <a href="#examples" className="hover:text-foreground transition-colors">See a trip</a>
             <a href="#destinations" className="hover:text-foreground transition-colors">Destinations</a>
             <Link to="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
           </div>
