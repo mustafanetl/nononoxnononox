@@ -2,7 +2,7 @@
 // Swap provider by changing BASE_URL and MODEL.
 
 const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash-preview-05-20";
+const MODEL = "google/gemini-3.1-flash-lite:free";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
