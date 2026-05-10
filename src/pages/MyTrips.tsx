@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Compass, Plus, MapPin, Calendar, Trash2, ArrowLeft, Play, Settings } from "lucide-react";
+import { Plus, MapPin, Calendar, Trash2, ArrowLeft, Play, Settings } from "lucide-react";
+import Logo from "@/components/Logo";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { toast } from "sonner";
 
@@ -66,8 +67,7 @@ const MyTrips = () => {
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="flex items-center gap-2">
-              <Compass className="h-5 w-5" />
-              <span className="font-semibold">My Trips</span>
+              <Logo size="sm" />
             </div>
           </div>
           <div className="flex items-center gap-2">

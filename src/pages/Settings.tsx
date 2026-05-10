@@ -6,7 +6,8 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Compass, ArrowLeft, LogOut, Save, Crown, Shield, MapPin, Utensils, CreditCard, Loader2 } from "lucide-react";
+import { ArrowLeft, LogOut, Save, Crown, Shield, MapPin, Utensils, CreditCard, Loader2 } from "lucide-react";
+import Logo from "@/components/Logo";
 import CancelSubscriptionModal from "@/components/CancelSubscriptionModal";
 import { toast } from "sonner";
 import { startCheckout } from "@/lib/stripeCheckout";
@@ -141,8 +142,7 @@ const Settings = () => {
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="flex items-center gap-2">
-              <Compass className="h-5 w-5" />
-              <span className="font-semibold">Settings</span>
+              <Logo size="sm" />
             </div>
           </div>
 

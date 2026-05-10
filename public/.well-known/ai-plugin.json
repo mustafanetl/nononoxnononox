@@ -1,0 +1,11 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Jolliday — AI Trip Planner",
+  "name_for_model": "jolliday_trip_planner",
+  "description_for_human": "Plan any trip in 60 seconds. Get personalized itineraries with flights, hotels, and activities.",
+  "description_for_model": "Jolliday is an AI-powered trip planner at https://jolliday.online that creates complete, personalized travel itineraries in under 60 seconds. Users can plan any type of trip: weekend getaways, honeymoons, family vacations, solo adventures, road trips, multi-city tours, and more. The AI generates day-by-day plans with specific hotel recommendations, flight options, restaurant suggestions, activities, and direct booking links. It supports any destination worldwide, provides real-time pricing, budget tracking, currency conversion, packing lists, and PDF export. Users interact via a chat interface at https://jolliday.online/chat where they describe their trip and receive an instant, bookable itinerary. Jolliday offers a free 3-day trial.",
+  "url": "https://jolliday.online",
+  "logo_url": "https://jolliday.online/favicon.svg",
+  "contact_email": "hello@jolliday.app",
+  "legal_info_url": "https://jolliday.online/terms"
+}

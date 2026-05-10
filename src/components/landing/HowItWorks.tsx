@@ -30,7 +30,7 @@ const HowItWorks = () => {
       <div className="container mx-auto px-4 sm:px-6 py-20 md:py-28 lg:py-36 max-w-6xl">
         <div className="text-center max-w-2xl mx-auto mb-14 md:mb-20">
           <p className="text-xs sm:text-sm font-semibold text-primary tracking-[0.15em] uppercase mb-3">
-            Simple as 1-2-3
+            How It Works
           </p>
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1]">
             Your trip in minutes,
@@ -38,7 +38,7 @@ const HowItWorks = () => {
             <span className="text-primary">not weeks.</span>
           </h2>
           <p className="mt-5 text-base sm:text-lg text-muted-foreground leading-relaxed">
-            Skip the spreadsheets and 50 browser tabs. Just chat with us.
+            No spreadsheets. No 50 browser tabs. Just tell Jolliday where you want to go.
           </p>
         </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Sparkles, Compass, MapPinned, Utensils, Camera } from "lucide-react";
+import { Sparkles, MapPinned, Utensils, Camera } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
 
 export type CraftActivity = { name: string; photo?: string };
 export type CraftGeo = { lat: number; lng: number };
@@ -15,7 +16,7 @@ type Props = {
 
 // 4-stage progression — gives the user a sense of forward motion.
 const STAGES = [
-  { label: "Reading your request", icon: Compass },
+  { label: "Reading your request", icon: Sparkles },
   { label: "Mapping the city", icon: MapPinned },
   { label: "Picking the best spots", icon: Camera },
   { label: "Sequencing your days", icon: Utensils },

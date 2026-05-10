@@ -44,7 +44,7 @@ const FinalCTA = () => {
             </h2>
 
             <p className="mt-5 md:mt-6 text-base sm:text-lg text-white/60 max-w-xl mx-auto leading-relaxed">
-              Start for free. No credit card required. Cancel anytime.
+              Start for free. Full itinerary in under 60 seconds.
             </p>
 
             <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -66,11 +66,11 @@ const FinalCTA = () => {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                No credit card
+                Cancel anytime
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                Cancel anytime
+                Any destination worldwide
               </div>
             </div>
           </div>

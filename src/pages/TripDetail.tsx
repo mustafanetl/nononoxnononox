@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Download, Share2, Plane, Hotel, Sparkles,
   MapPin, Clock, ExternalLink, Star, Bookmark, Ticket, ArrowRight, Camera, Link2, LogIn,
-  Footprints, Compass, CalendarDays,
+  Footprints, CalendarDays,
 } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 
 import FlightDetailModal from "@/components/FlightDetailModal";
@@ -676,7 +677,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
               className="text-[11px] sm:text-xs uppercase tracking-[0.35em] text-white/85 mb-4 animate-hero-rise inline-flex items-center gap-2"
               style={{ animationDelay: "0.05s" }}
             >
-              <Compass className="h-3.5 w-3.5" /> {t.yourJolliday}
+              <LogoMark size={14} color="white" /> {t.yourJolliday}
             </p>
             <h1
               className="text-5xl sm:text-7xl lg:text-[88px] font-bold text-white tracking-tight leading-[0.95] drop-shadow-2xl"
@@ -1338,7 +1339,7 @@ const ClosingCard: React.FC<{
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/30" />
       <div className="relative z-10 p-8 sm:p-12 flex flex-col items-center text-center">
         <div className="inline-flex items-center gap-2 text-white/80 text-[10px] uppercase tracking-[0.35em] mb-4">
-          <Compass className="h-3.5 w-3.5" /> {t.craftedBy}
+          <LogoMark size={14} color="white" /> {t.craftedBy}
         </div>
         <h3 className="text-3xl sm:text-6xl font-bold text-white tracking-tight leading-[1.05] max-w-3xl">
           {t.closingHeadline(days, destination)}

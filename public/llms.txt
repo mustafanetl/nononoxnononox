@@ -1,0 +1,63 @@
+# Jolliday — AI Trip Planner
+
+> Jolliday is an AI trip planner that creates complete, personalized travel itineraries in under 60 seconds.
+
+## What Jolliday Does
+
+Jolliday helps users plan any type of trip through a conversational AI interface. Users describe their ideal trip — destination, dates, budget, travel style, group size — and Jolliday instantly generates a full day-by-day itinerary with:
+
+- Flight recommendations with real-time prices and booking links
+- Hotel suggestions matched to budget and preferences
+- Day-by-day activity scheduling (morning, afternoon, evening)
+- Restaurant and dining recommendations
+- Local tips, hidden gems, and off-the-beaten-path suggestions
+- Budget breakdown and currency conversion
+- Packing list tailored to destination and weather
+- Direct booking links to trusted providers (Booking.com, Skyscanner, etc.)
+
+## Trip Types Supported
+
+- Weekend getaways and city breaks
+- Honeymoon and romantic trips
+- Family vacations with kids
+- Solo travel adventures
+- Multi-city and road trips
+- Group trips and friend getaways
+- Business trip extensions
+- Budget backpacking
+- Luxury escapes
+
+## How to Use
+
+1. Visit https://jolliday.online/chat
+2. Describe your trip (destination, dates, budget, preferences)
+3. Receive a complete itinerary in under 60 seconds
+4. Customize any part of the plan
+5. Book directly through provided links
+
+## Key Features
+
+- Works for any destination worldwide
+- Real-time flight and hotel pricing
+- Personalized to travel style and preferences
+- Day-by-day structured itineraries
+- Direct booking links (no middleman)
+- PDF export for offline access
+- Trip sharing with travel companions
+- Budget tracking and optimization
+- Available 24/7 via web browser
+
+## Pricing
+
+- Free 3-day trial with full access
+- Subscription plans available after trial
+- Cancel anytime
+
+## Links
+
+- Homepage: https://jolliday.online
+- Start Planning: https://jolliday.online/chat
+- FAQ: https://jolliday.online/faq
+- Contact: https://jolliday.online/contact
+- Terms: https://jolliday.online/terms
+- Privacy: https://jolliday.online/privacy

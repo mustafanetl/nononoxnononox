@@ -143,8 +143,7 @@ const HeroSection = () => {
 
           {/* Subtitle */}
           <p className="mt-6 md:mt-8 text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-2">
-            Tell me where you want to go. I'll build a complete itinerary with
-            flights, hotels, and things to do — ready to book in 60 seconds.
+            Your AI trip planner. Flights, hotels, activities — one conversation.
           </p>
 
           {/* BIG composer-style input (Layla-style) */}

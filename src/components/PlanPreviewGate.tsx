@@ -1,4 +1,5 @@
-import { Plane, Hotel, Sparkles, MapPin, Calendar, ArrowRight, Check, Lock, Star, Loader2, Compass, CalendarDays } from "lucide-react";
+import { Plane, Hotel, Sparkles, MapPin, Calendar, ArrowRight, Check, Lock, Star, Loader2, CalendarDays } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
 import { useState } from "react";
 import { getCityImage } from "@/utils/cityImages";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
@@ -56,7 +57,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
             className="text-[10px] uppercase tracking-[0.35em] text-white/85 mb-3 inline-flex items-center gap-2 animate-hero-rise"
             style={{ animationDelay: "0.05s" }}
           >
-            <Compass className="h-3 w-3" /> Your Jolliday
+            <LogoMark size={12} color="currentColor" /> Your Jolliday
           </p>
           <h3
             className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-[0.95] drop-shadow-lg"

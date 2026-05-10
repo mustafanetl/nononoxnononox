@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import TripDetail from "./TripDetail";
-import { Compass } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
 import { toast } from "sonner";
 
 const SharedTrip = () => {
@@ -68,7 +68,7 @@ const SharedTrip = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex items-center gap-3 text-muted-foreground">
-          <Compass className="h-5 w-5 animate-spin" /> Loading shared trip…
+          <LogoMark size={20} color="hsl(234 62% 47%)" className="animate-spin" /> Loading shared trip…
         </div>
       </div>
     );
