@@ -612,7 +612,7 @@ const Promox = () => {
           </div>
         )}
 
-        {/* SCENE 7: MAP — clean city map */}
+        {/* SCENE 7: MAP — dark style with smooth route connecting all pins */}
         {scene === "map" && (
           <div
             className="absolute inset-0 flex flex-col items-center justify-center px-4"
@@ -628,63 +628,96 @@ const Promox = () => {
             </h2>
 
             <div
-              className="relative rounded-3xl overflow-hidden animate-promo-fade-up aspect-square w-full max-w-[340px] shadow-2xl"
+              className="relative rounded-3xl overflow-hidden border border-white/10 animate-promo-fade-up aspect-square w-full max-w-[340px] shadow-2xl"
               style={{
                 animationDelay: "0.15s",
                 background:
-                  "linear-gradient(135deg, hsl(210 30% 94%), hsl(210 25% 88%))",
+                  "linear-gradient(135deg, hsl(234 40% 18%), hsl(234 30% 10%))",
               }}
             >
-              {/* Map — streets grid + water + park */}
+              {/* Grid + route that passes through every pin */}
               <svg
                 className="absolute inset-0 w-full h-full"
-                viewBox="0 0 300 300"
+                viewBox="0 0 400 400"
                 preserveAspectRatio="none"
               >
                 <defs>
                   <pattern
-                    id="streets-px"
-                    width="20"
-                    height="20"
+                    id="grid-px"
+                    width="25"
+                    height="25"
                     patternUnits="userSpaceOnUse"
                   >
                     <path
-                      d="M 0 10 L 20 10 M 10 0 L 10 20"
-                      stroke="hsl(210 20% 82%)"
+                      d="M 25 0 L 0 0 0 25"
+                      fill="none"
+                      stroke="hsl(234 40% 40%)"
                       strokeWidth="0.6"
                     />
                   </pattern>
+                  <filter id="pathGlow">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
                 </defs>
-                <rect width="300" height="300" fill="url(#streets-px)" />
-                {/* Water at bottom */}
-                <path
-                  d="M 0 220 Q 80 205 150 225 T 300 245 L 300 300 L 0 300 Z"
-                  fill="hsl(210 60% 85%)"
-                  opacity="0.7"
+
+                {/* Background grid */}
+                <rect
+                  width="400"
+                  height="400"
+                  fill="url(#grid-px)"
+                  opacity="0.35"
                 />
-                {/* Park */}
-                <circle cx="105" cy="130" r="35" fill="hsl(120 40% 82%)" opacity="0.7" />
-                {/* Main roads */}
-                <path
-                  d="M 40 30 Q 100 70 150 120 T 250 260"
-                  stroke="white"
-                  strokeWidth="5"
-                  fill="none"
-                />
-                <path
-                  d="M 30 160 Q 120 175 180 160 T 300 145"
-                  stroke="white"
-                  strokeWidth="3.5"
-                  fill="none"
-                />
+
+                {/* Route — smooth curve through all 4 pin coordinates:
+                    Day 1 (100,110) → Day 2 (230,150) → Day 3 (180,250) → Day 4 (310,320) */}
+                <g filter="url(#pathGlow)">
+                  <path
+                    d="M 100 110 C 150 110, 180 135, 230 150 C 275 170, 230 215, 180 250 C 210 285, 270 305, 310 320"
+                    fill="none"
+                    stroke="hsl(234 62% 72%)"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeDasharray="7 7"
+                    className="animate-promo-dash"
+                    opacity="0.85"
+                  />
+                </g>
               </svg>
 
-              {/* Pins */}
+              {/* Pins — coordinates match the path */}
               {[
-                { top: "44%", left: "28%", day: 1, label: "Shibuya", delay: 0.4 },
-                { top: "58%", left: "52%", day: 2, label: "Senso-ji", delay: 0.75 },
-                { top: "70%", left: "36%", day: 3, label: "Tsukiji", delay: 1.1 },
-                { top: "22%", left: "50%", day: 4, label: "Shinjuku", delay: 1.45 },
+                {
+                  top: "27.5%",
+                  left: "25%",
+                  day: "1",
+                  label: "Shibuya",
+                  delay: 0.4,
+                },
+                {
+                  top: "37.5%",
+                  left: "57.5%",
+                  day: "2",
+                  label: "Senso-ji",
+                  delay: 0.85,
+                },
+                {
+                  top: "62.5%",
+                  left: "45%",
+                  day: "3",
+                  label: "Tsukiji",
+                  delay: 1.3,
+                },
+                {
+                  top: "80%",
+                  left: "77.5%",
+                  day: "4",
+                  label: "Shinjuku",
+                  delay: 1.75,
+                },
               ].map((pin) => (
                 <div
                   key={pin.day}
@@ -697,7 +730,7 @@ const Promox = () => {
                 >
                   <div className="relative flex flex-col items-center">
                     <div
-                      className="px-2 py-0.5 rounded-md text-[10px] font-bold text-white mb-1 whitespace-nowrap shadow-md"
+                      className="px-2 py-0.5 rounded-md text-[10px] font-bold text-white mb-1 whitespace-nowrap shadow-lg"
                       style={{
                         background:
                           "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
@@ -721,7 +754,7 @@ const Promox = () => {
 
             <p
               className="mt-5 text-white/60 text-sm text-center animate-promo-fade-up"
-              style={{ animationDelay: "1.9s" }}
+              style={{ animationDelay: "2.2s" }}
             >
               Every stop pinned.
             </p>
