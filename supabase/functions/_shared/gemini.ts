@@ -1,8 +1,8 @@
 // AI provider wrapper — currently using Groq (OpenAI-compatible).
 // Swap provider by changing BASE_URL and MODEL.
 
-const BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "llama-3.1-8b-instant";
+const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL = "google/gemini-2.0-flash-exp:free";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -23,12 +23,14 @@ export async function streamGemini(
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
+      "HTTP-Referer": "https://jolliday.online",
+      "X-Title": "Jolliday AI Trip Planner",
     },
     body: JSON.stringify({
       model: MODEL,
       messages,
       stream: true,
-      max_tokens: 4096,
+      max_tokens: maxTokens,
       temperature: 0.8,
     }),
   });
@@ -64,6 +66,8 @@ export async function callGemini(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://jolliday.online",
+        "X-Title": "Jolliday AI Trip Planner",
       },
       body: JSON.stringify({
         model: MODEL,

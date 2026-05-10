@@ -68,11 +68,12 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "activity and destination are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY");
-    const AI_KEY = GROQ_API_KEY || GEMINI_API_KEY;
+    const AI_KEY = OPENROUTER_API_KEY || GROQ_API_KEY || GEMINI_API_KEY;
     if (!AI_KEY && !LOVABLE_API_KEY) throw new Error("AI service not configured");
 
     const exclusions = [activity.name, ...(Array.isArray(excludeNames) ? excludeNames : [])].filter(Boolean);

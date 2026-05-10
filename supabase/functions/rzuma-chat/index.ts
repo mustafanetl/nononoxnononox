@@ -277,17 +277,17 @@ serve(async (req) => {
     const preferences = sanitizePreferences(rawPrefs);
     const revisionRequest = sanitizeRevisionIssues(rawRevision);
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY"); // legacy, unused
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
-    const AI_KEY = GROQ_API_KEY || GEMINI_API_KEY;
+    const AI_KEY = OPENROUTER_API_KEY || GROQ_API_KEY || GEMINI_API_KEY;
 
     if (!AI_KEY) {
-      console.error("No AI key configured (GROQ_API_KEY or GEMINI_API_KEY)");
+      console.error("No AI key configured");
       return new Response(
         JSON.stringify({
-          error: "AI service not configured. Add GROQ_API_KEY to Supabase secrets.",
+          error: "AI service not configured. Add OPENROUTER_API_KEY to Supabase secrets.",
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
