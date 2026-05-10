@@ -1,64 +1,39 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f5f6ff"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#eef0ff"/>
       <stop offset="100%" stop-color="#ffffff"/>
     </linearGradient>
     <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#5469e8"/>
       <stop offset="100%" stop-color="#2d42b3"/>
     </linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#5469e8"/>
-      <stop offset="100%" stop-color="#7c4dff"/>
-    </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
 
   <!-- Background -->
   <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <!-- Subtle grid pattern -->
-  <g opacity="0.04">
-    <path d="M 0 63 L 1200 63 M 0 126 L 1200 126 M 0 189 L 1200 189 M 0 252 L 1200 252 M 0 315 L 1200 315 M 0 378 L 1200 378 M 0 441 L 1200 441 M 0 504 L 1200 504 M 0 567 L 1200 567" stroke="#2d42b3" stroke-width="1"/>
-    <path d="M 80 0 L 80 630 M 160 0 L 160 630 M 240 0 L 240 630 M 320 0 L 320 630 M 400 0 L 400 630 M 480 0 L 480 630 M 560 0 L 560 630 M 640 0 L 640 630 M 720 0 L 720 630 M 800 0 L 800 630 M 880 0 L 880 630 M 960 0 L 960 630 M 1040 0 L 1040 630 M 1120 0 L 1120 630" stroke="#2d42b3" stroke-width="1"/>
+  <!-- Soft orbs -->
+  <circle cx="1050" cy="100" r="220" fill="#5469e8" opacity="0.1"/>
+  <circle cx="80" cy="560" r="180" fill="#7c4dff" opacity="0.08"/>
+
+  <!-- Logo mark top-left -->
+  <g transform="translate(90, 80)">
+    <rect width="96" height="96" rx="24" fill="url(#mark)"/>
+    <path d="M48 18 C49 31 52 43 62.5 46 C73 49 73 47.5 76 48 C73 48.5 73 47 62.5 50 C52 53 49 65 48 78 C47 65 44 53 33.5 50 C23 47 23 48.5 20 48 C23 47.5 23 49 33.5 46 C44 43 47 31 48 18 Z" fill="#ffffff"/>
+    <circle cx="48" cy="48" r="2.5" fill="#5469e8"/>
   </g>
 
-  <!-- Blurred orb decorations -->
-  <circle cx="1050" cy="150" r="180" fill="#5469e8" opacity="0.08"/>
-  <circle cx="150" cy="500" r="150" fill="#7c4dff" opacity="0.06"/>
-
-  <!-- Logo mark -->
-  <g transform="translate(80, 80)">
-    <rect width="88" height="88" rx="22" fill="url(#mark)"/>
-    <g filter="url(#glow)">
-      <path d="M44 16 C44.8 28 47.7 39 57.4 42 C67.1 45 67.1 43.3 70 44 C67.1 44.7 67.1 43 57.4 46 C47.7 49 44.8 60 44 72 C43.2 60 40.3 49 30.6 46 C20.9 43 20.9 44.7 18 44 C20.9 43.3 20.9 45 30.6 42 C40.3 39 43.2 28 44 16 Z" fill="white"/>
-    </g>
-    <circle cx="44" cy="44" r="2" fill="#5469e8"/>
-  </g>
-
-  <!-- Brand name next to logo -->
-  <text x="190" y="140" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="42" font-weight="800" fill="#0f172a" letter-spacing="-1">Jolliday</text>
+  <!-- Brand name -->
+  <text x="210" y="148" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="900" fill="#0f172a">Jolliday</text>
 
   <!-- Main headline -->
-  <text x="80" y="310" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="92" font-weight="800" fill="#0f172a" letter-spacing="-3">Any trip.</text>
-  <text x="80" y="410" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-size="92" font-weight="800" fill="#0f172a" letter-spacing="-3">In one chat.</text>
+  <text x="90" y="340" font-family="Arial, Helvetica, sans-serif" font-size="128" font-weight="900" fill="#0f172a">Any trip.</text>
+  <text x="90" y="470" font-family="Arial, Helvetica, sans-serif" font-size="128" font-weight="900" fill="#2d42b3">In one chat.</text>
 
   <!-- Subtitle -->
-  <text x="80" y="475" font-family="'Inter', -apple-system, sans-serif" font-size="28" font-weight="500" fill="#64748b">Your AI trip planner. Flights, hotels, activities — in under a minute.</text>
+  <text x="90" y="540" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="500" fill="#475569">Your AI trip planner. Plan anywhere in minutes.</text>
 
-  <!-- CTA pill -->
-  <g transform="translate(80, 520)">
-    <rect width="290" height="64" rx="32" fill="url(#accent)"/>
-    <text x="38" y="42" font-family="'Inter', sans-serif" font-size="22" font-weight="700" fill="white">Start planning free →</text>
-  </g>
-
-  <!-- URL -->
-  <text x="395" y="562" font-family="'Inter', sans-serif" font-size="22" font-weight="500" fill="#64748b">jolliday.online</text>
+  <!-- URL at bottom right -->
+  <text x="1110" y="590" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#2d42b3">jolliday.online</text>
 </svg>
