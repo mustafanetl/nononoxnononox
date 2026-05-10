@@ -279,6 +279,17 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+
+    // Diagnostic logs — helps pinpoint why a provider isn't being reached.
+    console.log("ENV CHECK:", {
+      hasGeminiKey: !!GEMINI_API_KEY,
+      geminiKeyPrefix: GEMINI_API_KEY ? GEMINI_API_KEY.slice(0, 6) + "…" : null,
+      hasLovableKey: !!LOVABLE_API_KEY,
+      envKeys: Object.keys(Deno.env.toObject()).filter((k) =>
+        /GEMINI|LOVABLE|GOOGLE|SUPABASE/i.test(k),
+      ),
+    });
+
     if (!GEMINI_API_KEY && !LOVABLE_API_KEY) {
       console.error("Neither GEMINI_API_KEY nor LOVABLE_API_KEY configured");
       throw new Error("AI service is not configured");
