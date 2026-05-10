@@ -29,8 +29,8 @@ const features = [
 
 const WhyJolliday = () => {
   return (
-    <section className="bg-background border-t border-border">
-      <div className="container mx-auto px-4 py-12 md:py-20 lg:py-28 max-w-5xl">
+    <section className="bg-[hsl(0_0%_98%)]">
+      <div className="container mx-auto px-4 py-16 md:py-28 lg:py-36 max-w-5xl">
         <div className="text-center max-w-xl mx-auto mb-12">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
             Everything you need in one place

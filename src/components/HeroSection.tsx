@@ -14,7 +14,7 @@ const HeroSection = () => {
 
   return (
     <section
-      className="relative pt-16 pb-12 md:pt-[120px] md:pb-20 px-4"
+      className="relative pt-28 pb-16 md:pt-[200px] md:pb-[120px] lg:pt-[240px] lg:pb-[140px] px-4 min-h-[70vh] md:min-h-[85vh] flex items-center"
       style={{ background: "linear-gradient(180deg, hsl(0 0% 97%), hsl(0 0% 100%))" }}
     >
       <div className="relative z-10 container mx-auto max-w-3xl text-center">
