@@ -1,43 +1,45 @@
-import { CalendarDays, Tag, Link2, Share2 } from "lucide-react";
+import { Wand2, PiggyBank, MapPin, ShieldCheck } from "lucide-react";
 
 const features = [
   {
-    icon: CalendarDays,
-    title: "Day-by-day itinerary",
+    icon: Wand2,
+    title: "Tailor-made",
     description:
-      "Morning, afternoon, evening — a real structured plan, not just a list.",
+      "Get a personalized itinerary tailored to your preferences and travel style. Every moment is designed around your unique interests.",
   },
   {
-    icon: Tag,
-    title: "Live prices",
+    icon: PiggyBank,
+    title: "Cheaper",
     description:
-      "Real flight and hotel prices, pulled now — not estimates from months ago.",
+      "Find the best deals on flights, hotels, and activities. Real-time prices mean you always get the most value for your budget.",
   },
   {
-    icon: Link2,
-    title: "Book in one click",
+    icon: MapPin,
+    title: "Hidden Gems",
     description:
-      "Every hotel and flight has a direct link. No tab-switching needed.",
+      "Discover off-the-beaten-path destinations and local secrets that most tourists never find. Experience places like a local.",
   },
   {
-    icon: Share2,
-    title: "Share with friends",
+    icon: ShieldCheck,
+    title: "No Surprises",
     description:
-      "Send your plan to your travel crew. Everyone stays on the same page.",
+      "Everything runs smoothly from flights to accommodations. Detailed planning means you can focus on making memories.",
   },
 ];
 
 const WhyJolliday = () => {
   return (
     <section className="bg-[hsl(0_0%_98%)]">
-      <div className="container mx-auto px-4 py-16 md:py-28 lg:py-36 max-w-5xl">
-        <div className="text-center max-w-xl mx-auto mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Everything you need in one place
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            No more jumping between 10 tabs to plan a trip.
+      <div className="container mx-auto px-4 py-20 md:py-32 lg:py-40 max-w-5xl">
+        <div className="text-center max-w-2xl mx-auto mb-14 md:mb-16">
+          <p className="text-sm font-semibold text-primary tracking-wide uppercase mb-3">
+            Why Jolliday
           </p>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
+            I'll be there for you
+            <br className="hidden sm:block" />
+            in every step
+          </h2>
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
@@ -46,14 +48,16 @@ const WhyJolliday = () => {
             return (
               <div
                 key={f.title}
-                className="rounded-[1rem] border border-[hsl(0_0%_85%)] bg-white p-6 flex items-start gap-4 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06),0px_1px_2px_-1px_rgba(0,0,0,0.03)]"
+                className="rounded-2xl border border-border bg-white p-7 flex items-start gap-5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300 group"
               >
-                <div className="w-10 h-10 rounded-xl bg-foreground/5 border border-border flex items-center justify-center shrink-0">
-                  <Icon className="h-5 w-5 text-foreground" />
+                <div className="w-12 h-12 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:scale-105 transition-all duration-300">
+                  <Icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold">{f.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                  <h3 className="text-base font-semibold text-foreground mb-1.5">
+                    {f.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     {f.description}
                   </p>
                 </div>
