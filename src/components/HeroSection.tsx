@@ -33,9 +33,9 @@ const HeroSection = () => {
       <div className="w-full max-w-3xl mx-auto pt-28 pb-12 sm:pt-32 sm:pb-16 md:pt-40 md:pb-20 flex flex-col items-center text-center">
         {/* Headline */}
         <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-[-0.03em] text-foreground leading-[1.05]">
-          Your trip.
+          Any trip.
           <br />
-          Planned in minutes.
+          In one chat.
         </h1>
 
         {/* Big text box */}
