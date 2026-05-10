@@ -277,8 +277,8 @@ serve(async (req) => {
     const preferences = sanitizePreferences(rawPrefs);
     const revisionRequest = sanitizeRevisionIssues(rawRevision);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY"); // legacy, unused
 
     // Diagnostic logs — helps pinpoint why a provider isn't being reached.
     console.log("ENV CHECK:", {
@@ -290,9 +290,14 @@ serve(async (req) => {
       ),
     });
 
-    if (!GEMINI_API_KEY && !LOVABLE_API_KEY) {
-      console.error("Neither GEMINI_API_KEY nor LOVABLE_API_KEY configured");
-      throw new Error("AI service is not configured");
+    if (!GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY is not set in environment");
+      return new Response(
+        JSON.stringify({
+          error: "Gemini API key not configured on the server. Add GEMINI_API_KEY to Supabase secrets.",
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     console.log(
@@ -354,78 +359,41 @@ serve(async (req) => {
       });
     }
 
-    // ── PROVIDER: prefer Gemini direct, fall back to Lovable gateway ──────
-    if (GEMINI_API_KEY) {
-      const geminiMessages: ChatMessage[] = [...systemMessages, ...trimmedMessages];
-      const upstream = await streamGemini(geminiMessages, GEMINI_API_KEY, 16384);
+    // ── AI CALL: direct Gemini, no Lovable fallback ──────────
+    const geminiMessages: ChatMessage[] = [...systemMessages, ...trimmedMessages];
+    const upstream = await streamGemini(geminiMessages, GEMINI_API_KEY, 16384);
 
-      if (!upstream.ok) {
-        const errorText = await upstream.text();
-        console.error("Gemini error:", upstream.status, errorText);
+    if (!upstream.ok) {
+      const errorText = await upstream.text();
+      console.error("Gemini error:", upstream.status, errorText);
 
-        if (upstream.status === 429) {
-          return new Response(
-            JSON.stringify({ error: "AI is busy right now. Please try again in a moment." }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
-        if (upstream.status === 400) {
-          return new Response(
-            JSON.stringify({ error: "Invalid request to AI. Please try rephrasing." }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
+      if (upstream.status === 429) {
         return new Response(
-          JSON.stringify({ error: "AI service temporarily unavailable" }),
+          JSON.stringify({ error: "AI is busy right now. Please try again in a moment." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if (upstream.status === 400) {
+        return new Response(
+          JSON.stringify({ error: "Invalid request to AI. Please try rephrasing." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if (upstream.status === 403) {
+        return new Response(
+          JSON.stringify({
+            error: "Gemini API access denied. Check the API key is valid and 'Generative Language API' is enabled in Google Cloud.",
+          }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-
-      return new Response(upstream.body, {
-        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-      });
-    }
-
-    // Legacy path — Lovable gateway. Kept as a safety fallback so the site
-    // keeps working if GEMINI_API_KEY is ever unset.
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [...systemMessages, ...trimmedMessages],
-        stream: true,
-        max_tokens: 16384,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "AI service is busy. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Usage limit reached. Please try again later." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
       return new Response(
         JSON.stringify({ error: "AI service temporarily unavailable" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    return new Response(response.body, {
+    return new Response(upstream.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
