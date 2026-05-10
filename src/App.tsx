@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import Promo from "./pages/Promo";
 import Promox from "./pages/Promox";
+import Promoar from "./pages/Promoar";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/admin" element={<Admin />} />
               <Route path="/promo" element={<Promo />} />
               <Route path="/promox" element={<Promox />} />
+              <Route path="/promoar" element={<Promoar />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
