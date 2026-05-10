@@ -14,8 +14,8 @@ import Logo, { LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 
 /**
- * /promoar — Arabic 9:16 vertical promo (RTL).
- * Same as /promox but fully in Arabic. Brand: جوليدي
+ * /promoar — Arabic RTL 9:16 promo, Syrian dialect.
+ * Brand name kept in English: Jolliday.
  */
 
 type Scene =
@@ -71,7 +71,12 @@ const TOKYO_IMAGES = {
     "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&q=80&auto=format&fit=crop",
 };
 
-const PROMPT_TEXT = "٤ أيام في طوكيو، أحب الطعام 🍣";
+const PROMPT_TEXT = "٤ أيام بطوكيو، بحب الأكل 🍣";
+
+// Helper to render a name in English (LTR) inside RTL flow
+const Brand = () => (
+  <span style={{ direction: "ltr", unicodeBidi: "isolate" }}>Jolliday</span>
+);
 
 const Promoar = () => {
   const [scene, setScene] = useState<Scene>("intro");
@@ -183,8 +188,11 @@ const Promoar = () => {
                 <LogoMark size={54} color="white" />
               </div>
             </div>
-            <h1 className="text-white text-5xl font-extrabold tracking-tight mb-3">
-              جوليدي
+            <h1
+              className="text-white text-5xl font-extrabold tracking-tight mb-3"
+              style={{ direction: "ltr" }}
+            >
+              Jolliday
             </h1>
             <p className="text-white/60 mb-8">جولة سريعة</p>
             <Button
@@ -198,7 +206,7 @@ const Promoar = () => {
               }}
             >
               <Play className="h-5 w-5 fill-white" />
-              {imagesLoaded ? "تشغيل" : "جاري التحميل…"}
+              {imagesLoaded ? "شغّل" : "عم يحمّل…"}
             </Button>
           </div>
         </div>
@@ -233,7 +241,7 @@ const Promoar = () => {
                 <Logo size="xl" variant="mark-only" />
               </div>
               <h2 className="text-white text-3xl font-bold mb-8">
-                هذا هو جوليدي.
+                هيدا هو <Brand />.
               </h2>
               <div className="flex flex-col gap-3">
                 <Button
@@ -241,7 +249,7 @@ const Promoar = () => {
                   size="lg"
                   className="h-12 px-6 rounded-full gap-2 bg-white text-black hover:bg-white/90"
                 >
-                  <RotateCcw className="h-4 w-4" /> إعادة
+                  <RotateCcw className="h-4 w-4" /> مرة تانية
                 </Button>
                 <Link to="/">
                   <Button
@@ -252,7 +260,7 @@ const Promoar = () => {
                         "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
                     }}
                   >
-                    الذهاب للموقع <ArrowLeft className="h-4 w-4" />
+                    روح عالموقع <ArrowLeft className="h-4 w-4" />
                   </Button>
                 </Link>
               </div>
@@ -283,15 +291,15 @@ const Promoar = () => {
               </div>
               <h1
                 className="text-white text-7xl font-extrabold tracking-tight animate-promo-fade-up"
-                style={{ animationDelay: "0.3s" }}
+                style={{ animationDelay: "0.3s", direction: "ltr" }}
               >
-                جوليدي
+                Jolliday
               </h1>
               <p
                 className="mt-4 text-white/60 text-xl animate-promo-fade-up"
                 style={{ animationDelay: "0.6s" }}
               >
-                مخطط الرحلات الذكي
+                مخطط السفر الذكي
               </p>
             </div>
           </div>
@@ -303,16 +311,16 @@ const Promoar = () => {
             <div className="w-full px-6 text-center">
               <div className="flex flex-col gap-2 mb-10 max-w-[260px] mx-auto">
                 {[
-                  "كاياك",
-                  "بوكينج",
-                  "سكاي سكانر",
-                  "إير بي إن بي",
-                  "إكسبيديا",
+                  "Kayak",
+                  "Booking",
+                  "Skyscanner",
+                  "Airbnb",
+                  "Expedia",
                 ].map((tab, i) => (
                   <div
                     key={tab}
                     className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/40 text-base font-medium animate-promo-tab-fly"
-                    style={{ animationDelay: `${i * 0.08}s` }}
+                    style={{ animationDelay: `${i * 0.08}s`, direction: "ltr" }}
                   >
                     {tab}
                   </div>
@@ -322,7 +330,7 @@ const Promoar = () => {
                 className="text-white text-4xl font-extrabold tracking-tight animate-promo-fade-up leading-tight"
                 style={{ animationDelay: "0.7s" }}
               >
-                تخطط لرحلة؟
+                عم تخطط لسفرة؟
               </h2>
               <h2
                 className="mt-3 text-4xl font-extrabold tracking-tight animate-promo-fade-up leading-tight"
@@ -336,7 +344,7 @@ const Promoar = () => {
                   paddingBottom: "0.2em",
                 }}
               >
-                فقط اسأل جوليدي.
+                بس اسأل <Brand />.
               </h2>
             </div>
           </div>
@@ -347,9 +355,9 @@ const Promoar = () => {
           <div className="absolute inset-0 flex items-center justify-center bg-white px-4">
             <div className="w-full text-center">
               <h2 className="text-5xl font-extrabold tracking-tight text-foreground mb-10 animate-promo-fade-up">
-                أي رحلة.
+                أي سفرة.
                 <br />
-                في محادثة واحدة.
+                بمحادثة وحدة.
               </h2>
 
               <div
@@ -371,7 +379,7 @@ const Promoar = () => {
                     }}
                   >
                     <ArrowLeft className="h-4 w-4" />
-                    خطط رحلتي
+                    خطّط سفرتي
                   </div>
                 </div>
               </div>
@@ -408,21 +416,21 @@ const Promoar = () => {
                     style={{ animationDelay: "0.6s" }}
                   >
                     <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
-                    <span className="font-medium">اختيار الأحياء…</span>
+                    <span className="font-medium">عم اختار الأحياء…</span>
                   </div>
                   <div
                     className="animate-promo-slide-in-left bg-muted/50 rounded-xl px-3 py-2 inline-flex items-center gap-2 text-sm text-muted-foreground"
                     style={{ animationDelay: "1.5s" }}
                   >
                     <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
-                    <span className="font-medium">البحث عن أفضل مطاعم السوشي…</span>
+                    <span className="font-medium">عم دوّر على أحلى سوشي…</span>
                   </div>
                   <div
                     className="animate-promo-slide-in-left bg-muted/50 rounded-xl px-3 py-2 inline-flex items-center gap-2 text-sm text-muted-foreground"
                     style={{ animationDelay: "2.4s" }}
                   >
                     <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
-                    <span className="font-medium">حساب الميزانية…</span>
+                    <span className="font-medium">عم شوف الأسعار…</span>
                   </div>
                   <div
                     className="animate-promo-scale-in rounded-xl px-4 py-3 inline-flex items-center gap-2 text-sm font-semibold text-white shadow-lg"
@@ -432,7 +440,7 @@ const Promoar = () => {
                         "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
                     }}
                   >
-                    ✨ رحلتك إلى طوكيو جاهزة
+                    ✨ سفرتك لطوكيو جاهزة
                   </div>
                 </div>
               </div>
@@ -440,7 +448,7 @@ const Promoar = () => {
           </div>
         )}
 
-        {/* SCENE 5: ITINERARY — 4 days */}
+        {/* SCENE 5: ITINERARY */}
         {scene === "itinerary" && (
           <div
             className="absolute inset-0 flex flex-col items-center justify-center px-4"
@@ -451,15 +459,15 @@ const Promoar = () => {
           >
             <div className="text-center mb-5">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-2 animate-promo-fade-up">
-                برنامجك في طوكيو
+                برنامجك بطوكيو
               </p>
               <h2
                 className="text-3xl font-extrabold tracking-tight text-foreground animate-promo-fade-up"
                 style={{ animationDelay: "0.2s" }}
               >
-                يوماً بيوم.
+                يوم بيوم.
                 <br />
-                جاهز.
+                جاهزة.
               </h2>
             </div>
 
@@ -475,7 +483,7 @@ const Promoar = () => {
                   day: "اليوم ٢",
                   title: "سينسو-جي",
                   image: TOKYO_IMAGES.senso,
-                  tag: "ثقافة · تاريخ",
+                  tag: "معابد · تاريخ",
                 },
                 {
                   day: "اليوم ٣",
@@ -487,7 +495,7 @@ const Promoar = () => {
                   day: "اليوم ٤",
                   title: "شينجوكو",
                   image: TOKYO_IMAGES.shinjuku,
-                  tag: "حياة ليلية",
+                  tag: "سهرات · إطلالات",
                 },
               ].map((d, i) => (
                 <div
@@ -534,9 +542,9 @@ const Promoar = () => {
             }}
           >
             <h2 className="text-center text-3xl font-extrabold tracking-tight text-foreground mb-6 animate-promo-fade-up">
-              رحلات طيران حقيقية.
+              طيران فعلي.
               <br />
-              أسعار حقيقية.
+              أسعار فعلية.
             </h2>
 
             <div className="w-full max-w-[360px] space-y-3">
@@ -549,29 +557,46 @@ const Promoar = () => {
                     <Plane className="h-3.5 w-3.5 text-sky-600" />
                   </div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    رحلة طيران
+                    طيران
                   </span>
                 </div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-xl font-extrabold text-foreground">DXB</p>
-                    <p className="text-[10px] text-muted-foreground">٢٣:٣٠</p>
+                    <p
+                      className="text-xl font-extrabold text-foreground"
+                      style={{ direction: "ltr" }}
+                    >
+                      IST
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      ١٩:٤٥
+                    </p>
                   </div>
                   <div className="flex-1 mx-3 relative">
                     <div className="h-px bg-border" />
                     <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary -scale-x-100" />
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-extrabold text-foreground">HND</p>
-                    <p className="text-[10px] text-muted-foreground">١٥:١٠+١</p>
+                    <p
+                      className="text-xl font-extrabold text-foreground"
+                      style={{ direction: "ltr" }}
+                    >
+                      HND
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      ١٤:٢٠+١
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-border">
                   <span className="text-[10px] text-muted-foreground">
-                    طيران الإمارات · ٩س ٤٠د
+                    الخطوط التركية · مباشر
                   </span>
-                  <span className="text-base font-extrabold text-primary">
-                    ٢٤٨٠ د.إ
+                  <span
+                    className="text-base font-extrabold text-primary"
+                    style={{ direction: "ltr", unicodeBidi: "isolate" }}
+                  >
+                    $850
                   </span>
                 </div>
               </div>
@@ -604,14 +629,17 @@ const Promoar = () => {
                     </div>
                   </div>
                   <p className="text-[10px] text-muted-foreground mb-2">
-                    شيبويا · ٥ دقائق للمحطة
+                    شيبويا · ٥ دقايق للمترو
                   </p>
                   <div className="flex items-center justify-between pt-2 border-t border-border">
                     <span className="text-[10px] text-muted-foreground">
-                      ٤ ليالٍ
+                      ٤ ليالي
                     </span>
-                    <span className="text-base font-extrabold text-primary">
-                      ١٤٢٥ د.إ
+                    <span
+                      className="text-base font-extrabold text-primary"
+                      style={{ direction: "ltr", unicodeBidi: "isolate" }}
+                    >
+                      $388
                     </span>
                   </div>
                 </div>
@@ -630,9 +658,9 @@ const Promoar = () => {
             }}
           >
             <h2 className="text-white text-3xl font-extrabold tracking-tight mb-5 text-center animate-promo-fade-up">
-              كل شيء
+              كل شي
               <br />
-              على الخريطة
+              عالخريطة
             </h2>
 
             <div
@@ -757,7 +785,7 @@ const Promoar = () => {
               className="mt-5 text-white/60 text-sm text-center animate-promo-fade-up"
               style={{ animationDelay: "1.5s" }}
             >
-              كل وجهة مُعلّمة.
+              كل محطة معلّمة.
             </p>
           </div>
         )}
@@ -773,13 +801,13 @@ const Promoar = () => {
           >
             <div className="text-center">
               <p className="text-white/70 text-base mb-3 animate-promo-fade-up">
-                رحلتك القادمة
+                سفرتك الجاية
               </p>
               <h2
                 className="text-white text-5xl font-extrabold tracking-tight leading-[1.2] animate-promo-blur-in"
                 style={{ animationDelay: "0.3s" }}
               >
-                على بُعد
+                على بعد
                 <br />
                 رسالة
                 <br />
@@ -793,7 +821,7 @@ const Promoar = () => {
                     display: "inline-block",
                   }}
                 >
-                  واحدة.
+                  وحدة.
                 </span>
               </h2>
             </div>
@@ -823,9 +851,9 @@ const Promoar = () => {
               </div>
               <h2
                 className="text-white text-5xl font-extrabold tracking-tight animate-promo-fade-up"
-                style={{ animationDelay: "0.2s" }}
+                style={{ animationDelay: "0.2s", direction: "ltr" }}
               >
-                جوليدي
+                Jolliday
               </h2>
               <p
                 className="mt-6 text-white text-xl font-semibold animate-promo-fade-up"
@@ -837,7 +865,7 @@ const Promoar = () => {
                 className="mt-3 text-white/60 text-sm animate-promo-fade-up"
                 style={{ animationDelay: "0.75s" }}
               >
-                جرّب مجاناً
+                جرّبه ببلاش
               </p>
             </div>
           </div>
