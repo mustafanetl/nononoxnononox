@@ -1,276 +1,124 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowUp,
-  Sparkles,
-  Star,
-  MapPin,
-  Plane,
-  Calendar,
-  Users,
-} from "lucide-react";
-
-const suggestions = [
-  { icon: MapPin, label: "Weekend in Paris", query: "Plan a weekend in Paris" },
-  { icon: Plane, label: "7 days in Japan", query: "Plan 7 days in Japan" },
-  { icon: Calendar, label: "Bali honeymoon", query: "Plan a Bali honeymoon" },
-  {
-    icon: Users,
-    label: "Family Europe trip",
-    query: "Plan a family trip to Europe",
-  },
-];
+import { ArrowRight, Sparkles, Play } from "lucide-react";
 
 const HeroSection = () => {
   const [query, setQuery] = useState("");
-  const [tripCount, setTripCount] = useState(0);
   const navigate = useNavigate();
-  const counterRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const hasAnimated = useRef(false);
-
-  const TARGET_COUNT = 48293;
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true;
-          animateCounter();
-        }
-      },
-      { threshold: 0.3 }
-    );
-
-    if (counterRef.current) observer.observe(counterRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const animateCounter = () => {
-    const duration = 2000;
-    const start = performance.now();
-
-    const tick = (now: number) => {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setTripCount(Math.floor(eased * TARGET_COUNT));
-      if (progress < 1) requestAnimationFrame(tick);
-    };
-
-    requestAnimationFrame(tick);
-  };
-
-  // Auto-grow textarea
-  useEffect(() => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = "auto";
-    ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
-  }, [query]);
 
   const handleSubmit = (q: string) => {
     const trimmed = q.trim();
     if (trimmed) navigate(`/chat?q=${encodeURIComponent(trimmed)}`);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(query);
-    }
-  };
-
   return (
-    <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-20 sm:pt-24">
-      {/* Background gradient */}
+    <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden">
+      {/* Clean white background with subtle gradient */}
+      <div className="absolute inset-0 bg-white" />
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 opacity-40"
         style={{
           background:
-            "radial-gradient(ellipse 100% 70% at 50% 0%, hsl(234 62% 47% / 0.09) 0%, transparent 65%), linear-gradient(180deg, hsl(0 0% 99.5%) 0%, hsl(0 0% 100%) 100%)",
+            "radial-gradient(ellipse 80% 50% at 50% -10%, hsl(234 62% 47% / 0.06) 0%, transparent 70%)",
         }}
       />
 
-      {/* Grid pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.025]"
-        style={{
-          backgroundImage:
-            "linear-gradient(hsl(0 0% 0%) 1px, transparent 1px), linear-gradient(90deg, hsl(0 0% 0%) 1px, transparent 1px)",
-          backgroundSize: "64px 64px",
-        }}
-      />
-
-      {/* Decorative blurred orbs */}
-      <div className="absolute top-1/4 -left-32 w-96 h-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
-
-      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-12 sm:py-16 md:py-20">
+      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 pt-24 pb-16 sm:pt-28 sm:pb-20 md:pt-32 md:pb-24">
         <div className="max-w-4xl mx-auto text-center">
-          {/* Main headline */}
-          <h1 className="font-display text-[2.75rem] leading-[1.02] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[5.5rem] xl:text-[6.25rem] font-extrabold tracking-[-0.03em] text-foreground animate-fade-in">
-            Plan your dream trip
+          {/* Headline — big, bold, clean */}
+          <h1 className="font-display text-[2.75rem] leading-[1.02] sm:text-[3.75rem] md:text-[5rem] lg:text-[6rem] xl:text-[7rem] font-extrabold tracking-[-0.03em] text-foreground">
+            Your trip.
             <br />
-            in{" "}
-            <span className="relative inline-block">
-              <span
-                className="bg-clip-text text-transparent"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, hsl(234 62% 52%), hsl(260 70% 60%))",
-                }}
-              >
-                minutes
-              </span>
-              <svg
-                className="absolute -bottom-1 sm:-bottom-2 left-0 w-full h-3 text-primary/40"
-                viewBox="0 0 200 12"
-                fill="none"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d="M2 8 C50 2, 150 2, 198 8"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </span>
-            .
+            Planned in minutes.
           </h1>
 
-          {/* Subtitle */}
-          <p className="mt-6 md:mt-8 text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-2">
-            Your AI trip planner. Flights, hotels, activities — one conversation.
-          </p>
-
-          {/* BIG composer-style input (Layla-style) */}
-          <div className="mt-10 md:mt-12 max-w-2xl mx-auto">
-            <div className="relative rounded-3xl border-2 border-border bg-white shadow-[0_4px_24px_-4px_rgba(45,66,179,0.08)] hover:border-primary/30 focus-within:border-primary focus-within:shadow-[0_8px_40px_-8px_rgba(45,66,179,0.25)] transition-all duration-200">
-              {/* Label above */}
-              <div className="flex items-center gap-2 px-5 pt-4 pb-1">
+          {/* Three CTA buttons — clean row like Layla */}
+          <div className="mt-10 md:mt-14 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+            <Link to="/chat">
+              <Button
+                size="lg"
+                className="h-14 w-full sm:w-auto px-8 rounded-full text-base font-semibold gap-2 shadow-lg shadow-primary/15 press-bounce"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                }}
+              >
+                Create a new trip
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            </Link>
+            <Link to="/chat?q=Inspire me where to go">
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-14 w-full sm:w-auto px-8 rounded-full text-base font-semibold gap-2 border-2 border-border hover:border-primary/30 hover:bg-primary/5 press-bounce"
+              >
                 <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold text-primary tracking-wide uppercase">
-                  Tell me about your trip
-                </span>
-              </div>
+                Inspire me where to go
+              </Button>
+            </Link>
+            <Link to="/chat?q=What can you help me with?">
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-14 w-full sm:w-auto px-8 rounded-full text-base font-semibold gap-2 border-2 border-border hover:border-primary/30 hover:bg-primary/5 press-bounce"
+              >
+                <Play className="h-4 w-4 text-primary" />
+                See how I can help
+              </Button>
+            </Link>
+          </div>
 
-              <textarea
-                ref={textareaRef}
+          {/* Divider */}
+          <div className="mt-14 md:mt-20 w-full max-w-2xl mx-auto border-t border-border" />
+
+          {/* Second section — input + stat */}
+          <div className="mt-10 md:mt-14 max-w-2xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground mb-8">
+              Your trip in minutes,
+              <br className="sm:hidden" />
+              <span className="text-muted-foreground"> not weeks.</span>
+            </h2>
+
+            {/* Clean input box */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSubmit(query);
+              }}
+              className="flex items-center gap-2 rounded-full border-2 border-border bg-white pl-5 sm:pl-6 pr-2 py-2 shadow-sm hover:border-primary/30 focus-within:border-primary focus-within:shadow-lg focus-within:shadow-primary/10 transition-all duration-200"
+            >
+              <input
+                type="text"
+                placeholder="Plan my trip"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="e.g. Plan a 5-day trip to Japan for a couple in April with a mid-range budget..."
-                rows={2}
-                className="w-full px-5 pt-2 pb-3 text-base sm:text-lg text-foreground placeholder:text-muted-foreground/50 bg-transparent focus:outline-none resize-none leading-relaxed min-h-[80px] max-h-[200px]"
+                className="flex-1 min-w-0 bg-transparent py-2.5 text-base sm:text-lg text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
               />
+              <Button
+                type="submit"
+                size="lg"
+                className="h-12 px-6 rounded-full gap-1.5 shrink-0 font-semibold shadow-md text-base"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                }}
+              >
+                Plan my trip
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </form>
 
-              {/* Action row */}
-              <div className="flex items-center justify-between gap-3 px-3 pb-3 pt-1">
-                {/* Quick pills on the left */}
-                <div className="hidden sm:flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-hide pl-2">
-                  {suggestions.slice(0, 3).map((s) => {
-                    const Icon = s.icon;
-                    return (
-                      <button
-                        key={s.label}
-                        type="button"
-                        onClick={() => setQuery(s.query)}
-                        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-muted-foreground bg-foreground/[0.03] hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20 transition-all"
-                      >
-                        <Icon className="h-3 w-3" />
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Submit button */}
-                <Button
-                  type="button"
-                  onClick={() => handleSubmit(query)}
-                  disabled={!query.trim()}
-                  size="lg"
-                  className="h-12 px-5 rounded-2xl gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 shadow-md font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{
-                    background: query.trim()
-                      ? "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))"
-                      : undefined,
-                  }}
-                >
-                  <span className="hidden sm:inline">Plan my trip</span>
-                  <ArrowUp className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Mobile suggestions — below input */}
-            <div className="sm:hidden mt-4 flex gap-2 overflow-x-auto scrollbar-hide px-1">
-              {suggestions.slice(0, 3).map((s) => {
-                const Icon = s.icon;
-                return (
-                  <button
-                    key={s.label}
-                    type="button"
-                    onClick={() => handleSubmit(s.query)}
-                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-muted-foreground bg-white border border-border hover:border-primary/30 hover:text-primary transition-all"
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {s.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Trust indicators */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              Free 3-day trial
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              Cancel anytime
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              Instant results
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div
-            ref={counterRef}
-            className="mt-12 md:mt-16 flex items-center justify-center gap-4 sm:gap-8 md:gap-12"
-          >
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl md:text-3xl font-extrabold text-foreground tabular-nums">
-                {tripCount.toLocaleString()}+
-              </div>
-              <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mt-0.5 sm:mt-1">
-                Trips Planned
-              </div>
-            </div>
-            <div className="w-px h-8 sm:h-10 bg-border" />
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl md:text-3xl font-extrabold text-foreground">
-                &lt;60s
-              </div>
-              <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mt-0.5 sm:mt-1">
-                Avg Plan Time
-              </div>
-            </div>
-            <div className="w-px h-8 sm:h-10 bg-border" />
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl md:text-3xl font-extrabold text-foreground flex items-center justify-center gap-1">
-                4.9
-                <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-amber-400 text-amber-400" />
-              </div>
-              <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mt-0.5 sm:mt-1">
-                Avg Rating
+            {/* Trip counter */}
+            <div className="mt-8 flex items-center justify-center">
+              <div className="text-center">
+                <span className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tabular-nums">
+                  48,293
+                </span>
+                <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                  Trips Planned
+                </p>
               </div>
             </div>
           </div>
