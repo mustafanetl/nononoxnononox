@@ -4,8 +4,8 @@ import { ArrowRight } from "lucide-react";
 
 const FinalCTA = () => {
   return (
-    <section className="bg-muted">
-      <div className="container mx-auto px-4 py-20 md:py-28 max-w-3xl text-center">
+    <section className="bg-background">
+      <div className="container mx-auto px-4 py-20 md:py-32 lg:py-40 max-w-3xl text-center">
         <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-foreground leading-[1.1]">
           Ready to plan your next trip?
         </h2>

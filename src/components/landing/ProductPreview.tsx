@@ -48,8 +48,8 @@ const PreviewTile = ({ code, label, image }: { code: string; label: string; imag
 
 const ProductPreview = () => {
   return (
-    <section id="examples" className="bg-[hsl(0_0%_98%)] border-t border-border">
-      <div className="container mx-auto px-4 py-12 md:py-20 lg:py-24 max-w-6xl">
+    <section id="examples" className="bg-[hsl(0_0%_98%)]">
+      <div className="container mx-auto px-4 py-16 md:py-28 lg:py-36 max-w-6xl">
         <div className="mb-10 md:mb-12 max-w-2xl">
           <span className="inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">
             What you actually get

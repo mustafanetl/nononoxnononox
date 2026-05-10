@@ -38,7 +38,7 @@ const destinations: Dest[] = [
 const DestinationsMosaic = () => {
   return (
     <section className="bg-background">
-      <div className="container mx-auto px-4 py-20 md:py-24 max-w-5xl">
+      <div className="container mx-auto px-4 py-16 md:py-28 lg:py-36 max-w-5xl">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
             Popular destinations
