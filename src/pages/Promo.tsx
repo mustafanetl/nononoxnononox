@@ -541,7 +541,7 @@ const Promo = () => {
 
             <div className="grid grid-cols-2 gap-5">
               <div
-                className="rounded-2xl border border-border bg-white shadow-xl p-5 animate-promo-slide-in-left"
+                className="rounded-2xl border border-border bg-white shadow-xl p-5 animate-promo-smooth-rise"
                 style={{ animationDelay: "0.2s" }}
               >
                 <div className="flex items-center gap-2 mb-4">
@@ -575,8 +575,8 @@ const Promo = () => {
               </div>
 
               <div
-                className="rounded-2xl border border-border bg-white shadow-xl overflow-hidden animate-promo-slide-in-right"
-                style={{ animationDelay: "0.35s" }}
+                className="rounded-2xl border border-border bg-white shadow-xl overflow-hidden animate-promo-smooth-rise"
+                style={{ animationDelay: "0.55s" }}
               >
                 <div className="aspect-[16/9] relative overflow-hidden bg-muted">
                   <img
@@ -610,16 +610,6 @@ const Promo = () => {
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div
-              className="mt-6 flex items-center justify-center gap-2 animate-promo-fade-up"
-              style={{ animationDelay: "1s" }}
-            >
-              <Check className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-muted-foreground font-medium">
-                Direct booking links. No middleman.
-              </span>
             </div>
           </div>
         </div>
