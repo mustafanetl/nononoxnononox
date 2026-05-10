@@ -3,60 +3,57 @@ import { Link } from "react-router-dom";
 import {
   Plane,
   Hotel,
-  MapPin,
-  Sparkles,
   ArrowRight,
   Play,
   RotateCcw,
   Star,
+  Send,
+  MoreHorizontal,
+  ChevronLeft,
+  Clock,
+  MapPin,
 } from "lucide-react";
 import Logo, { LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 
 /**
- * /promox — 9:16 vertical promo optimized for TikTok/Reels/Shorts.
+ * /promox — TikTok-ready vertical promo.
  *
- * Built to survive the first 2-second attention test:
- * - SCENE 1 (0-1.5s): Shock hook with big text
- * - SCENE 2 (1.5-3s): Problem flash
- * - SCENE 3 (3-7s): Typing reveal
- * - SCENE 4 onwards: payoff with fast cuts
+ * Approach: Frame the entire promo as a REAL phone screen recording of
+ * someone using Jolliday. More authentic, more share-worthy.
  *
- * Total: ~38s
+ * Structure:
+ * 1. HOOK — bold overlay text over blurred tokyo footage
+ * 2. PHONE START — the "recording starts", shows Jolliday chat
+ * 3. USER TYPES — typewriter in real chat UI
+ * 4. AI RESPONDS — streaming reveal
+ * 5. CARDS STREAM IN — itinerary, hotel, flight cards in chat
+ * 6. MAP REVEAL
+ * 7. PAYOFF text overlay
+ * 8. CTA
  */
 
-type Scene =
-  | "hook"
-  | "problem"
-  | "typing"
-  | "chat"
-  | "itinerary"
-  | "hotel"
-  | "map"
-  | "cta"
-  | "end";
+type Scene = "hook" | "chat-type" | "chat-ai" | "chat-itinerary" | "chat-hotel" | "map" | "payoff" | "end";
 
 const SCENE_DURATIONS: Record<Scene, number> = {
-  hook: 1800,        // SHORT — grab attention FAST
-  problem: 1700,     // Quick problem flash
-  typing: 4200,      // Let the user see the prompt type
-  chat: 4500,        // The "magic" is happening
-  itinerary: 7500,   // PAYOFF — let them enjoy the trip reveal
-  hotel: 4500,       // Fast flash of value
-  map: 4500,         // Quick map reveal
-  cta: 2800,         // Punchy CTA
-  end: 3000,         // Clean end card
+  hook: 2200,
+  "chat-type": 4500,
+  "chat-ai": 3800,
+  "chat-itinerary": 7500,
+  "chat-hotel": 5000,
+  map: 4800,
+  payoff: 3200,
+  end: 3000,
 };
 
 const SCENE_ORDER: Scene[] = [
   "hook",
-  "problem",
-  "typing",
-  "chat",
-  "itinerary",
-  "hotel",
+  "chat-type",
+  "chat-ai",
+  "chat-itinerary",
+  "chat-hotel",
   "map",
-  "cta",
+  "payoff",
   "end",
 ];
 
@@ -65,21 +62,23 @@ const TOTAL_DURATION = SCENE_ORDER.reduce(
   0
 );
 
-const TOKYO_IMAGES = {
-  shibuya:
-    "https://images.unsplash.com/photo-1554797589-7241bb691973?w=600&h=800&q=80&auto=format&fit=crop",
-  senso:
-    "https://images.unsplash.com/photo-1528164344705-47542687000d?w=600&h=800&q=80&auto=format&fit=crop",
-  sushi:
-    "https://images.unsplash.com/photo-1553621042-f6e147245754?w=600&h=800&q=80&auto=format&fit=crop",
-  shinjuku:
-    "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&h=800&q=80&auto=format&fit=crop",
-  hotel:
-    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&q=80&auto=format&fit=crop",
+const TOKYO = {
+  shibuya: "https://images.unsplash.com/photo-1554797589-7241bb691973?w=600&h=800&q=80&auto=format&fit=crop",
+  senso: "https://images.unsplash.com/photo-1528164344705-47542687000d?w=600&h=800&q=80&auto=format&fit=crop",
+  sushi: "https://images.unsplash.com/photo-1553621042-f6e147245754?w=600&h=800&q=80&auto=format&fit=crop",
+  shinjuku: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&h=800&q=80&auto=format&fit=crop",
+  hotel: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&q=80&auto=format&fit=crop",
+  hero: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=900&h=1600&q=80&auto=format&fit=crop",
 };
 
-// 4 days now (matching 4 itinerary cards)
 const PROMPT_TEXT = "4 days in Tokyo, love food 🍣";
+
+const ITINERARY = [
+  { day: "Day 1", title: "Shibuya", image: TOKYO.shibuya, tag: "Arrive · Neon streets" },
+  { day: "Day 2", title: "Senso-ji", image: TOKYO.senso, tag: "Culture · Temples" },
+  { day: "Day 3", title: "Tsukiji", image: TOKYO.sushi, tag: "Sushi · Markets" },
+  { day: "Day 4", title: "Shinjuku", image: TOKYO.shinjuku, tag: "Nightlife · Views" },
+];
 
 const Promox = () => {
   const [scene, setScene] = useState<Scene>("hook");
@@ -91,7 +90,7 @@ const Promox = () => {
   const rafRef = useRef<number>();
 
   useEffect(() => {
-    const urls = Object.values(TOKYO_IMAGES);
+    const urls = Object.values(TOKYO);
     let loaded = 0;
     urls.forEach((url) => {
       const img = new Image();
@@ -144,16 +143,23 @@ const Promox = () => {
   }, [playing, imagesLoaded]);
 
   useEffect(() => {
-    if (scene !== "typing") return;
+    if (scene !== "chat-type") return;
     setTypedText("");
     const chars = [...PROMPT_TEXT];
     let i = 0;
-    const interval = setInterval(() => {
-      i++;
-      setTypedText(chars.slice(0, i).join(""));
-      if (i >= chars.length) clearInterval(interval);
-    }, 75);
-    return () => clearInterval(interval);
+    // Delay 600ms so user sees the empty chat first
+    const startDelay = setTimeout(() => {
+      const interval = setInterval(() => {
+        i++;
+        setTypedText(chars.slice(0, i).join(""));
+        if (i >= chars.length) clearInterval(interval);
+      }, 80);
+      (startDelay as any).interval = interval;
+    }, 600);
+    return () => {
+      clearTimeout(startDelay);
+      if ((startDelay as any).interval) clearInterval((startDelay as any).interval);
+    };
   }, [scene]);
 
   const replay = () => startPlayback();
@@ -190,7 +196,7 @@ const Promox = () => {
             <h1 className="text-white text-5xl font-extrabold tracking-tight mb-3">
               Jolliday
             </h1>
-            <p className="text-white/60 mb-8">TikTok cut · 38s</p>
+            <p className="text-white/60 mb-8">TikTok cut · ~34s</p>
             <Button
               onClick={startPlayback}
               disabled={!imagesLoaded}
@@ -210,11 +216,101 @@ const Promox = () => {
     );
   }
 
+  // Shared chat frame used across chat-* scenes so it feels continuous
+  const ChatFrame = ({
+    children,
+    showTyping = false,
+    inputValue = "",
+    withCursor = false,
+  }: {
+    children?: React.ReactNode;
+    showTyping?: boolean;
+    inputValue?: string;
+    withCursor?: boolean;
+  }) => (
+    <div className="absolute inset-0 bg-white flex flex-col">
+      {/* Status bar mock */}
+      <div className="flex items-center justify-between px-5 pt-3 pb-2 text-[11px] font-semibold text-foreground">
+        <span>9:41</span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-2 rounded-sm border border-foreground/60 flex items-center justify-end pr-0.5">
+            <span className="w-1.5 h-1 bg-foreground/80 rounded-sm" />
+          </span>
+        </span>
+      </div>
+
+      {/* Chat header */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border">
+        <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+          style={{
+            background:
+              "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+          }}
+        >
+          <LogoMark size={16} color="white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-foreground leading-tight">
+            Jolliday
+          </p>
+          <p className="text-[10px] text-green-600 font-medium leading-tight">
+            ● online
+          </p>
+        </div>
+        <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+      </div>
+
+      {/* Chat body */}
+      <div className="flex-1 overflow-hidden px-3 py-4 space-y-2.5">
+        {children}
+      </div>
+
+      {/* Input bar */}
+      <div className="border-t border-border px-3 py-2.5 bg-white">
+        <div className="flex items-center gap-2 rounded-full border-2 border-border px-4 py-2 bg-white relative">
+          <div className="flex-1 text-sm text-foreground min-h-[20px] relative">
+            {inputValue ? (
+              <span>
+                {inputValue}
+                {withCursor && (
+                  <span className="inline-block w-0.5 h-4 bg-primary ml-0.5 animate-pulse align-middle" />
+                )}
+              </span>
+            ) : (
+              <span className="text-muted-foreground/50">Message Jolliday…</span>
+            )}
+          </div>
+          <div
+            className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-md transition-all ${
+              inputValue ? "animate-promo-button-pulse" : "opacity-40"
+            }`}
+            style={{
+              background: inputValue
+                ? "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))"
+                : "hsl(0 0% 90%)",
+            }}
+          >
+            <Send
+              className={`h-4 w-4 ${inputValue ? "text-white" : "text-muted-foreground"}`}
+            />
+          </div>
+        </div>
+        {showTyping && (
+          <p className="text-[10px] text-muted-foreground text-center mt-1.5">
+            Press send to plan your trip
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="relative overflow-hidden select-none" style={frameStyle}>
         {/* Progress bar */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 z-50">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 z-50 pointer-events-none">
           <div
             className="h-full"
             style={{
@@ -260,502 +356,523 @@ const Promox = () => {
           </div>
         )}
 
-        {/* SCENE 1: HOOK — pattern interrupt to stop the scroll */}
+        {/* SCENE 1: HOOK — bold POV claim over slowly-zooming Tokyo footage */}
         {scene === "hook" && (
-          <div
-            className="absolute inset-0 flex items-center justify-center overflow-hidden"
-            style={{
-              background:
-                "radial-gradient(ellipse at 50% 40%, hsl(234 62% 25%) 0%, hsl(234 62% 8%) 55%, black 100%)",
-            }}
-          >
-            {/* Background photo layered in (Shibuya neon for that visual pop) */}
-            <div className="absolute inset-0 opacity-30">
-              <img
-                src={TOKYO_IMAGES.shibuya}
-                alt=""
-                className="w-full h-full object-cover animate-promo-hook-zoom"
-              />
-              <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 overflow-hidden bg-black">
+            <img
+              src={TOKYO.hero}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover animate-promo-hook-zoom"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/85" />
+
+            {/* Top "POV:" label */}
+            <div className="absolute top-12 left-0 right-0 flex justify-center animate-promo-hook-badge">
+              <div className="px-4 py-1.5 rounded-full bg-red-500 text-white text-xs font-black uppercase tracking-widest">
+                ● POV
+              </div>
             </div>
 
-            <div className="relative text-center px-6">
-              {/* Badge flies in */}
-              <div
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-6 animate-promo-hook-badge"
-              >
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-white/90 text-xs font-bold uppercase tracking-wider">
-                  Wait for it
-                </span>
-              </div>
-
-              {/* MEGA HEADLINE */}
+            {/* Centered big text */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
               <h1
-                className="text-white font-extrabold tracking-[-0.04em] leading-[0.95] animate-promo-hook-text"
-                style={{ fontSize: "clamp(3rem, 14vw, 5.5rem)" }}
+                className="text-white font-black tracking-[-0.03em] leading-[0.95] animate-promo-hook-text"
+                style={{
+                  fontSize: "clamp(2.5rem, 12vw, 4.5rem)",
+                  textShadow: "0 4px 30px rgba(0,0,0,0.4)",
+                }}
               >
-                I planned
-                <br />a trip to
+                i planned
+                <br />
+                my whole
                 <br />
                 <span
-                  className="animate-promo-hook-tokyo inline-block"
                   style={{
                     background:
-                      "linear-gradient(135deg, hsl(340 85% 65%), hsl(40 95% 60%))",
+                      "linear-gradient(135deg, hsl(40 100% 60%), hsl(340 90% 60%))",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
-                    paddingBottom: "0.15em",
+                    paddingBottom: "0.1em",
+                    display: "inline-block",
                   }}
                 >
-                  Tokyo
+                  tokyo trip
                 </span>
               </h1>
               <p
-                className="mt-5 text-white text-2xl font-bold animate-promo-hook-subtext"
-                style={{ animationDelay: "0.7s" }}
+                className="mt-6 text-white text-3xl font-black animate-promo-hook-subtext"
+                style={{
+                  animationDelay: "0.7s",
+                  textShadow: "0 2px 20px rgba(0,0,0,0.6)",
+                }}
               >
-                in <span className="text-yellow-300">60 seconds</span> 🤯
+                in <span className="text-yellow-300 underline decoration-4 underline-offset-4">60 seconds</span>
+              </p>
+            </div>
+
+            {/* Bottom caption */}
+            <div
+              className="absolute bottom-10 left-0 right-0 text-center px-8 animate-promo-fade-up"
+              style={{ animationDelay: "1.1s" }}
+            >
+              <p className="text-white/90 text-sm font-semibold">
+                watch 👇 this is crazy
               </p>
             </div>
           </div>
         )}
 
-        {/* SCENE 2: PROBLEM — quick flash of the chaos */}
-        {scene === "problem" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black">
-            <div className="w-full px-6 text-center">
-              <p
-                className="text-white/70 text-base font-semibold uppercase tracking-wider mb-6 animate-promo-fade-up"
-              >
-                The usual way:
-              </p>
-
-              <div className="flex flex-col gap-1.5 mb-8 max-w-[280px] mx-auto">
-                {["Kayak", "Booking", "Airbnb", "Reddit", "Skyscanner"].map(
-                  (tab, i) => (
-                    <div
-                      key={tab}
-                      className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/40 text-sm font-medium line-through animate-promo-tab-fly"
-                      style={{ animationDelay: `${i * 0.05}s` }}
-                    >
-                      {tab}
-                    </div>
-                  )
-                )}
-              </div>
-
-              <h2
-                className="text-white text-4xl font-extrabold tracking-tight animate-promo-hook-text leading-tight"
-                style={{ animationDelay: "0.5s" }}
-              >
-                There's a{" "}
-                <span
-                  style={{
-                    background:
-                      "linear-gradient(135deg, hsl(234 62% 62%), hsl(260 70% 65%))",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  better way
-                </span>
-                .
-              </h2>
-            </div>
-          </div>
-        )}
-
-        {/* SCENE 3: TYPING */}
-        {scene === "typing" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white px-4">
-            <div className="w-full text-center">
-              <h2 className="text-5xl font-extrabold tracking-tight text-foreground mb-10 animate-promo-fade-up">
-                Just ask.
-              </h2>
-
-              <div
-                className="rounded-2xl border-2 border-primary bg-white shadow-2xl shadow-primary/20 overflow-hidden animate-promo-scale-in"
-                style={{ animationDelay: "0.2s" }}
-              >
-                <div className="px-5 pt-5 pb-3 text-left min-h-[110px]">
-                  <p className="text-lg text-foreground leading-relaxed">
-                    {typedText}
-                    <span className="inline-block w-0.5 h-5 bg-primary ml-0.5 animate-pulse align-middle" />
-                  </p>
-                </div>
-                <div className="flex items-center justify-end px-3 pb-3">
-                  <div
-                    className="h-10 px-5 rounded-xl flex items-center gap-2 font-semibold text-white shadow-md text-sm animate-promo-button-pulse"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
-                    }}
-                  >
-                    Plan my trip
-                    <ArrowRight className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* SCENE 4: CHAT */}
-        {scene === "chat" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white px-4">
-            <div className="w-full">
-              <div className="flex justify-end mb-5 animate-promo-slide-in-right">
-                <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-primary text-white px-4 py-3 text-base">
-                  {PROMPT_TEXT}
-                </div>
-              </div>
-
-              <div
-                className="flex gap-2.5 animate-promo-fade-up"
-                style={{ animationDelay: "0.3s" }}
-              >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
-                  }}
-                >
-                  <LogoMark size={20} color="white" />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <div
-                    className="animate-promo-slide-in-left bg-muted/50 rounded-xl px-3 py-2 inline-flex items-center gap-2 text-sm text-muted-foreground"
-                    style={{ animationDelay: "0.5s" }}
-                  >
-                    <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
-                    <span className="font-medium">Picking neighborhoods…</span>
-                  </div>
-                  <div
-                    className="animate-promo-slide-in-left bg-muted/50 rounded-xl px-3 py-2 inline-flex items-center gap-2 text-sm text-muted-foreground"
-                    style={{ animationDelay: "1.3s" }}
-                  >
-                    <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
-                    <span className="font-medium">Finding sushi spots…</span>
-                  </div>
-                  <div
-                    className="animate-promo-slide-in-left bg-muted/50 rounded-xl px-3 py-2 inline-flex items-center gap-2 text-sm text-muted-foreground"
-                    style={{ animationDelay: "2.1s" }}
-                  >
-                    <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
-                    <span className="font-medium">Pricing it out…</span>
-                  </div>
-                  <div
-                    className="animate-promo-scale-in rounded-xl px-4 py-3 inline-flex items-center gap-2 text-sm font-semibold text-white shadow-lg"
-                    style={{
-                      animationDelay: "3s",
-                      background:
-                        "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
-                    }}
-                  >
-                    ✨ Your Tokyo trip is ready
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* SCENE 5: ITINERARY — the payoff — 4 days only */}
-        {scene === "itinerary" && (
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center px-4"
-            style={{
-              background:
-                "linear-gradient(180deg, hsl(0 0% 99%) 0%, hsl(234 62% 97%) 100%)",
-            }}
+        {/* SCENE 2: USER TYPING IN CHAT */}
+        {scene === "chat-type" && (
+          <ChatFrame
+            showTyping={typedText.length === PROMPT_TEXT.length}
+            inputValue={typedText}
+            withCursor
           >
-            <div className="text-center mb-5">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-2 animate-promo-fade-up">
-                Your Tokyo trip
-              </p>
-              <h2
-                className="text-3xl font-extrabold tracking-tight text-foreground animate-promo-fade-up"
-                style={{ animationDelay: "0.15s" }}
+            {/* Empty chat — just a welcome from AI */}
+            <div className="flex gap-2.5 animate-promo-fade-up">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                }}
               >
-                4 days. Planned.
-              </h2>
+                <LogoMark size={16} color="white" />
+              </div>
+              <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm max-w-[85%]">
+                Hey! Where are we heading? ✈️
+              </div>
+            </div>
+          </ChatFrame>
+        )}
+
+        {/* SCENE 3: AI THINKING */}
+        {scene === "chat-ai" && (
+          <ChatFrame>
+            {/* Previous AI msg */}
+            <div className="flex gap-2.5 opacity-60">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                }}
+              >
+                <LogoMark size={16} color="white" />
+              </div>
+              <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm max-w-[85%]">
+                Hey! Where are we heading? ✈️
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 w-full max-w-[380px]">
-              {[
-                { day: "Day 1", title: "Shibuya", image: TOKYO_IMAGES.shibuya, tag: "Neon · Streets" },
-                { day: "Day 2", title: "Senso-ji", image: TOKYO_IMAGES.senso, tag: "Culture · Temples" },
-                { day: "Day 3", title: "Tsukiji", image: TOKYO_IMAGES.sushi, tag: "Sushi · Seafood" },
-                { day: "Day 4", title: "Shinjuku", image: TOKYO_IMAGES.shinjuku, tag: "Nightlife · Views" },
-              ].map((d, i) => (
+            {/* User message — already sent */}
+            <div className="flex justify-end">
+              <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-primary text-white px-4 py-2.5 text-sm">
+                {PROMPT_TEXT}
+              </div>
+            </div>
+
+            {/* AI thinking states */}
+            <div className="flex gap-2.5">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                }}
+              >
+                <LogoMark size={16} color="white" />
+              </div>
+              <div className="space-y-1.5 flex-1">
                 <div
-                  key={d.day}
-                  className="rounded-2xl overflow-hidden bg-white border border-border shadow-lg animate-promo-card-drop-slow"
-                  style={{ animationDelay: `${0.4 + i * 0.7}s` }}
+                  className="bg-muted rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm max-w-[90%] animate-promo-fade-up"
+                  style={{ animationDelay: "0.2s" }}
                 >
-                  <div className="aspect-[3/4] relative overflow-hidden bg-muted">
+                  On it! 🍣 Crafting 4 days in Tokyo...
+                </div>
+
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-primary/5 border border-primary/10 text-xs text-primary font-medium max-w-fit animate-promo-fade-up"
+                  style={{ animationDelay: "1s" }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  Picking neighborhoods
+                </div>
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-primary/5 border border-primary/10 text-xs text-primary font-medium max-w-fit animate-promo-fade-up"
+                  style={{ animationDelay: "1.8s" }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  Finding sushi spots
+                </div>
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-primary/5 border border-primary/10 text-xs text-primary font-medium max-w-fit animate-promo-fade-up"
+                  style={{ animationDelay: "2.6s" }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  Pricing it out
+                </div>
+              </div>
+            </div>
+          </ChatFrame>
+        )}
+
+        {/* SCENE 4: ITINERARY — cards stream in chat */}
+        {scene === "chat-itinerary" && (
+          <ChatFrame>
+            <div className="flex gap-2.5">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                }}
+              >
+                <LogoMark size={16} color="white" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <div
+                  className="bg-muted rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm font-semibold max-w-[95%] animate-promo-fade-up"
+                >
+                  ✨ Here's your 4-day Tokyo plan
+                </div>
+              </div>
+            </div>
+
+            {/* Itinerary grid as a chat card */}
+            <div
+              className="bg-gradient-to-b from-white to-[hsl(234_62%_98%)] rounded-2xl border border-border overflow-hidden shadow-lg ml-10 animate-promo-scale-in"
+              style={{ animationDelay: "0.4s" }}
+            >
+              <div className="p-3 border-b border-border flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Clock className="h-3 w-3 text-primary" />
+                </div>
+                <p className="text-xs font-bold text-foreground">
+                  Tokyo · 4 days
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 p-3">
+                {ITINERARY.map((d, i) => (
+                  <div
+                    key={d.day}
+                    className="rounded-xl overflow-hidden relative aspect-[3/4] animate-promo-card-drop-slow"
+                    style={{ animationDelay: `${0.7 + i * 0.9}s` }}
+                  >
                     <img
                       src={d.image}
                       alt={d.title}
                       className="w-full h-full object-cover animate-promo-ken-burns"
                       loading="eager"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-white/95 backdrop-blur-sm text-[10px] font-bold text-primary uppercase tracking-wider">
+                    <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-white/95 text-[9px] font-bold text-primary uppercase tracking-wider">
                       {d.day}
                     </div>
-                    <div className="absolute inset-x-2 bottom-2">
-                      <p className="text-white text-base font-extrabold leading-tight">
+                    <div className="absolute inset-x-1.5 bottom-1.5">
+                      <p className="text-white text-xs font-extrabold leading-tight">
                         {d.title}
                       </p>
-                      <p className="text-white/80 text-[10px] mt-0.5">
+                      <p className="text-white/70 text-[8px] leading-tight mt-0.5">
                         {d.tag}
                       </p>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </ChatFrame>
         )}
 
-        {/* SCENE 6: HOTEL + FLIGHT */}
-        {scene === "hotel" && (
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center px-4"
-            style={{
-              background:
-                "linear-gradient(180deg, hsl(234 62% 98%) 0%, hsl(0 0% 100%) 100%)",
-            }}
-          >
-            <h2 className="text-center text-3xl font-extrabold tracking-tight text-foreground mb-5 animate-promo-fade-up">
-              With real prices.
-            </h2>
-
-            <div className="w-full max-w-[360px] space-y-3">
+        {/* SCENE 5: HOTEL + FLIGHT cards in chat */}
+        {scene === "chat-hotel" && (
+          <ChatFrame>
+            <div className="flex gap-2.5">
               <div
-                className="rounded-2xl border border-border bg-white shadow-xl p-4 animate-promo-smooth-rise"
-                style={{ animationDelay: "0.2s" }}
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                }}
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center">
-                    <Plane className="h-3.5 w-3.5 text-sky-600" />
+                <LogoMark size={16} color="white" />
+              </div>
+              <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm font-semibold max-w-[90%] animate-promo-fade-up">
+                And here's your flight + hotel 👇
+              </div>
+            </div>
+
+            <div className="ml-10 space-y-2">
+              {/* Flight card */}
+              <div
+                className="rounded-2xl border border-border bg-white shadow-md p-3 animate-promo-smooth-rise"
+                style={{ animationDelay: "0.4s" }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-md bg-sky-50 flex items-center justify-center">
+                    <Plane className="h-3 w-3 text-sky-600" />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Flight
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Flight · ANA
                   </span>
                 </div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                   <div>
-                    <p className="text-xl font-extrabold text-foreground">JFK</p>
-                    <p className="text-[10px] text-muted-foreground">7:45 PM</p>
+                    <p className="text-lg font-extrabold text-foreground leading-none">
+                      JFK
+                    </p>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">
+                      7:45 PM
+                    </p>
                   </div>
                   <div className="flex-1 mx-3 relative">
                     <div className="h-px bg-border" />
-                    <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary" />
+                    <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 text-primary" />
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-extrabold text-foreground">HND</p>
-                    <p className="text-[10px] text-muted-foreground">11:20 PM+1</p>
+                    <p className="text-lg font-extrabold text-foreground leading-none">
+                      HND
+                    </p>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">
+                      11:20 PM+1
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between pt-3 border-t border-border">
-                  <span className="text-[10px] text-muted-foreground">
-                    ANA · 14h 05m
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <span className="text-[9px] text-muted-foreground">
+                    Direct · 14h 05m
                   </span>
-                  <span className="text-base font-extrabold text-primary">
+                  <span className="text-sm font-extrabold text-primary">
                     $612
                   </span>
                 </div>
               </div>
 
+              {/* Hotel card */}
               <div
-                className="rounded-2xl border border-border bg-white shadow-xl overflow-hidden animate-promo-smooth-rise"
-                style={{ animationDelay: "0.55s" }}
+                className="rounded-2xl border border-border bg-white shadow-md overflow-hidden animate-promo-smooth-rise"
+                style={{ animationDelay: "0.85s" }}
               >
                 <div className="aspect-[16/9] relative overflow-hidden bg-muted">
                   <img
-                    src={TOKYO_IMAGES.hotel}
+                    src={TOKYO.hotel}
                     alt="Hotel"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
                   />
-                  <div className="absolute top-2 left-2 px-2 py-1 rounded-md bg-white/95 text-[10px] font-bold text-primary uppercase tracking-wider inline-flex items-center gap-1">
-                    <Hotel className="h-3 w-3" /> Hotel
+                  <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-white/95 text-[9px] font-bold text-primary uppercase tracking-wider inline-flex items-center gap-1">
+                    <Hotel className="h-2.5 w-2.5" /> Hotel
                   </div>
                 </div>
-                <div className="p-3">
+                <div className="p-2.5">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <h3 className="text-sm font-bold text-foreground">
+                    <h3 className="text-xs font-bold text-foreground">
                       Shibuya Granbell
                     </h3>
                     <div className="flex items-center gap-0.5 shrink-0">
-                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                      <span className="text-xs font-semibold">4.6</span>
+                      <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+                      <span className="text-[10px] font-semibold">4.6</span>
                     </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mb-2">
+                  <p className="text-[9px] text-muted-foreground mb-1.5">
                     Shibuya · 5 min to station
                   </p>
-                  <div className="flex items-center justify-between pt-2 border-t border-border">
-                    <span className="text-[10px] text-muted-foreground">
+                  <div className="flex items-center justify-between pt-1.5 border-t border-border">
+                    <span className="text-[9px] text-muted-foreground">
                       4 nights
                     </span>
-                    <span className="text-base font-extrabold text-primary">
+                    <span className="text-sm font-extrabold text-primary">
                       $388
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </ChatFrame>
         )}
 
-        {/* SCENE 7: MAP */}
+        {/* SCENE 6: MAP — clean city map, no weird paths */}
         {scene === "map" && (
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center px-4"
-            style={{
-              background:
-                "linear-gradient(180deg, hsl(234 62% 8%) 0%, hsl(234 62% 3%) 100%)",
-            }}
-          >
-            <h2 className="text-white text-3xl font-extrabold tracking-tight mb-5 text-center animate-promo-fade-up">
-              Every stop pinned.
-            </h2>
+          <ChatFrame>
+            <div className="flex gap-2.5">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                }}
+              >
+                <LogoMark size={16} color="white" />
+              </div>
+              <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm font-semibold max-w-[90%] animate-promo-fade-up">
+                Every stop, pinned for you 📍
+              </div>
+            </div>
 
+            {/* Map card */}
             <div
-              className="relative rounded-3xl overflow-hidden border border-white/10 animate-promo-fade-up aspect-square w-full max-w-[340px]"
+              className="ml-10 rounded-2xl overflow-hidden shadow-md border border-border animate-promo-smooth-rise"
               style={{
-                animationDelay: "0.15s",
+                animationDelay: "0.3s",
                 background:
-                  "linear-gradient(135deg, hsl(234 40% 18%), hsl(234 30% 10%))",
+                  "linear-gradient(135deg, hsl(210 30% 94%), hsl(210 25% 88%))",
+                height: "min(55%, 420px)",
               }}
             >
-              <svg
-                className="absolute inset-0 w-full h-full opacity-30"
-                viewBox="0 0 400 400"
-                preserveAspectRatio="none"
-              >
-                <defs>
-                  <pattern
-                    id="grid-px"
-                    width="30"
-                    height="30"
-                    patternUnits="userSpaceOnUse"
-                  >
-                    <path
-                      d="M 30 0 L 0 0 0 30"
-                      fill="none"
-                      stroke="hsl(234 40% 40%)"
-                      strokeWidth="0.5"
-                    />
-                  </pattern>
-                </defs>
-                <rect width="400" height="400" fill="url(#grid-px)" />
-                <path
-                  d="M 80 100 Q 160 140 220 200 T 300 300"
-                  fill="none"
-                  stroke="hsl(234 62% 62%)"
-                  strokeWidth="2.5"
-                  strokeDasharray="6 6"
-                  className="animate-promo-dash"
-                />
-              </svg>
-
-              {[
-                { top: "22%", left: "20%", day: "1", label: "Shibuya", delay: 0.25 },
-                { top: "42%", left: "42%", day: "2", label: "Senso-ji", delay: 0.55 },
-                { top: "62%", left: "58%", day: "3", label: "Tsukiji", delay: 0.85 },
-                { top: "80%", left: "76%", day: "4", label: "Shinjuku", delay: 1.15 },
-              ].map((pin) => (
-                <div
-                  key={pin.day}
-                  className="absolute -translate-x-1/2 -translate-y-full animate-promo-pin-drop"
-                  style={{
-                    top: pin.top,
-                    left: pin.left,
-                    animationDelay: `${pin.delay}s`,
-                  }}
+              {/* Fake map with districts / water / roads */}
+              <div className="relative w-full h-full">
+                {/* Water shape */}
+                <svg
+                  className="absolute inset-0 w-full h-full"
+                  viewBox="0 0 300 400"
+                  preserveAspectRatio="none"
                 >
-                  <div className="relative flex flex-col items-center">
-                    <div
-                      className="px-2 py-0.5 rounded-md text-[9px] font-bold text-white mb-1 whitespace-nowrap shadow-lg"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
-                      }}
+                  <defs>
+                    <pattern
+                      id="streets"
+                      width="20"
+                      height="20"
+                      patternUnits="userSpaceOnUse"
                     >
-                      Day {pin.day} · {pin.label}
-                    </div>
-                    <div
-                      className="w-7 h-7 rounded-full border-2 border-white shadow-lg flex items-center justify-center"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
-                      }}
-                    >
-                      <MapPin className="h-3.5 w-3.5 text-white fill-white" />
+                      <path
+                        d="M 0 10 L 20 10 M 10 0 L 10 20"
+                        stroke="hsl(210 20% 82%)"
+                        strokeWidth="0.8"
+                      />
+                    </pattern>
+                  </defs>
+                  <rect width="300" height="400" fill="url(#streets)" />
+                  {/* Water */}
+                  <path
+                    d="M 0 280 Q 80 260 150 290 T 300 320 L 300 400 L 0 400 Z"
+                    fill="hsl(210 60% 85%)"
+                    opacity="0.6"
+                  />
+                  {/* Park */}
+                  <circle cx="110" cy="170" r="42" fill="hsl(120 40% 82%)" opacity="0.7" />
+                  {/* Main road */}
+                  <path
+                    d="M 40 40 Q 100 80 150 160 T 250 340"
+                    stroke="white"
+                    strokeWidth="6"
+                    fill="none"
+                  />
+                  <path
+                    d="M 30 200 Q 120 220 180 200 T 300 180"
+                    stroke="white"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                </svg>
+
+                {/* District labels */}
+                <span className="absolute top-[18%] left-[38%] text-[9px] font-semibold text-foreground/50 uppercase tracking-wider">
+                  Shinjuku
+                </span>
+                <span className="absolute top-[42%] left-[22%] text-[9px] font-semibold text-foreground/50 uppercase tracking-wider">
+                  Shibuya
+                </span>
+                <span className="absolute top-[58%] left-[58%] text-[9px] font-semibold text-foreground/50 uppercase tracking-wider">
+                  Asakusa
+                </span>
+
+                {/* Pins */}
+                {[
+                  { top: "45%", left: "28%", day: 1, label: "Shibuya", delay: 0.6 },
+                  { top: "62%", left: "55%", day: 2, label: "Senso-ji", delay: 1.0 },
+                  { top: "72%", left: "40%", day: 3, label: "Tsukiji", delay: 1.4 },
+                  { top: "22%", left: "48%", day: 4, label: "Shinjuku", delay: 1.8 },
+                ].map((pin) => (
+                  <div
+                    key={pin.day}
+                    className="absolute -translate-x-1/2 -translate-y-full animate-promo-pin-drop"
+                    style={{
+                      top: pin.top,
+                      left: pin.left,
+                      animationDelay: `${pin.delay}s`,
+                    }}
+                  >
+                    <div className="relative flex flex-col items-center">
+                      <div
+                        className="px-1.5 py-0.5 rounded text-[9px] font-bold text-white mb-1 whitespace-nowrap shadow-md"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                        }}
+                      >
+                        {pin.label}
+                      </div>
+                      <div
+                        className="w-7 h-7 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-[10px] font-black"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                        }}
+                      >
+                        {pin.day}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </ChatFrame>
         )}
 
-        {/* SCENE 8: CTA — bold and punchy */}
-        {scene === "cta" && (
+        {/* SCENE 7: PAYOFF — big text reveal */}
+        {scene === "payoff" && (
           <div
-            className="absolute inset-0 flex items-center justify-center px-6"
+            className="absolute inset-0 flex items-center justify-center overflow-hidden"
             style={{
               background:
-                "radial-gradient(ellipse at center, hsl(234 62% 30%) 0%, hsl(234 62% 15%) 60%, black 100%)",
+                "radial-gradient(ellipse at center, hsl(234 62% 30%) 0%, hsl(234 62% 12%) 60%, black 100%)",
             }}
           >
-            <div className="text-center">
-              <h2
-                className="text-white text-6xl font-extrabold tracking-tight leading-[0.95] animate-promo-blur-in"
+            <div className="text-center px-6">
+              <p
+                className="text-white/60 text-base font-semibold uppercase tracking-[0.2em] mb-5 animate-promo-fade-up"
               >
-                Your trip.
+                No tabs. No stress.
+              </p>
+              <h2
+                className="text-white font-black tracking-[-0.03em] leading-[0.95] animate-promo-blur-in"
+                style={{
+                  fontSize: "clamp(3rem, 13vw, 5rem)",
+                  animationDelay: "0.2s",
+                }}
+              >
+                Just
                 <br />
                 <span
                   style={{
                     background:
-                      "linear-gradient(135deg, hsl(234 62% 72%), hsl(260 70% 75%))",
+                      "linear-gradient(135deg, hsl(40 100% 60%), hsl(340 90% 60%))",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
-                    paddingBottom: "0.15em",
+                    paddingBottom: "0.1em",
                     display: "inline-block",
                   }}
                 >
-                  One chat.
+                  Jolliday.
                 </span>
               </h2>
               <p
-                className="mt-6 text-white/80 text-lg animate-promo-fade-up"
-                style={{ animationDelay: "0.4s" }}
+                className="mt-6 text-white/90 text-xl font-bold animate-promo-fade-up"
+                style={{ animationDelay: "0.8s" }}
               >
-                Link in bio 👆
+                try it free 👇
               </p>
             </div>
           </div>
         )}
 
-        {/* SCENE 9: END */}
+        {/* SCENE 8: END */}
         {scene === "end" && (
           <div
             className="absolute inset-0 flex items-center justify-center"
             style={{
               background:
-                "radial-gradient(ellipse at center, hsl(234 62% 25%) 0%, hsl(234 62% 8%) 50%, black 100%)",
+                "radial-gradient(ellipse at center, hsl(234 62% 25%) 0%, hsl(234 62% 6%) 60%, black 100%)",
             }}
           >
             <div className="text-center px-6">
@@ -771,7 +888,7 @@ const Promox = () => {
                 </div>
               </div>
               <h2
-                className="text-white text-5xl font-extrabold tracking-tight animate-promo-fade-up"
+                className="text-white text-5xl font-black tracking-tight animate-promo-fade-up"
                 style={{ animationDelay: "0.15s" }}
               >
                 Jolliday
@@ -783,10 +900,10 @@ const Promox = () => {
                 jolliday.online
               </p>
               <p
-                className="mt-3 text-white/60 text-sm animate-promo-fade-up"
+                className="mt-4 text-white/60 text-sm animate-promo-fade-up"
                 style={{ animationDelay: "0.65s" }}
               >
-                Try free 👇
+                link in bio 👆
               </p>
             </div>
           </div>
