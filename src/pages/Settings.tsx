@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Compass, ArrowLeft, LogOut, Save, Crown, Shield, MapPin, Utensils, CreditCard, Loader2 } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
 import CancelSubscriptionModal from "@/components/CancelSubscriptionModal";
 import { toast } from "sonner";
 import { startCheckout } from "@/lib/stripeCheckout";
@@ -146,7 +145,7 @@ const Settings = () => {
               <span className="font-semibold">Settings</span>
             </div>
           </div>
-          <ThemeToggle />
+
         </nav>
       </header>
 

@@ -24,7 +24,7 @@ import Admin from "./pages/Admin";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
     <QueryClientProvider client={queryClient}>
       <TripProvider>
         <TooltipProvider>

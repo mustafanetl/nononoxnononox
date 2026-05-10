@@ -42,7 +42,7 @@ const MobileStickyCTA = () => {
           Plan your next trip
         </div>
         <Link to="/chat">
-          <Button size="sm" className="rounded-full gap-1">
+          <Button size="sm" className="min-h-[44px] min-w-[44px] rounded-full gap-1">
             Get started
             <ArrowRight className="h-4 w-4" />
           </Button>

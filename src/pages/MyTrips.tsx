@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Compass, Plus, MapPin, Calendar, Trash2, ArrowLeft, Play, Settings } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { toast } from "sonner";
 
@@ -77,7 +76,6 @@ const MyTrips = () => {
                 <Settings className="h-4 w-4" />
               </Button>
             </Link>
-            <ThemeToggle />
             <Link to="/chat">
               <Button size="sm" className="gap-1">
                 <Plus className="h-4 w-4" /> New Trip
