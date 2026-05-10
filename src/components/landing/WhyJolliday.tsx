@@ -5,55 +5,55 @@ const features = [
     icon: CalendarDays,
     title: "Day-by-day itinerary",
     description:
-      "A real structured plan — morning, afternoon, evening — not just a list of suggestions.",
+      "Morning, afternoon, evening — a real structured plan, not just a list.",
   },
   {
     icon: Tag,
-    title: "Real-time prices",
+    title: "Live prices",
     description:
-      "Actual flight and hotel prices pulled live, not estimates from months ago.",
+      "Real flight and hotel prices, pulled now — not estimates from months ago.",
   },
   {
     icon: Link2,
-    title: "One-click booking links",
+    title: "Book in one click",
     description:
-      "Every hotel and flight comes with a direct link to book. No copy-pasting, no tab switching.",
+      "Every hotel and flight has a direct link. No tab-switching needed.",
   },
   {
     icon: Share2,
-    title: "Share with your travel crew",
+    title: "Share with friends",
     description:
-      "Send your itinerary to friends or family with one link. Everyone stays on the same page.",
+      "Send your plan to your travel crew. Everyone stays on the same page.",
   },
 ];
 
 const WhyJolliday = () => {
   return (
-    <section className="border-t border-b border-border">
+    <section className="bg-muted/30">
       <div className="container mx-auto px-4 py-20 md:py-28 max-w-5xl">
-        <div className="text-center max-w-2xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-            Why Jolliday — not just ChatGPT
+        <div className="text-center max-w-xl mx-auto mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+            Everything you need in one place
           </h2>
-          <p className="mt-4 text-base md:text-lg text-muted-foreground">
-            ChatGPT gives you ideas. Jolliday gives you a trip.
+          <p className="mt-3 text-muted-foreground">
+            No more jumping between 10 tabs to plan a trip.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-5 md:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2">
           {features.map((f) => {
             const Icon = f.icon;
             return (
               <div
                 key={f.title}
-                className="rounded-2xl border border-border bg-card p-6 flex items-start gap-4"
+                className="rounded-2xl border border-border bg-background p-6 flex items-start gap-4"
               >
-                <div className="w-11 h-11 rounded-xl border border-border bg-background flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-foreground/5 border border-border flex items-center justify-center shrink-0">
                   <Icon className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold tracking-tight">{f.title}</h3>
-                  <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+                  <h3 className="text-sm font-semibold">{f.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                     {f.description}
                   </p>
                 </div>
