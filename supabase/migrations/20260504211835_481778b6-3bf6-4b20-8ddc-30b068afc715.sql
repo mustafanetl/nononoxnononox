@@ -64,9 +64,9 @@ CREATE POLICY "Admins can read email send log"
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
--- Grant admin to mustafa@gmail.com
-INSERT INTO public.user_roles (user_id, role)
-VALUES ('74a198ef-dab4-4364-82f8-7b0a5d4a8696', 'admin');
+-- Grant admin to mustafa@gmail.com (will be added after first signup)
+-- INSERT INTO public.user_roles (user_id, role)
+-- VALUES ('74a198ef-dab4-4364-82f8-7b0a5d4a8696', 'admin');
 
 -- Helper view for admin: list users with email + profile + subscription
 CREATE OR REPLACE VIEW public.admin_users_overview
