@@ -20,8 +20,8 @@ import Logo, { LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 
 /**
- * /promo — cinematic showcase with voice narration + transition sounds.
- * Records as a full promo video when you screen-capture this page.
+ * /promo — cinematic showcase with high-quality synthesized sound FX.
+ * No voice-over, no music — just crisp, purposeful sound design.
  */
 
 type Scene =
@@ -35,16 +35,17 @@ type Scene =
   | "cta"
   | "end";
 
+// Paced for feel — snappy where it matters, room to breathe where visuals shine
 const SCENE_DURATIONS: Record<Scene, number> = {
-  intro: 3000,
-  problem: 4000,
-  typing: 5000,
+  intro: 2800,
+  problem: 3200,
+  typing: 4800,
   chat: 5000,
   itinerary: 6500,
   hotel: 5500,
-  map: 5500,
-  cta: 4000,
-  end: 4000,
+  map: 5800,
+  cta: 3500,
+  end: 3800,
 };
 
 const SCENE_ORDER: Scene[] = [
@@ -58,19 +59,6 @@ const SCENE_ORDER: Scene[] = [
   "cta",
   "end",
 ];
-
-// Voice-over text per scene — matches what's on screen
-const SCENE_NARRATION: Record<Scene, string> = {
-  intro: "Meet Jolliday. Your AI trip planner.",
-  problem: "Stop juggling twenty browser tabs. Just ask Jolliday.",
-  typing: "Describe any trip, anywhere in the world.",
-  chat: "Jolliday builds your entire plan in under a minute.",
-  itinerary: "Day by day. Every neighborhood. Every experience.",
-  hotel: "Real flights. Real hotels. Real prices.",
-  map: "Every stop pinned on a map. Walking times included.",
-  cta: "Your next trip is one message away.",
-  end: "Jolliday dot online. Try it free.",
-};
 
 const TOTAL_DURATION = SCENE_ORDER.reduce(
   (sum, s) => sum + SCENE_DURATIONS[s],
@@ -92,8 +80,234 @@ const TOKYO_IMAGES = {
     "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=450&q=80&auto=format&fit=crop",
 };
 
-// The exact sentence shown in text box AND chat bubble
 const PROMPT_TEXT = "5 days in Tokyo for a couple, love food 🍣";
+
+/**
+ * High-quality sound synthesis toolkit.
+ * All sounds generated procedurally via Web Audio API — no files required.
+ */
+class SoundFX {
+  ctx: AudioContext;
+  master: GainNode;
+  noiseBuffer: AudioBuffer;
+
+  constructor() {
+    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.6;
+    this.master.connect(this.ctx.destination);
+
+    // Pre-generate white noise buffer for texture
+    const len = this.ctx.sampleRate * 1;
+    this.noiseBuffer = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const data = this.noiseBuffer.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  }
+
+  resume() {
+    if (this.ctx.state === "suspended") this.ctx.resume();
+  }
+
+  // Mechanical keyboard click — short, crisp, slightly detuned per press
+  typeClick() {
+    const now = this.ctx.currentTime;
+    const freq = 1800 + Math.random() * 800;
+
+    // Body: short sine ping
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.03);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+    osc.connect(gain).connect(this.master);
+    osc.start(now);
+    osc.stop(now + 0.05);
+
+    // Click: short noise burst through high-pass
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+    const hp = this.ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 3000;
+    const ng = this.ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, now);
+    ng.gain.exponentialRampToValueAtTime(0.05, now + 0.001);
+    ng.gain.exponentialRampToValueAtTime(0.0001, now + 0.02);
+    noise.connect(hp).connect(ng).connect(this.master);
+    noise.start(now);
+    noise.stop(now + 0.03);
+  }
+
+  // Cinematic whoosh — filtered noise sweeping low→high + sub bump
+  whoosh() {
+    const now = this.ctx.currentTime;
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.Q.value = 1.2;
+    bp.frequency.setValueAtTime(400, now);
+    bp.frequency.exponentialRampToValueAtTime(4000, now + 0.45);
+    const ng = this.ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, now);
+    ng.gain.exponentialRampToValueAtTime(0.22, now + 0.08);
+    ng.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+    noise.connect(bp).connect(ng).connect(this.master);
+    noise.start(now);
+    noise.stop(now + 0.65);
+
+    // Sub thump
+    const sub = this.ctx.createOscillator();
+    const sg = this.ctx.createGain();
+    sub.type = "sine";
+    sub.frequency.setValueAtTime(80, now);
+    sub.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+    sg.gain.setValueAtTime(0.0001, now);
+    sg.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
+    sg.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+    sub.connect(sg).connect(this.master);
+    sub.start(now);
+    sub.stop(now + 0.4);
+  }
+
+  // Sparkle — cascading high-frequency chimes (magical/AI feel)
+  sparkle() {
+    const now = this.ctx.currentTime;
+    const notes = [1760, 2349, 2637, 3136, 3520]; // A6 D7 E7 G7 A7
+    notes.forEach((f, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = f;
+      const t0 = now + i * 0.06;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+      osc.connect(gain).connect(this.master);
+      osc.start(t0);
+      osc.stop(t0 + 0.55);
+    });
+  }
+
+  // UI pop — bubbly chat message arrival
+  pop() {
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(900, now + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.15, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+    osc.connect(gain).connect(this.master);
+    osc.start(now);
+    osc.stop(now + 0.22);
+  }
+
+  // Success chime — two-note "ding"
+  success() {
+    const now = this.ctx.currentTime;
+    const notes = [
+      { f: 1046, t: 0 }, // C6
+      { f: 1568, t: 0.12 }, // G6
+    ];
+    notes.forEach(({ f, t }) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = f;
+      const t0 = now + t;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
+      osc.connect(gain).connect(this.master);
+      osc.start(t0);
+      osc.stop(t0 + 0.6);
+    });
+  }
+
+  // Card drop — deep woody thud
+  thud() {
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(55, now + 0.15);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.3, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+    osc.connect(gain).connect(this.master);
+    osc.start(now);
+    osc.stop(now + 0.22);
+  }
+
+  // Pin drop — short "tk" click
+  pin() {
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(1200, now);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.05);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.1, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+    osc.connect(gain).connect(this.master);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
+  // Deep hit — big reveal (end card)
+  bigHit() {
+    const now = this.ctx.currentTime;
+
+    // Boom
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(60, now);
+    osc.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.5, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+    osc.connect(gain).connect(this.master);
+    osc.start(now);
+    osc.stop(now + 0.65);
+
+    // Impact noise
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 800;
+    const ng = this.ctx.createGain();
+    ng.gain.setValueAtTime(0.3, now);
+    ng.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+    noise.connect(lp).connect(ng).connect(this.master);
+    noise.start(now);
+    noise.stop(now + 0.35);
+  }
+}
+
+// Which sound each scene triggers on entry
+const SCENE_SOUND: Record<Scene, keyof SoundFX | null> = {
+  intro: "sparkle",
+  problem: "whoosh",
+  typing: "whoosh",
+  chat: "pop",
+  itinerary: "whoosh",
+  hotel: "whoosh",
+  map: "whoosh",
+  cta: "whoosh",
+  end: "bigHit",
+};
 
 const Promo = () => {
   const [scene, setScene] = useState<Scene>("intro");
@@ -103,7 +317,7 @@ const Promo = () => {
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const startTimeRef = useRef<number>(0);
   const rafRef = useRef<number>();
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  const sfxRef = useRef<SoundFX | null>(null);
 
   // Preload images
   useEffect(() => {
@@ -121,71 +335,17 @@ const Promo = () => {
     return () => clearTimeout(t);
   }, []);
 
-  // Transition sound — short synthesized whoosh
-  const playTransitionSound = () => {
-    if (!audioCtxRef.current) return;
-    const ctx = audioCtxRef.current;
-    const now = ctx.currentTime;
-
-    // High-pitched rising tone for punchy transition
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(600, now);
-    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.3);
-  };
-
-  // Play narration for a scene
-  const speakScene = (s: Scene) => {
-    if (!("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(SCENE_NARRATION[s]);
-    u.rate = 1.05;
-    u.pitch = 1;
-    u.volume = 1;
-    // Prefer a clean english voice
-    const voices = window.speechSynthesis.getVoices();
-    const preferred =
-      voices.find((v) => /(Samantha|Google US|Microsoft Aria|Alex|Jenny)/i.test(v.name)) ||
-      voices.find((v) => v.lang === "en-US") ||
-      voices[0];
-    if (preferred) u.voice = preferred;
-    window.speechSynthesis.speak(u);
-  };
-
   const startPlayback = () => {
-    // Init audio context (requires user gesture)
-    if (!audioCtxRef.current) {
-      try {
-        audioCtxRef.current = new (window.AudioContext ||
-          (window as any).webkitAudioContext)();
-      } catch {}
-    }
-
-    // Trigger voices to load in some browsers
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.getVoices();
-    }
-
+    if (!sfxRef.current) sfxRef.current = new SoundFX();
+    sfxRef.current.resume();
     setScene("intro");
     setProgress(0);
     setPlaying(true);
-
-    // Kick off first scene sound + narration immediately
-    setTimeout(() => {
-      playTransitionSound();
-      speakScene("intro");
-    }, 50);
+    // Intro sound
+    setTimeout(() => sfxRef.current?.sparkle(), 100);
   };
 
-  // Scene transitions with sound/narration
+  // Scene transitions with sound FX
   useEffect(() => {
     if (!playing || !imagesLoaded) return;
 
@@ -198,8 +358,11 @@ const Promo = () => {
       elapsed += SCENE_DURATIONS[SCENE_ORDER[i - 1]];
       const t = setTimeout(() => {
         setScene(s);
-        playTransitionSound();
-        speakScene(s);
+        const sfx = sfxRef.current;
+        const soundName = SCENE_SOUND[s];
+        if (sfx && soundName && typeof (sfx as any)[soundName] === "function") {
+          (sfx as any)[soundName]();
+        }
       }, elapsed);
       timeouts.push(t);
     });
@@ -219,29 +382,78 @@ const Promo = () => {
     return () => {
       timeouts.forEach(clearTimeout);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     };
   }, [playing, imagesLoaded]);
 
-  // Typewriter — iterate by graphemes so emoji counts as 1 character
+  // Typewriter with per-keystroke click sounds
   useEffect(() => {
     if (scene !== "typing") return;
     setTypedText("");
-    const chars = [...PROMPT_TEXT]; // grapheme-aware split
+    const chars = [...PROMPT_TEXT];
     let i = 0;
     const interval = setInterval(() => {
       i++;
       setTypedText(chars.slice(0, i).join(""));
+      // Click on every character (except the emoji for clean sound)
+      if (i <= chars.length && chars[i - 1] !== "🍣") {
+        sfxRef.current?.typeClick();
+      }
       if (i >= chars.length) clearInterval(interval);
     }, 75);
     return () => clearInterval(interval);
+  }, [scene]);
+
+  // Chat scene — schedule pop + chime sounds aligned with animations
+  useEffect(() => {
+    if (scene !== "chat") return;
+    const sfx = sfxRef.current;
+    if (!sfx) return;
+    // Pop already fired on scene entry (user message)
+    const t1 = setTimeout(() => sfx.pop(), 900); // "Picking neighborhoods"
+    const t2 = setTimeout(() => sfx.pop(), 1800); // "Finding sushi"
+    const t3 = setTimeout(() => sfx.pop(), 2700); // "Pricing"
+    const t4 = setTimeout(() => sfx.success(), 3600); // "Ready" chime
+    return () => [t1, t2, t3, t4].forEach(clearTimeout);
+  }, [scene]);
+
+  // Itinerary — thud per card + sparkle at end
+  useEffect(() => {
+    if (scene !== "itinerary") return;
+    const sfx = sfxRef.current;
+    if (!sfx) return;
+    const timers: NodeJS.Timeout[] = [];
+    for (let i = 0; i < 5; i++) {
+      timers.push(setTimeout(() => sfx.thud(), 300 + i * 150));
+    }
+    timers.push(setTimeout(() => sfx.sparkle(), 1500));
+    return () => timers.forEach(clearTimeout);
+  }, [scene]);
+
+  // Hotel — 2 pops for 2 cards
+  useEffect(() => {
+    if (scene !== "hotel") return;
+    const sfx = sfxRef.current;
+    if (!sfx) return;
+    const t1 = setTimeout(() => sfx.pop(), 220);
+    const t2 = setTimeout(() => sfx.pop(), 370);
+    return () => [t1, t2].forEach(clearTimeout);
+  }, [scene]);
+
+  // Map — pin drop sounds
+  useEffect(() => {
+    if (scene !== "map") return;
+    const sfx = sfxRef.current;
+    if (!sfx) return;
+    const delays = [300, 600, 900, 1200, 1500];
+    const timers = delays.map((d) => setTimeout(() => sfx.pin(), d));
+    return () => timers.forEach(clearTimeout);
   }, [scene]);
 
   const replay = () => {
     startPlayback();
   };
 
-  // Show play screen until user clicks
+  // Pre-play screen
   if (!playing && progress === 0) {
     return (
       <div
@@ -266,7 +478,7 @@ const Promo = () => {
           <h1 className="text-white text-5xl sm:text-6xl font-extrabold tracking-tight mb-3">
             Jolliday
           </h1>
-          <p className="text-white/60 mb-8">A quick tour with sound</p>
+          <p className="text-white/60 mb-8">A 45-second tour</p>
           <Button
             onClick={startPlayback}
             disabled={!imagesLoaded}
@@ -278,12 +490,10 @@ const Promo = () => {
             }}
           >
             <Play className="h-5 w-5 fill-white" />
-            {imagesLoaded ? "Play with sound" : "Loading…"}
+            {imagesLoaded ? "Play" : "Loading…"}
             <Volume2 className="h-5 w-5" />
           </Button>
-          <p className="mt-4 text-white/40 text-xs">
-            Unmute your device to hear the narration
-          </p>
+          <p className="mt-4 text-white/40 text-xs">Unmute for sound</p>
         </div>
       </div>
     );
@@ -291,7 +501,6 @@ const Promo = () => {
 
   return (
     <div className="fixed inset-0 bg-black overflow-hidden select-none">
-      {/* Progress bar */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 z-50">
         <div
           className="h-full"
@@ -304,7 +513,6 @@ const Promo = () => {
         />
       </div>
 
-      {/* Replay overlay */}
       {!playing && progress >= 100 && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="text-center">
@@ -376,7 +584,7 @@ const Promo = () => {
         </div>
       )}
 
-      {/* SCENE 2: PROBLEM — fixed bottom text clipping */}
+      {/* SCENE 2: PROBLEM */}
       {scene === "problem" && (
         <div className="absolute inset-0 flex items-center justify-center bg-[hsl(0_0%_6%)]">
           <div className="max-w-4xl px-8 text-center py-8">
@@ -402,14 +610,14 @@ const Promo = () => {
             </div>
             <h2
               className="text-white text-4xl sm:text-5xl font-extrabold tracking-tight animate-promo-fade-up leading-tight"
-              style={{ animationDelay: "0.6s" }}
+              style={{ animationDelay: "0.5s" }}
             >
               Planning a trip?
             </h2>
             <h2
-              className="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight animate-promo-fade-up leading-tight pb-2"
+              className="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight animate-promo-fade-up leading-tight"
               style={{
-                animationDelay: "1.2s",
+                animationDelay: "1s",
                 background:
                   "linear-gradient(135deg, hsl(234 62% 62%), hsl(260 70% 65%))",
                 WebkitBackgroundClip: "text",
@@ -461,7 +669,7 @@ const Promo = () => {
         </div>
       )}
 
-      {/* SCENE 4: CHAT — same prompt text */}
+      {/* SCENE 4: CHAT */}
       {scene === "chat" && (
         <div className="absolute inset-0 flex items-center justify-center bg-white">
           <div className="w-full max-w-2xl px-6">
@@ -611,7 +819,7 @@ const Promo = () => {
         </div>
       )}
 
-      {/* SCENE 6: HOTEL + FLIGHT */}
+      {/* SCENE 6: HOTEL */}
       {scene === "hotel" && (
         <div
           className="absolute inset-0 flex items-center justify-center"
