@@ -455,3 +455,57 @@
     animation: promo-dash 3s linear infinite;
   }
 }
+
+
+@layer utilities {
+  /* Punchier promo animations */
+  @keyframes promo-blur-in {
+    from { opacity: 0; transform: scale(0.9); filter: blur(16px); }
+    to   { opacity: 1; transform: scale(1);   filter: blur(0);    }
+  }
+  .animate-promo-blur-in {
+    animation: promo-blur-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes promo-spin-in {
+    0%   { opacity: 0; transform: scale(0.4) rotate(-180deg); }
+    70%  { opacity: 1; transform: scale(1.1) rotate(10deg);   }
+    100% { opacity: 1; transform: scale(1)   rotate(0);       }
+  }
+  .animate-promo-spin-in {
+    animation: promo-spin-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes promo-card-drop {
+    from { opacity: 0; transform: translateY(-40px) rotate(-3deg); filter: blur(8px); }
+    to   { opacity: 1; transform: translateY(0)    rotate(0);      filter: blur(0);   }
+  }
+  .animate-promo-card-drop {
+    animation: promo-card-drop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes promo-ken-burns {
+    from { transform: scale(1); }
+    to   { transform: scale(1.08); }
+  }
+  .animate-promo-ken-burns {
+    animation: promo-ken-burns 6s ease-out both;
+  }
+
+  @keyframes promo-tab-fly {
+    from { opacity: 0; transform: translateY(-20px) scale(0.8); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);   }
+  }
+  .animate-promo-tab-fly {
+    animation: promo-tab-fly 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes promo-stat-pop {
+    0%   { opacity: 0; transform: scale(0.3); }
+    60%  { opacity: 1; transform: scale(1.15); }
+    100% { opacity: 1; transform: scale(1);    }
+  }
+  .animate-promo-stat-pop {
+    animation: promo-stat-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+}
