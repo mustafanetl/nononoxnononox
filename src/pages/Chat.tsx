@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Menu, Compass, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown, MoreHorizontal } from "lucide-react";
+import { ArrowUp, Plus, Menu, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown, MoreHorizontal, Sparkles, Plane, Calendar, Users, Mountain, Utensils, PanelLeftClose } from "lucide-react";
+import Logo, { LogoMark } from "@/components/Logo";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { useAuth } from "@/hooks/useAuth";
 import FlightCard, { FlightData } from "@/components/FlightCard";
@@ -1031,31 +1032,61 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   return (
     <div className="h-screen flex bg-background">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} fixed md:relative md:translate-x-0 z-40 w-64 h-full chat-sidebar flex flex-col transition-transform duration-200`}>
-        <div className="p-3">
-          <Button onClick={clearChat} variant="outline" className="w-full justify-start gap-2">
-            <Plus className="h-4 w-4" /> New chat
+      <aside className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} fixed md:relative md:translate-x-0 z-40 w-72 h-full bg-[hsl(0_0%_98%)] border-r border-border flex flex-col transition-transform duration-200`}>
+        {/* Sidebar header with logo */}
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <Logo size="sm" />
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden h-8 w-8"
+          >
+            <PanelLeftClose className="h-4 w-4" />
           </Button>
         </div>
-        <div className="flex-1 overflow-y-auto p-3">
-          <p className="text-xs text-muted-foreground px-2 mb-2">Recent</p>
+
+        {/* New chat button */}
+        <div className="p-3">
+          <Button
+            onClick={clearChat}
+            className="w-full justify-start gap-2 h-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-medium shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> New trip
+          </Button>
+        </div>
+
+        {/* Conversations list */}
+        <div className="flex-1 overflow-y-auto px-3 pb-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground px-2 mb-2 mt-1">
+            Recent trips
+          </p>
           {conversations.length === 0 ? (
-            <p className="text-sm text-muted-foreground px-2">No previous chats</p>
+            <div className="px-2 py-6 text-center">
+              <p className="text-xs text-muted-foreground">
+                Your trips will appear here
+              </p>
+            </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {conversations.map(c => (
                 <div
                   key={c.id}
-                  className={`group flex items-center gap-1 px-2 py-1.5 rounded-lg cursor-pointer text-sm transition-colors ${
-                    c.id === activeId ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50"
+                  className={`group flex items-center gap-1 px-3 py-2 rounded-lg cursor-pointer text-sm transition-colors ${
+                    c.id === activeId
+                      ? "bg-white border border-border text-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-white hover:text-foreground"
                   }`}
                   onClick={() => switchChat(c.id)}
                 >
+                  <MapPin className="h-3.5 w-3.5 shrink-0 opacity-60" />
                   <span className="flex-1 truncate">{c.title}</span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 hover:bg-destructive/10 hover:text-destructive"
                     onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
                   >
                     <Trash2 className="h-3 w-3" />
@@ -1065,50 +1096,67 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             </div>
           )}
         </div>
-        <div className="p-3 border-t border-border space-y-2">
+
+        {/* Sidebar footer */}
+        <div className="p-3 border-t border-border space-y-1">
           {user ? (
-            <div className="flex items-center gap-2">
-              <Link to="/my-trips" className="flex-1 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <>
+              <Link
+                to="/my-trips"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white hover:text-foreground transition-colors"
+              >
                 <User className="h-4 w-4" /> My Trips
               </Link>
-              <Link to="/settings">
-                <Button variant="ghost" size="icon" className="h-7 w-7" title="Settings">
-                  <Settings className="h-3.5 w-3.5" />
-                </Button>
+              <Link
+                to="/settings"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white hover:text-foreground transition-colors"
+              >
+                <Settings className="h-4 w-4" /> Settings
               </Link>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut}>
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+              <button
+                onClick={signOut}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white hover:text-foreground transition-colors"
+              >
+                <LogOut className="h-4 w-4" /> Sign out
+              </button>
+            </>
           ) : (
-            <Link to="/auth" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              to="/auth"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white hover:text-foreground transition-colors"
+            >
               <User className="h-4 w-4" /> Sign in
             </Link>
           )}
-          <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <Compass className="h-4 w-4" /> Back to home
-          </Link>
         </div>
       </aside>
 
-      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 md:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="flex items-center justify-between gap-3 p-3 border-b border-border">
+      <main className="flex-1 flex flex-col min-w-0 bg-white">
+        <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-white/95 backdrop-blur-sm sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden">
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden h-9 w-9">
               <Menu className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-2">
-              <Compass className="h-5 w-5" />
-              <span className="font-semibold hidden min-[400px]:inline">Jolliday</span>
+            <div className="flex items-center gap-2 md:hidden">
+              <Logo size="sm" variant="mark-only" />
+              <span className="font-bold text-base">Jolliday</span>
             </div>
+            {hasMessages && (
+              <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <span className="font-medium text-foreground">
+                  {conversations.find(c => c.id === activeId)?.title || "New trip"}
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1">
             {compareItems.length > 0 && (
               <Button variant="ghost" size="icon" onClick={() => setCompareOpen(true)} className="h-9 w-9 relative">
                 <GitCompare className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">
                   {compareItems.length}
                 </span>
               </Button>
@@ -1140,26 +1188,66 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-4 py-8">
             {!hasMessages ? (
-              <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-full bg-foreground flex items-center justify-center">
-                    <Compass className="h-6 w-6 text-background" />
-                  </div>
+              <div className="flex flex-col items-center justify-center min-h-[70vh] animate-fade-in">
+                {/* Big logo */}
+                <div className="mb-6">
+                  <Logo size="xl" variant="mark-only" />
                 </div>
-                <h1 className="text-2xl font-semibold mb-2">
+
+                {/* Greeting */}
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground text-center mb-3">
                   {preferences.displayName
-                    ? `Hey ${preferences.displayName}, what are we planning?`
-                    : "What are you up to?"}
+                    ? `Hey ${preferences.displayName},`
+                    : "Where to next?"}
                 </h1>
-                <p className="text-muted-foreground text-center mb-8">
-                  Plan a trip, find a date spot, or discover what's happening near you.
+                <p className="text-base md:text-lg text-muted-foreground text-center mb-10 max-w-lg">
+                  {preferences.displayName
+                    ? "Where are we going today? Tell me about your dream trip."
+                    : "I'm Jolliday, your AI travel planner. Tell me about the trip you want."}
                 </p>
-                <div className="grid grid-cols-2 gap-2 w-full max-w-md">
-                  {suggestions.map((s) => (
-                    <button key={s} onClick={() => sendMessage(s)} className="p-3 text-left text-sm border border-border rounded-xl hover:bg-muted active:scale-95 transition-all">
-                      {s}
-                    </button>
-                  ))}
+
+                {/* Quick start categories */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 w-full max-w-2xl mb-8">
+                  {[
+                    { icon: Plane, label: "Weekend trip", q: "Plan a quick weekend getaway" },
+                    { icon: Mountain, label: "Adventure", q: "Plan an adventure trip" },
+                    { icon: Utensils, label: "Food & culture", q: "Plan a food & culture trip" },
+                    { icon: Users, label: "Family", q: "Plan a family vacation" },
+                  ].map((cat) => {
+                    const Icon = cat.icon;
+                    return (
+                      <button
+                        key={cat.label}
+                        onClick={() => sendMessage(cat.q)}
+                        className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-border bg-white hover:border-primary/30 hover:bg-primary/[0.02] hover:-translate-y-0.5 transition-all duration-200 group"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all">
+                          <Icon className="h-5 w-5 text-primary group-hover:text-white transition-colors" />
+                        </div>
+                        <span className="text-xs sm:text-sm font-medium text-foreground">
+                          {cat.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Smart suggestions */}
+                <div className="w-full max-w-2xl">
+                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3 text-center">
+                    Or try one of these
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {suggestions.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => sendMessage(s)}
+                        className="px-4 py-2 text-sm rounded-full border border-border bg-white text-muted-foreground hover:border-primary/30 hover:text-primary hover:bg-primary/5 active:scale-95 transition-all duration-200"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : (
@@ -1290,8 +1378,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                         </div>
                       ) : (
                         <div className="flex gap-3">
-                          <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0">
-                            <Compass className="h-4 w-4 text-background" />
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" }}>
+                            <LogoMark size={16} color="white" />
                           </div>
                           <div className="flex-1 min-w-0">
                             {parsed.text && !hideLatestResponse && (
@@ -1432,8 +1520,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 )}
                 {qaStatus && !isCraftingPlan && (
                   <div className="flex gap-3 animate-fade-in">
-                    <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0">
-                      <Compass className="h-4 w-4 text-background animate-spin" style={{ animationDuration: "2s" }} />
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" }}>
+                      <LogoMark size={16} color="white" className="animate-spin" />
                     </div>
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground">
                       <span className="w-1.5 h-1.5 rounded-full bg-foreground/60 animate-pulse" />
@@ -1460,51 +1548,66 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           </div>
         )}
 
-        <div className="p-4 pb-6">
+        <div className="px-4 pt-2 pb-4 bg-gradient-to-t from-white via-white to-transparent">
           <div className="max-w-3xl mx-auto">
             {planGenerated && !isPremium && !subLoading ? (
-              <div className="chat-input-container p-4 text-center">
-                <p className="text-sm font-medium text-foreground mb-1">
-                  ✨ Your plan is ready — don't miss out
+              <div className="rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-5 text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-primary/20 mb-3">
+                  <Crown className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-semibold text-primary">
+                    Plan ready
+                  </span>
+                </div>
+                <p className="text-base font-bold text-foreground mb-1">
+                  Your trip is ready to unlock
                 </p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Start your 3-day free trial to unlock everything and keep chatting
+                <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
+                  Start your 3-day free trial to view the full plan and keep chatting
                 </p>
                 <Button
                   onClick={() => setShowPaywall(true)}
-                  className="gap-2"
-                  variant="default"
+                  size="lg"
+                  className="gap-2 h-12 px-6 rounded-full font-semibold shadow-lg shadow-primary/20"
+                  style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" }}
                 >
                   <Crown className="h-4 w-4" />
-                  Start Free Trial — 3 Days Free
+                  Start Free Trial
                 </Button>
-                <p className="text-center text-muted-foreground mt-2" style={{ fontSize: "12px" }}>
-                  3-day free trial · Cancel anytime
+                <p className="text-xs text-muted-foreground mt-3">
+                  3 days free · Cancel anytime
                 </p>
               </div>
             ) : (
               <>
                 <form onSubmit={handleSubmit}>
-                  <div className="chat-input-container p-2">
-                    <div className="flex items-end gap-2">
-                      <textarea
-                        ref={textareaRef}
-                        placeholder="Message Jolliday..."
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        disabled={isLoading}
-                        rows={1}
-                        className="flex-1 bg-transparent px-3 py-2 text-sm resize-none focus:outline-none min-h-[40px] max-h-[200px]"
-                      />
-                      <VoiceInput onTranscript={(t) => setInput(prev => prev ? prev + " " + t : t)} disabled={isLoading} />
-                      <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="h-9 w-9 rounded-lg shrink-0">
+                  <div className="relative rounded-3xl border-2 border-border bg-white shadow-[0_4px_24px_-4px_rgba(45,66,179,0.08)] hover:border-primary/30 focus-within:border-primary focus-within:shadow-[0_8px_32px_-8px_rgba(45,66,179,0.2)] transition-all duration-200">
+                    <textarea
+                      ref={textareaRef}
+                      placeholder="Message Jolliday..."
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      disabled={isLoading}
+                      rows={1}
+                      className="w-full bg-transparent px-5 pt-4 pb-2 text-base text-foreground placeholder:text-muted-foreground/60 resize-none focus:outline-none min-h-[56px] max-h-[200px] leading-relaxed"
+                    />
+                    <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-1">
+                      <div className="flex items-center gap-1">
+                        <VoiceInput onTranscript={(t) => setInput(prev => prev ? prev + " " + t : t)} disabled={isLoading} />
+                      </div>
+                      <Button
+                        type="submit"
+                        size="icon"
+                        disabled={!input.trim() || isLoading}
+                        className="h-10 w-10 rounded-xl shrink-0 shadow-md disabled:opacity-40 disabled:shadow-none"
+                        style={input.trim() && !isLoading ? { background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" } : undefined}
+                      >
                         <ArrowUp className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 </form>
-                <p className="text-xs text-muted-foreground text-center mt-2">
+                <p className="text-[11px] text-muted-foreground text-center mt-2.5">
                   Jolliday can make mistakes. Verify travel details before booking.
                 </p>
               </>

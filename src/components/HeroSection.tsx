@@ -109,36 +109,8 @@ const HeroSection = () => {
 
       <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-12 sm:py-16 md:py-20">
         <div className="max-w-4xl mx-auto text-center">
-          {/* Trust badge */}
-          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white border border-border shadow-sm mb-6 md:mb-8 animate-fade-in">
-            <div className="flex -space-x-2">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="w-5 h-5 rounded-full border-2 border-white"
-                  style={{
-                    background: `linear-gradient(135deg, hsl(${
-                      200 + i * 30
-                    } 70% 55%), hsl(${260 + i * 20} 70% 60%))`,
-                  }}
-                />
-              ))}
-            </div>
-            <span className="text-xs sm:text-sm font-medium text-foreground">
-              Trusted by <span className="font-bold">48,000+</span> travellers
-            </span>
-            <div className="flex gap-0.5 ml-1">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className="h-3 w-3 fill-amber-400 text-amber-400"
-                />
-              ))}
-            </div>
-          </div>
-
           {/* Main headline */}
-          <h1 className="font-display text-[2.75rem] leading-[1.02] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[5.5rem] xl:text-[6.25rem] font-extrabold tracking-[-0.03em] text-foreground">
+          <h1 className="font-display text-[2.75rem] leading-[1.02] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[5.5rem] xl:text-[6.25rem] font-extrabold tracking-[-0.03em] text-foreground animate-fade-in">
             Plan your dream trip
             <br />
             in{" "}
@@ -262,11 +234,11 @@ const HeroSection = () => {
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              No credit card
+              Cancel anytime
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              Cancel anytime
+              Instant results
             </div>
           </div>
 

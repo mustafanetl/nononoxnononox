@@ -32,19 +32,17 @@ export const LogoMark = ({
   <svg
     width={size}
     height={size}
-    viewBox="0 0 32 32"
+    viewBox="0 0 64 64"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
     aria-hidden="true"
   >
-    {/* North-star shape (4-pointed star with concave curves) */}
     <path
-      d="M16 2.5 C16.5 8 18 13.5 23 15 C28 16.5 28 15.5 29.5 16 C28 16.5 28 15.5 23 17 C18 18.5 16.5 24 16 29.5 C15.5 24 14 18.5 9 17 C4 15.5 4 16.5 2.5 16 C4 15.5 4 16.5 9 15 C14 13.5 15.5 8 16 2.5 Z"
+      d="M32 12 C32.7 20.5 34.8 28.4 41.8 30.4 C48.8 32.4 48.8 31.2 50.8 32 C48.8 32.8 48.8 31.6 41.8 33.6 C34.8 35.6 32.7 43.5 32 52 C31.3 43.5 29.2 35.6 22.2 33.6 C15.2 31.6 15.2 32.8 13.2 32 C15.2 31.2 15.2 32.4 22.2 30.4 C29.2 28.4 31.3 20.5 32 12 Z"
       fill={color}
     />
-    {/* Center dot */}
-    <circle cx="16" cy="16" r="1.5" fill={color} opacity="0.25" />
+    <circle cx="32" cy="32" r="2" fill={color} opacity="0.35" />
   </svg>
 );
 
