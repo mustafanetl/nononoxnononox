@@ -23,6 +23,10 @@ const faqs = [
     a: "Jolliday works for destinations worldwide — cities, islands, road trips, and multi-country trips. If you can travel there, we can plan it.",
   },
   {
+    q: "Can it plan family or group trips?",
+    a: "Absolutely. Just tell us who's coming along and we'll balance activities that work for everyone — from toddlers to grandparents.",
+  },
+  {
     q: "Is my data safe?",
     a: "Yes. We do not sell your personal data to third parties. Your trip information is used only to generate and improve your itineraries.",
   },
@@ -30,18 +34,29 @@ const faqs = [
 
 const HomeFAQ = () => {
   return (
-    <section className="bg-[hsl(0_0%_98%)]">
-      <div className="container mx-auto px-4 py-16 md:py-28 lg:py-36 max-w-3xl">
-        <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-center mb-10 md:mb-14">
-          Frequently asked questions
-        </h2>
-        <Accordion type="single" collapsible className="w-full">
+    <section className="bg-background">
+      <div className="container mx-auto px-4 sm:px-6 py-20 md:py-28 lg:py-36 max-w-3xl">
+        <div className="text-center mb-10 md:mb-14">
+          <p className="text-xs sm:text-sm font-semibold text-primary tracking-[0.15em] uppercase mb-3">
+            FAQ
+          </p>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1]">
+            Questions?
+            <br className="sm:hidden" />
+            <span className="text-primary"> We've got answers.</span>
+          </h2>
+        </div>
+        <Accordion type="single" collapsible className="w-full space-y-3">
           {faqs.map((f, i) => (
-            <AccordionItem key={i} value={`item-${i}`}>
-              <AccordionTrigger className="text-left text-base md:text-lg font-medium">
+            <AccordionItem
+              key={i}
+              value={`item-${i}`}
+              className="border border-border rounded-2xl bg-white px-5 sm:px-6 data-[state=open]:border-primary/30 data-[state=open]:shadow-md transition-all"
+            >
+              <AccordionTrigger className="text-left text-base sm:text-lg font-semibold text-foreground hover:no-underline py-5">
                 {f.q}
               </AccordionTrigger>
-              <AccordionContent className="text-sm md:text-base text-muted-foreground leading-relaxed">
+              <AccordionContent className="text-sm sm:text-base text-muted-foreground leading-relaxed pb-5">
                 {f.a}
               </AccordionContent>
             </AccordionItem>
