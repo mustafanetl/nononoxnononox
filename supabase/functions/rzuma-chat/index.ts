@@ -278,30 +278,23 @@ serve(async (req) => {
     const revisionRequest = sanitizeRevisionIssues(rawRevision);
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY"); // legacy, unused
 
-    // Diagnostic logs — helps pinpoint why a provider isn't being reached.
-    console.log("ENV CHECK:", {
-      hasGeminiKey: !!GEMINI_API_KEY,
-      geminiKeyPrefix: GEMINI_API_KEY ? GEMINI_API_KEY.slice(0, 6) + "…" : null,
-      hasLovableKey: !!LOVABLE_API_KEY,
-      envKeys: Object.keys(Deno.env.toObject()).filter((k) =>
-        /GEMINI|LOVABLE|GOOGLE|SUPABASE/i.test(k),
-      ),
-    });
+    const AI_KEY = GROQ_API_KEY || GEMINI_API_KEY;
 
-    if (!GEMINI_API_KEY) {
-      console.error("GEMINI_API_KEY is not set in environment");
+    if (!AI_KEY) {
+      console.error("No AI key configured (GROQ_API_KEY or GEMINI_API_KEY)");
       return new Response(
         JSON.stringify({
-          error: "Gemini API key not configured on the server. Add GEMINI_API_KEY to Supabase secrets.",
+          error: "AI service not configured. Add GROQ_API_KEY to Supabase secrets.",
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     console.log(
-      `rzuma-chat tier=${ctx.tier} userId=${ctx.userId ?? ctx.ip} msgs=${trimmedMessages.length} remaining=${limitCheck.remaining} provider=${GEMINI_API_KEY ? "gemini" : "lovable"}`,
+      `rzuma-chat tier=${ctx.tier} userId=${ctx.userId ?? ctx.ip} msgs=${trimmedMessages.length} remaining=${limitCheck.remaining}`,
     );
 
     const systemMessages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }];
@@ -361,7 +354,7 @@ serve(async (req) => {
 
     // ── AI CALL: direct Gemini, no Lovable fallback ──────────
     const geminiMessages: ChatMessage[] = [...systemMessages, ...trimmedMessages];
-    const upstream = await streamGemini(geminiMessages, GEMINI_API_KEY, 16384);
+    const upstream = await streamGemini(geminiMessages, AI_KEY, 16384);
 
     if (!upstream.ok) {
       const errorText = await upstream.text();

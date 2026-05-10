@@ -70,8 +70,10 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     const GOOGLE_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY");
-    if (!GEMINI_API_KEY && !LOVABLE_API_KEY) throw new Error("AI service not configured");
+    const AI_KEY = GROQ_API_KEY || GEMINI_API_KEY;
+    if (!AI_KEY && !LOVABLE_API_KEY) throw new Error("AI service not configured");
 
     const exclusions = [activity.name, ...(Array.isArray(excludeNames) ? excludeNames : [])].filter(Boolean);
 
@@ -92,14 +94,14 @@ Respond with ONLY a JSON array, no prose, no markdown fences:
 
 Rules: only famous, easy-to-verify venues. Realistic prices. Same currency as original (${activity.currency || "$"}).`;
 
-    // Prefer direct Gemini; fall back to Lovable if only that key is set.
+    // Prefer direct AI call; fall back to Lovable if only that key is set.
     let content = "";
-    if (GEMINI_API_KEY) {
+    if (AI_KEY) {
       const messages: ChatMessage[] = [
         { role: "system", content: "You are a travel expert. Respond with ONLY valid JSON, no prose, no code fences." },
         { role: "user", content: prompt },
       ];
-      const result = await callGemini(messages, GEMINI_API_KEY, 2048);
+      const result = await callGemini(messages, AI_KEY, 2048);
       if (result.error) {
         console.error("Gemini error:", result.status, result.error);
         return new Response(JSON.stringify({ error: "AI request failed" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
