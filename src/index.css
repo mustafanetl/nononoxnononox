@@ -541,3 +541,61 @@
     animation: promo-smooth-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }
+
+
+@layer utilities {
+  /* TikTok hook animations — designed to grab attention in the first second */
+  @keyframes promo-hook-zoom {
+    from { transform: scale(1.15); }
+    to   { transform: scale(1);    }
+  }
+  .animate-promo-hook-zoom {
+    animation: promo-hook-zoom 1.8s ease-out both;
+  }
+
+  @keyframes promo-hook-badge {
+    0%   { opacity: 0; transform: scale(0.3) translateY(-30px); }
+    60%  { opacity: 1; transform: scale(1.1) translateY(0);     }
+    100% { opacity: 1; transform: scale(1)   translateY(0);     }
+  }
+  .animate-promo-hook-badge {
+    animation: promo-hook-badge 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes promo-hook-text {
+    0%   { opacity: 0; transform: scale(1.3); filter: blur(20px); letter-spacing: 0.1em; }
+    60%  { opacity: 1; transform: scale(0.98); filter: blur(0);    letter-spacing: -0.04em; }
+    100% { opacity: 1; transform: scale(1);    filter: blur(0);    letter-spacing: -0.04em; }
+  }
+  .animate-promo-hook-text {
+    animation: promo-hook-text 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 0.1s;
+  }
+
+  @keyframes promo-hook-tokyo {
+    0%   { transform: translateY(30px) scale(0.6); opacity: 0; }
+    60%  { transform: translateY(-8px) scale(1.08); opacity: 1; }
+    100% { transform: translateY(0)    scale(1);    opacity: 1; }
+  }
+  .animate-promo-hook-tokyo {
+    animation: promo-hook-tokyo 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: 0.45s;
+  }
+
+  @keyframes promo-hook-subtext {
+    from { opacity: 0; transform: translateY(20px) scale(0.9); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);   }
+  }
+  .animate-promo-hook-subtext {
+    animation: promo-hook-subtext 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes promo-button-pulse {
+    0%, 100% { transform: scale(1);    box-shadow: 0 4px 12px hsl(234 62% 47% / 0.3); }
+    50%      { transform: scale(1.06); box-shadow: 0 8px 24px hsl(234 62% 47% / 0.5); }
+  }
+  .animate-promo-button-pulse {
+    animation: promo-button-pulse 1.2s ease-in-out infinite;
+    animation-delay: 1s;
+  }
+}

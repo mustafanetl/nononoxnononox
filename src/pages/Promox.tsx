@@ -14,13 +14,19 @@ import Logo, { LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 
 /**
- * /promox — 9:16 vertical promo, optimized for phone recording
- * (TikTok, Reels, Shorts). Record full-screen on iPhone/Android or
- * use Chrome's device emulation (iPhone 14 Pro) + screen recorder.
+ * /promox — 9:16 vertical promo optimized for TikTok/Reels/Shorts.
+ *
+ * Built to survive the first 2-second attention test:
+ * - SCENE 1 (0-1.5s): Shock hook with big text
+ * - SCENE 2 (1.5-3s): Problem flash
+ * - SCENE 3 (3-7s): Typing reveal
+ * - SCENE 4 onwards: payoff with fast cuts
+ *
+ * Total: ~38s
  */
 
 type Scene =
-  | "intro"
+  | "hook"
   | "problem"
   | "typing"
   | "chat"
@@ -31,19 +37,19 @@ type Scene =
   | "end";
 
 const SCENE_DURATIONS: Record<Scene, number> = {
-  intro: 2500,
-  problem: 3000,
-  typing: 4500,
-  chat: 4800,
-  itinerary: 8000,
-  hotel: 5000,
-  map: 5000,
-  cta: 3000,
-  end: 3500,
+  hook: 1800,        // SHORT — grab attention FAST
+  problem: 1700,     // Quick problem flash
+  typing: 4200,      // Let the user see the prompt type
+  chat: 4500,        // The "magic" is happening
+  itinerary: 7500,   // PAYOFF — let them enjoy the trip reveal
+  hotel: 4500,       // Fast flash of value
+  map: 4500,         // Quick map reveal
+  cta: 2800,         // Punchy CTA
+  end: 3000,         // Clean end card
 };
 
 const SCENE_ORDER: Scene[] = [
-  "intro",
+  "hook",
   "problem",
   "typing",
   "chat",
@@ -68,16 +74,15 @@ const TOKYO_IMAGES = {
     "https://images.unsplash.com/photo-1553621042-f6e147245754?w=600&h=800&q=80&auto=format&fit=crop",
   shinjuku:
     "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&h=800&q=80&auto=format&fit=crop",
-  harajuku:
-    "https://images.unsplash.com/photo-1542051841857-5f90071e7989?w=600&h=800&q=80&auto=format&fit=crop",
   hotel:
     "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&q=80&auto=format&fit=crop",
 };
 
-const PROMPT_TEXT = "5 days in Tokyo, love food 🍣";
+// 4 days now (matching 4 itinerary cards)
+const PROMPT_TEXT = "4 days in Tokyo, love food 🍣";
 
 const Promox = () => {
-  const [scene, setScene] = useState<Scene>("intro");
+  const [scene, setScene] = useState<Scene>("hook");
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [typedText, setTypedText] = useState("");
@@ -101,7 +106,7 @@ const Promox = () => {
   }, []);
 
   const startPlayback = () => {
-    setScene("intro");
+    setScene("hook");
     setProgress(0);
     setPlaying(true);
   };
@@ -147,14 +152,12 @@ const Promox = () => {
       i++;
       setTypedText(chars.slice(0, i).join(""));
       if (i >= chars.length) clearInterval(interval);
-    }, 85);
+    }, 75);
     return () => clearInterval(interval);
   }, [scene]);
 
   const replay = () => startPlayback();
 
-  // 9:16 frame: uses min of 100vw or (100vh * 9/16) so it always fits screen
-  // On phone it fills the screen. On desktop, shows as phone-framed box with black bars.
   const frameStyle = {
     width: "min(100vw, calc(100vh * 9 / 16))",
     height: "min(100vh, calc(100vw * 16 / 9))",
@@ -187,7 +190,7 @@ const Promox = () => {
             <h1 className="text-white text-5xl font-extrabold tracking-tight mb-3">
               Jolliday
             </h1>
-            <p className="text-white/60 mb-8">A quick tour</p>
+            <p className="text-white/60 mb-8">TikTok cut · 38s</p>
             <Button
               onClick={startPlayback}
               disabled={!imagesLoaded}
@@ -209,10 +212,7 @@ const Promox = () => {
 
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
-      <div
-        className="relative overflow-hidden select-none"
-        style={frameStyle}
-      >
+      <div className="relative overflow-hidden select-none" style={frameStyle}>
         {/* Progress bar */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 z-50">
           <div
@@ -233,7 +233,7 @@ const Promox = () => {
                 <Logo size="xl" variant="mark-only" />
               </div>
               <h2 className="text-white text-3xl font-bold mb-8">
-                That's Jolliday.
+                jolliday.online
               </h2>
               <div className="flex flex-col gap-3">
                 <Button
@@ -252,7 +252,7 @@ const Promox = () => {
                         "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
                     }}
                   >
-                    Go to site <ArrowRight className="h-4 w-4" />
+                    Try Jolliday <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
               </div>
@@ -260,83 +260,107 @@ const Promox = () => {
           </div>
         )}
 
-        {/* SCENE 1: INTRO */}
-        {scene === "intro" && (
+        {/* SCENE 1: HOOK — pattern interrupt to stop the scroll */}
+        {scene === "hook" && (
           <div
-            className="absolute inset-0 flex items-center justify-center"
+            className="absolute inset-0 flex items-center justify-center overflow-hidden"
             style={{
               background:
-                "radial-gradient(ellipse at center, hsl(234 62% 25%) 0%, hsl(234 62% 10%) 60%, black 100%)",
+                "radial-gradient(ellipse at 50% 40%, hsl(234 62% 25%) 0%, hsl(234 62% 8%) 55%, black 100%)",
             }}
           >
-            <div className="text-center animate-promo-blur-in">
-              <div className="mb-8 flex justify-center">
-                <div
-                  className="w-32 h-32 rounded-[2rem] flex items-center justify-center shadow-[0_0_100px_hsl(234_62%_60%/0.6)] animate-promo-spin-in"
+            {/* Background photo layered in (Shibuya neon for that visual pop) */}
+            <div className="absolute inset-0 opacity-30">
+              <img
+                src={TOKYO_IMAGES.shibuya}
+                alt=""
+                className="w-full h-full object-cover animate-promo-hook-zoom"
+              />
+              <div className="absolute inset-0 bg-black/50" />
+            </div>
+
+            <div className="relative text-center px-6">
+              {/* Badge flies in */}
+              <div
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-6 animate-promo-hook-badge"
+              >
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-white/90 text-xs font-bold uppercase tracking-wider">
+                  Wait for it
+                </span>
+              </div>
+
+              {/* MEGA HEADLINE */}
+              <h1
+                className="text-white font-extrabold tracking-[-0.04em] leading-[0.95] animate-promo-hook-text"
+                style={{ fontSize: "clamp(3rem, 14vw, 5.5rem)" }}
+              >
+                I planned
+                <br />a trip to
+                <br />
+                <span
+                  className="animate-promo-hook-tokyo inline-block"
                   style={{
                     background:
-                      "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                      "linear-gradient(135deg, hsl(340 85% 65%), hsl(40 95% 60%))",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    paddingBottom: "0.15em",
                   }}
                 >
-                  <LogoMark size={72} color="white" />
-                </div>
-              </div>
-              <h1
-                className="text-white text-7xl font-extrabold tracking-tight animate-promo-fade-up"
-                style={{ animationDelay: "0.3s" }}
-              >
-                Jolliday
+                  Tokyo
+                </span>
               </h1>
               <p
-                className="mt-4 text-white/60 text-xl animate-promo-fade-up"
-                style={{ animationDelay: "0.6s" }}
+                className="mt-5 text-white text-2xl font-bold animate-promo-hook-subtext"
+                style={{ animationDelay: "0.7s" }}
               >
-                AI Trip Planner
+                in <span className="text-yellow-300">60 seconds</span> 🤯
               </p>
             </div>
           </div>
         )}
 
-        {/* SCENE 2: PROBLEM — vertical stacked tabs */}
+        {/* SCENE 2: PROBLEM — quick flash of the chaos */}
         {scene === "problem" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[hsl(0_0%_6%)]">
+          <div className="absolute inset-0 flex items-center justify-center bg-black">
             <div className="w-full px-6 text-center">
-              <div className="flex flex-col gap-2 mb-10 max-w-[260px] mx-auto">
-                {[
-                  "Kayak",
-                  "Booking",
-                  "Skyscanner",
-                  "Airbnb",
-                  "Expedia",
-                ].map((tab, i) => (
-                  <div
-                    key={tab}
-                    className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/40 text-base font-medium animate-promo-tab-fly"
-                    style={{ animationDelay: `${i * 0.08}s` }}
-                  >
-                    {tab}
-                  </div>
-                ))}
+              <p
+                className="text-white/70 text-base font-semibold uppercase tracking-wider mb-6 animate-promo-fade-up"
+              >
+                The usual way:
+              </p>
+
+              <div className="flex flex-col gap-1.5 mb-8 max-w-[280px] mx-auto">
+                {["Kayak", "Booking", "Airbnb", "Reddit", "Skyscanner"].map(
+                  (tab, i) => (
+                    <div
+                      key={tab}
+                      className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/40 text-sm font-medium line-through animate-promo-tab-fly"
+                      style={{ animationDelay: `${i * 0.05}s` }}
+                    >
+                      {tab}
+                    </div>
+                  )
+                )}
               </div>
+
               <h2
-                className="text-white text-4xl font-extrabold tracking-tight animate-promo-fade-up leading-tight"
-                style={{ animationDelay: "0.7s" }}
+                className="text-white text-4xl font-extrabold tracking-tight animate-promo-hook-text leading-tight"
+                style={{ animationDelay: "0.5s" }}
               >
-                Planning a trip?
-              </h2>
-              <h2
-                className="mt-3 text-4xl font-extrabold tracking-tight animate-promo-fade-up leading-tight"
-                style={{
-                  animationDelay: "1.2s",
-                  background:
-                    "linear-gradient(135deg, hsl(234 62% 62%), hsl(260 70% 65%))",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  paddingBottom: "0.2em",
-                }}
-              >
-                Just ask Jolliday.
+                There's a{" "}
+                <span
+                  style={{
+                    background:
+                      "linear-gradient(135deg, hsl(234 62% 62%), hsl(260 70% 65%))",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  better way
+                </span>
+                .
               </h2>
             </div>
           </div>
@@ -347,9 +371,7 @@ const Promox = () => {
           <div className="absolute inset-0 flex items-center justify-center bg-white px-4">
             <div className="w-full text-center">
               <h2 className="text-5xl font-extrabold tracking-tight text-foreground mb-10 animate-promo-fade-up">
-                Any trip.
-                <br />
-                In one chat.
+                Just ask.
               </h2>
 
               <div
@@ -364,7 +386,7 @@ const Promox = () => {
                 </div>
                 <div className="flex items-center justify-end px-3 pb-3">
                   <div
-                    className="h-10 px-5 rounded-xl flex items-center gap-2 font-semibold text-white shadow-md text-sm"
+                    className="h-10 px-5 rounded-xl flex items-center gap-2 font-semibold text-white shadow-md text-sm animate-promo-button-pulse"
                     style={{
                       background:
                         "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
@@ -379,7 +401,7 @@ const Promox = () => {
           </div>
         )}
 
-        {/* SCENE 4: CHAT — phone-native feel */}
+        {/* SCENE 4: CHAT */}
         {scene === "chat" && (
           <div className="absolute inset-0 flex items-center justify-center bg-white px-4">
             <div className="w-full">
@@ -405,21 +427,21 @@ const Promox = () => {
                 <div className="flex-1 space-y-2">
                   <div
                     className="animate-promo-slide-in-left bg-muted/50 rounded-xl px-3 py-2 inline-flex items-center gap-2 text-sm text-muted-foreground"
-                    style={{ animationDelay: "0.6s" }}
+                    style={{ animationDelay: "0.5s" }}
                   >
                     <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
                     <span className="font-medium">Picking neighborhoods…</span>
                   </div>
                   <div
                     className="animate-promo-slide-in-left bg-muted/50 rounded-xl px-3 py-2 inline-flex items-center gap-2 text-sm text-muted-foreground"
-                    style={{ animationDelay: "1.5s" }}
+                    style={{ animationDelay: "1.3s" }}
                   >
                     <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
                     <span className="font-medium">Finding sushi spots…</span>
                   </div>
                   <div
                     className="animate-promo-slide-in-left bg-muted/50 rounded-xl px-3 py-2 inline-flex items-center gap-2 text-sm text-muted-foreground"
-                    style={{ animationDelay: "2.4s" }}
+                    style={{ animationDelay: "2.1s" }}
                   >
                     <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
                     <span className="font-medium">Pricing it out…</span>
@@ -427,7 +449,7 @@ const Promox = () => {
                   <div
                     className="animate-promo-scale-in rounded-xl px-4 py-3 inline-flex items-center gap-2 text-sm font-semibold text-white shadow-lg"
                     style={{
-                      animationDelay: "3.3s",
+                      animationDelay: "3s",
                       background:
                         "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
                     }}
@@ -440,7 +462,7 @@ const Promox = () => {
           </div>
         )}
 
-        {/* SCENE 5: ITINERARY — vertical 2x3 grid, bigger cards */}
+        {/* SCENE 5: ITINERARY — the payoff — 4 days only */}
         {scene === "itinerary" && (
           <div
             className="absolute inset-0 flex flex-col items-center justify-center px-4"
@@ -451,49 +473,27 @@ const Promox = () => {
           >
             <div className="text-center mb-5">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-2 animate-promo-fade-up">
-                Your Tokyo itinerary
+                Your Tokyo trip
               </p>
               <h2
                 className="text-3xl font-extrabold tracking-tight text-foreground animate-promo-fade-up"
-                style={{ animationDelay: "0.2s" }}
+                style={{ animationDelay: "0.15s" }}
               >
-                Day by day.
-                <br />
-                Planned.
+                4 days. Planned.
               </h2>
             </div>
 
             <div className="grid grid-cols-2 gap-3 w-full max-w-[380px]">
               {[
-                {
-                  day: "Day 1",
-                  title: "Shibuya",
-                  image: TOKYO_IMAGES.shibuya,
-                  tag: "Neon · Streets",
-                },
-                {
-                  day: "Day 2",
-                  title: "Senso-ji",
-                  image: TOKYO_IMAGES.senso,
-                  tag: "Culture · History",
-                },
-                {
-                  day: "Day 3",
-                  title: "Tsukiji",
-                  image: TOKYO_IMAGES.sushi,
-                  tag: "Sushi · Seafood",
-                },
-                {
-                  day: "Day 4",
-                  title: "Shinjuku",
-                  image: TOKYO_IMAGES.shinjuku,
-                  tag: "Nightlife",
-                },
+                { day: "Day 1", title: "Shibuya", image: TOKYO_IMAGES.shibuya, tag: "Neon · Streets" },
+                { day: "Day 2", title: "Senso-ji", image: TOKYO_IMAGES.senso, tag: "Culture · Temples" },
+                { day: "Day 3", title: "Tsukiji", image: TOKYO_IMAGES.sushi, tag: "Sushi · Seafood" },
+                { day: "Day 4", title: "Shinjuku", image: TOKYO_IMAGES.shinjuku, tag: "Nightlife · Views" },
               ].map((d, i) => (
                 <div
                   key={d.day}
                   className="rounded-2xl overflow-hidden bg-white border border-border shadow-lg animate-promo-card-drop-slow"
-                  style={{ animationDelay: `${0.7 + i * 0.7}s` }}
+                  style={{ animationDelay: `${0.4 + i * 0.7}s` }}
                 >
                   <div className="aspect-[3/4] relative overflow-hidden bg-muted">
                     <img
@@ -524,7 +524,7 @@ const Promox = () => {
           </div>
         )}
 
-        {/* SCENE 6: HOTEL + FLIGHT — stacked vertically */}
+        {/* SCENE 6: HOTEL + FLIGHT */}
         {scene === "hotel" && (
           <div
             className="absolute inset-0 flex flex-col items-center justify-center px-4"
@@ -533,17 +533,14 @@ const Promox = () => {
                 "linear-gradient(180deg, hsl(234 62% 98%) 0%, hsl(0 0% 100%) 100%)",
             }}
           >
-            <h2 className="text-center text-3xl font-extrabold tracking-tight text-foreground mb-6 animate-promo-fade-up">
-              Real flights.
-              <br />
-              Real prices.
+            <h2 className="text-center text-3xl font-extrabold tracking-tight text-foreground mb-5 animate-promo-fade-up">
+              With real prices.
             </h2>
 
             <div className="w-full max-w-[360px] space-y-3">
-              {/* Flight */}
               <div
                 className="rounded-2xl border border-border bg-white shadow-xl p-4 animate-promo-smooth-rise"
-                style={{ animationDelay: "0.3s" }}
+                style={{ animationDelay: "0.2s" }}
               >
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center">
@@ -555,24 +552,16 @@ const Promox = () => {
                 </div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-xl font-extrabold text-foreground">
-                      JFK
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      7:45 PM
-                    </p>
+                    <p className="text-xl font-extrabold text-foreground">JFK</p>
+                    <p className="text-[10px] text-muted-foreground">7:45 PM</p>
                   </div>
                   <div className="flex-1 mx-3 relative">
                     <div className="h-px bg-border" />
                     <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary" />
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-extrabold text-foreground">
-                      HND
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      11:20 PM+1
-                    </p>
+                    <p className="text-xl font-extrabold text-foreground">HND</p>
+                    <p className="text-[10px] text-muted-foreground">11:20 PM+1</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-border">
@@ -585,10 +574,9 @@ const Promox = () => {
                 </div>
               </div>
 
-              {/* Hotel */}
               <div
                 className="rounded-2xl border border-border bg-white shadow-xl overflow-hidden animate-promo-smooth-rise"
-                style={{ animationDelay: "0.7s" }}
+                style={{ animationDelay: "0.55s" }}
               >
                 <div className="aspect-[16/9] relative overflow-hidden bg-muted">
                   <img
@@ -618,10 +606,10 @@ const Promox = () => {
                   </p>
                   <div className="flex items-center justify-between pt-2 border-t border-border">
                     <span className="text-[10px] text-muted-foreground">
-                      5 nights
+                      4 nights
                     </span>
                     <span className="text-base font-extrabold text-primary">
-                      $485
+                      $388
                     </span>
                   </div>
                 </div>
@@ -630,7 +618,7 @@ const Promox = () => {
           </div>
         )}
 
-        {/* SCENE 7: MAP — square map for vertical */}
+        {/* SCENE 7: MAP */}
         {scene === "map" && (
           <div
             className="absolute inset-0 flex flex-col items-center justify-center px-4"
@@ -639,10 +627,8 @@ const Promox = () => {
                 "linear-gradient(180deg, hsl(234 62% 8%) 0%, hsl(234 62% 3%) 100%)",
             }}
           >
-            <h2 className="text-white text-3xl font-extrabold tracking-tight mb-6 text-center animate-promo-fade-up">
-              See it all
-              <br />
-              on a map
+            <h2 className="text-white text-3xl font-extrabold tracking-tight mb-5 text-center animate-promo-fade-up">
+              Every stop pinned.
             </h2>
 
             <div
@@ -660,7 +646,7 @@ const Promox = () => {
               >
                 <defs>
                   <pattern
-                    id="grid-x"
+                    id="grid-px"
                     width="30"
                     height="30"
                     patternUnits="userSpaceOnUse"
@@ -673,9 +659,9 @@ const Promox = () => {
                     />
                   </pattern>
                 </defs>
-                <rect width="400" height="400" fill="url(#grid-x)" />
+                <rect width="400" height="400" fill="url(#grid-px)" />
                 <path
-                  d="M 80 100 Q 160 140 200 180 T 280 240 T 320 320"
+                  d="M 80 100 Q 160 140 220 200 T 300 300"
                   fill="none"
                   stroke="hsl(234 62% 62%)"
                   strokeWidth="2.5"
@@ -685,11 +671,10 @@ const Promox = () => {
               </svg>
 
               {[
-                { top: "22%", left: "20%", day: "1", label: "Shibuya", delay: 0.3 },
-                { top: "40%", left: "42%", day: "2", label: "Senso-ji", delay: 0.6 },
-                { top: "58%", left: "55%", day: "3", label: "Tsukiji", delay: 0.9 },
-                { top: "72%", left: "70%", day: "4", label: "Shinjuku", delay: 1.2 },
-                { top: "85%", left: "82%", day: "5", label: "Harajuku", delay: 1.5 },
+                { top: "22%", left: "20%", day: "1", label: "Shibuya", delay: 0.25 },
+                { top: "42%", left: "42%", day: "2", label: "Senso-ji", delay: 0.55 },
+                { top: "62%", left: "58%", day: "3", label: "Tsukiji", delay: 0.85 },
+                { top: "80%", left: "76%", day: "4", label: "Shinjuku", delay: 1.15 },
               ].map((pin) => (
                 <div
                   key={pin.day}
@@ -723,17 +708,10 @@ const Promox = () => {
                 </div>
               ))}
             </div>
-
-            <p
-              className="mt-6 text-white/60 text-sm text-center animate-promo-fade-up"
-              style={{ animationDelay: "1.8s" }}
-            >
-              Every stop pinned.
-            </p>
           </div>
         )}
 
-        {/* SCENE 8: CTA */}
+        {/* SCENE 8: CTA — bold and punchy */}
         {scene === "cta" && (
           <div
             className="absolute inset-0 flex items-center justify-center px-6"
@@ -743,16 +721,10 @@ const Promox = () => {
             }}
           >
             <div className="text-center">
-              <p className="text-white/70 text-base mb-3 animate-promo-fade-up">
-                Your next trip
-              </p>
               <h2
-                className="text-white text-5xl font-extrabold tracking-tight leading-[1.1] animate-promo-blur-in"
-                style={{ animationDelay: "0.3s" }}
+                className="text-white text-6xl font-extrabold tracking-tight leading-[0.95] animate-promo-blur-in"
               >
-                is one
-                <br />
-                message
+                Your trip.
                 <br />
                 <span
                   style={{
@@ -760,13 +732,19 @@ const Promox = () => {
                       "linear-gradient(135deg, hsl(234 62% 72%), hsl(260 70% 75%))",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
-                    paddingBottom: "0.2em",
+                    paddingBottom: "0.15em",
                     display: "inline-block",
                   }}
                 >
-                  away.
+                  One chat.
                 </span>
               </h2>
+              <p
+                className="mt-6 text-white/80 text-lg animate-promo-fade-up"
+                style={{ animationDelay: "0.4s" }}
+              >
+                Link in bio 👆
+              </p>
             </div>
           </div>
         )}
@@ -794,21 +772,21 @@ const Promox = () => {
               </div>
               <h2
                 className="text-white text-5xl font-extrabold tracking-tight animate-promo-fade-up"
-                style={{ animationDelay: "0.2s" }}
+                style={{ animationDelay: "0.15s" }}
               >
                 Jolliday
               </h2>
               <p
-                className="mt-6 text-white text-xl font-semibold animate-promo-fade-up"
-                style={{ animationDelay: "0.5s" }}
+                className="mt-5 text-white text-2xl font-bold animate-promo-fade-up"
+                style={{ animationDelay: "0.4s" }}
               >
                 jolliday.online
               </p>
               <p
                 className="mt-3 text-white/60 text-sm animate-promo-fade-up"
-                style={{ animationDelay: "0.75s" }}
+                style={{ animationDelay: "0.65s" }}
               >
-                Try free
+                Try free 👇
               </p>
             </div>
           </div>
