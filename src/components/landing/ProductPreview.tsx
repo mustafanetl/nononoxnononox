@@ -48,8 +48,8 @@ const PreviewTile = ({ code, label, image }: { code: string; label: string; imag
 
 const ProductPreview = () => {
   return (
-    <section id="examples" className="container mx-auto px-4 py-20 md:py-24 border-t border-border">
-      <div className="max-w-6xl mx-auto">
+    <section id="examples" className="bg-[hsl(0_0%_98%)] border-t border-border">
+      <div className="container mx-auto px-4 py-12 md:py-20 lg:py-24 max-w-6xl">
         <div className="mb-10 md:mb-12 max-w-2xl">
           <span className="inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">
             What you actually get
@@ -97,7 +97,7 @@ const ProductPreview = () => {
               <div className="mt-8 md:mt-10 pt-6 md:pt-8 border-t border-border">
                 <div className="flex items-baseline justify-between mb-5 md:mb-6 gap-3">
                   <h4 className="text-lg md:text-xl font-semibold">Day 1 — Belém & Alfama</h4>
-                  <span className="text-[10px] sm:text-xs uppercase tracking-[0.15em] text-muted-foreground whitespace-nowrap">Tue, May 6</span>
+                  <span className="text-[10px] sm:text-xs uppercase tracking-[0.15em] text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] sm:max-w-none">Tue, May 6</span>
                 </div>
                 <ul className="space-y-4 md:space-y-5">
                   {day1.map((item) => (

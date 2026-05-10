@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Compass, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import ThemeToggle from "@/components/ThemeToggle";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -72,9 +71,7 @@ const Auth = () => {
           <ArrowLeft className="h-4 w-4" /> Home
         </Link>
       </div>
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
+
 
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">

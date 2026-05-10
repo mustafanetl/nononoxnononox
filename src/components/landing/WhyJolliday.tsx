@@ -29,8 +29,8 @@ const features = [
 
 const WhyJolliday = () => {
   return (
-    <section className="bg-muted/30">
-      <div className="container mx-auto px-4 py-20 md:py-28 max-w-5xl">
+    <section className="bg-background border-t border-border">
+      <div className="container mx-auto px-4 py-12 md:py-20 lg:py-28 max-w-5xl">
         <div className="text-center max-w-xl mx-auto mb-12">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
             Everything you need in one place
@@ -46,7 +46,7 @@ const WhyJolliday = () => {
             return (
               <div
                 key={f.title}
-                className="rounded-2xl border border-border bg-background p-6 flex items-start gap-4"
+                className="rounded-[1rem] border border-[hsl(0_0%_85%)] bg-white p-6 flex items-start gap-4 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06),0px_1px_2px_-1px_rgba(0,0,0,0.03)]"
               >
                 <div className="w-10 h-10 rounded-xl bg-foreground/5 border border-border flex items-center justify-center shrink-0">
                   <Icon className="h-5 w-5 text-foreground" />

@@ -30,8 +30,8 @@ const faqs = [
 
 const HomeFAQ = () => {
   return (
-    <section className="border-t border-border">
-      <div className="container mx-auto px-4 py-20 md:py-28 max-w-3xl">
+    <section className="bg-background border-t border-border">
+      <div className="container mx-auto px-4 py-12 md:py-20 lg:py-28 max-w-3xl">
         <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-center mb-10 md:mb-14">
           Frequently asked questions
         </h2>

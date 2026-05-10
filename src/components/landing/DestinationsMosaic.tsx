@@ -53,7 +53,7 @@ const DestinationsMosaic = () => {
             <Link
               key={d.name}
               to={`/chat?q=Plan a trip to ${d.name}`}
-              className="group relative aspect-[4/3] rounded-xl overflow-hidden"
+              className="group relative aspect-[4/3] rounded-[1rem] overflow-hidden border border-[hsl(0_0%_85%)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06),0px_1px_2px_-1px_rgba(0,0,0,0.03)]"
             >
               <img
                 src={d.image}
@@ -61,7 +61,7 @@ const DestinationsMosaic = () => {
                 loading="lazy"
                 className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
               <div className="absolute inset-x-4 bottom-4">
                 <div className="text-[10px] uppercase tracking-[0.15em] text-white/70">
                   {d.country}

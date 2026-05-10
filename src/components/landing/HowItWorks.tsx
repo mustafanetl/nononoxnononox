@@ -23,8 +23,8 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <section className="bg-background">
-      <div className="container mx-auto px-4 py-20 md:py-28 max-w-5xl">
+    <section className="bg-[hsl(0_0%_98%)] border-t border-border">
+      <div className="container mx-auto px-4 py-12 md:py-20 lg:py-28 max-w-5xl">
         <div className="text-center max-w-xl mx-auto mb-14">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
             How it works

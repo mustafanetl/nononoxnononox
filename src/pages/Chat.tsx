@@ -11,7 +11,6 @@ import ItineraryCard, { ItineraryData } from "@/components/ItineraryCard";
 import HotelCard from "@/components/HotelCard";
 import HotelDetailModal from "@/components/HotelDetailModal";
 import BudgetPanel from "@/components/BudgetPanel";
-import ThemeToggle from "@/components/ThemeToggle";
 import TripTimeline, { TimelineLeg } from "@/components/TripTimeline";
 import TravelInfoCard, { TravelInfoData } from "@/components/TravelInfoCard";
 import QuickReplies from "@/components/QuickReplies";
@@ -1135,7 +1134,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <ThemeToggle />
           </div>
         </header>
 

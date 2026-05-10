@@ -18,8 +18,8 @@ const reviews = [
 
 const SocialProof = () => {
   return (
-    <section className="bg-background">
-      <div className="container mx-auto px-4 py-20 md:py-24 max-w-5xl">
+    <section className="bg-[hsl(0_0%_98%)] border-t border-border">
+      <div className="container mx-auto px-4 py-12 md:py-20 lg:py-24 max-w-5xl">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
             Loved by travellers
@@ -33,7 +33,7 @@ const SocialProof = () => {
           {reviews.map((r) => (
             <div
               key={r.name}
-              className="rounded-2xl border border-border bg-card p-6 flex flex-col"
+              className="rounded-[1rem] border border-[hsl(0_0%_85%)] bg-white p-6 flex flex-col shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06),0px_1px_2px_-1px_rgba(0,0,0,0.03)]"
             >
               <p className="text-base text-foreground leading-relaxed flex-1">
                 "{r.quote}"
