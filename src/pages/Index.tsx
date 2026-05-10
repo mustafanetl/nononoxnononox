@@ -36,7 +36,7 @@ const Index = () => {
             : "bg-transparent"
         }`}
       >
-        <nav className="container mx-auto flex items-center justify-between px-4 lg:px-6 h-16 lg:h-[72px]">
+        <nav className="w-full max-w-[1400px] mx-auto flex items-center justify-between px-6 lg:px-10 h-16 lg:h-[72px]">
           {/* Logo — always left */}
           <Link to="/" className="flex items-center gap-2.5 shrink-0">
             <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
