@@ -814,8 +814,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   }, [activeId]);
 
   // Detect when a full plan has been generated for free users.
-  // Strategy: show the FIRST plan fully (let them see the value).
-  // Block on the SECOND plan or when they try to modify.
+  // PAYWALL DISABLED FOR NOW — all users see all plans.
+  // Will re-implement with a better UX later.
   const [planCount, setPlanCount] = useState(0);
   useEffect(() => {
     if (isPremium || isLoading || shouldShowCraftingMap) return;
@@ -831,9 +831,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       if (blockTypes >= 2) count++;
     });
     setPlanCount(count);
-    // Only gate after the FIRST full plan — user gets to see plan #1 for free
-    if (count >= 2) setPlanGenerated(true);
-    else setPlanGenerated(false);
+    // Paywall disabled — never gate
+    setPlanGenerated(false);
   }, [parsedMessages, isLoading, isPremium, shouldShowCraftingMap]);
 
   // Auto-enrich destinations when streaming is done
