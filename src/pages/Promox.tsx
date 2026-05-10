@@ -29,16 +29,17 @@ type Scene =
   | "cta"
   | "end";
 
+// Tightened — each scene ends shortly after its animation completes
 const SCENE_DURATIONS: Record<Scene, number> = {
-  intro: 2800,
-  problem: 3200,
-  typing: 4800,
-  chat: 5000,
-  itinerary: 7500,
-  hotel: 5200,
-  map: 5000,
-  cta: 3500,
-  end: 3500,
+  intro: 2200,     // logo spin + title (~1.5s) + breath
+  problem: 2500,   // tabs fly in + 2 headlines (~2.1s) + breath
+  typing: 3500,    // typewriter finishes at ~2.3s + read buffer
+  chat: 4200,      // final "ready" lands at ~3.8s + breath
+  itinerary: 5500, // last card settles at ~3.9s + time to admire
+  hotel: 3000,     // cards rise (~1.6s) + time to read prices
+  map: 3800,       // all pins + route drawn (~3.1s) + breath
+  cta: 2500,       // gradient text reveal (~0.9s) + read time
+  end: 2700,       // logo + lines (~1.65s) + CTA read time
 };
 
 const SCENE_ORDER: Scene[] = [
@@ -485,7 +486,7 @@ const Promox = () => {
                 <div
                   key={d.day}
                   className="rounded-2xl overflow-hidden bg-white border border-border shadow-lg animate-promo-card-drop-slow"
-                  style={{ animationDelay: `${0.7 + i * 0.7}s` }}
+                  style={{ animationDelay: `${0.4 + i * 0.5}s` }}
                 >
                   <div className="aspect-[3/4] relative overflow-hidden bg-muted">
                     <img
@@ -695,28 +696,28 @@ const Promox = () => {
                   left: "25%",
                   day: "1",
                   label: "Shibuya",
-                  delay: 0.4,
+                  delay: 0.2,
                 },
                 {
                   top: "37.5%",
                   left: "57.5%",
                   day: "2",
                   label: "Senso-ji",
-                  delay: 0.85,
+                  delay: 0.55,
                 },
                 {
                   top: "62.5%",
                   left: "45%",
                   day: "3",
                   label: "Tsukiji",
-                  delay: 1.3,
+                  delay: 0.9,
                 },
                 {
                   top: "80%",
                   left: "77.5%",
                   day: "4",
                   label: "Shinjuku",
-                  delay: 1.75,
+                  delay: 1.25,
                 },
               ].map((pin) => (
                 <div
@@ -754,7 +755,7 @@ const Promox = () => {
 
             <p
               className="mt-5 text-white/60 text-sm text-center animate-promo-fade-up"
-              style={{ animationDelay: "2.2s" }}
+              style={{ animationDelay: "1.5s" }}
             >
               Every stop pinned.
             </p>
