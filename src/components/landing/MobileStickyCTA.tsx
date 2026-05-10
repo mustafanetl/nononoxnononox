@@ -39,19 +39,14 @@ const MobileStickyCTA = () => {
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="text-sm font-medium text-foreground leading-tight">
-          Ready to plan your trip?
+          Plan your next trip
         </div>
-        <div className="flex flex-col items-center shrink-0">
-          <Link to="/auth">
-            <Button size="sm" className="rounded-full gap-1">
-              Start free trial
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            3-day free trial · Cancel anytime
-          </p>
-        </div>
+        <Link to="/chat">
+          <Button size="sm" className="rounded-full gap-1">
+            Get started
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
       </div>
     </div>
   );

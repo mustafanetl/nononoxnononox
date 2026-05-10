@@ -1,54 +1,49 @@
-import { MapPin, Sparkles, Briefcase } from "lucide-react";
+import { Search, Calendar, Ticket } from "lucide-react";
 
 const steps = [
   {
-    icon: MapPin,
-    title: "Tell us your trip",
+    icon: Search,
+    title: "Tell us where",
     description:
-      "Enter your destination, dates, budget, and travel style — just type it naturally.",
+      "Type your destination, dates, and who's coming. That's all we need.",
   },
   {
-    icon: Sparkles,
-    title: "AI builds your plan",
+    icon: Calendar,
+    title: "Get your itinerary",
     description:
-      "Get a full day-by-day itinerary with flights, hotels, and activities in seconds.",
+      "A full day-by-day plan with places to stay, things to do, and where to eat.",
   },
   {
-    icon: Briefcase,
+    icon: Ticket,
     title: "Book and go",
     description:
-      "Browse your plan, tweak anything you want, and book with one click.",
+      "Everything links directly to booking. Tweak anything, then hit the road.",
   },
 ];
 
 const HowItWorks = () => {
   return (
-    <section className="border-t border-b border-border">
-      <div className="container mx-auto px-4 py-20 md:py-28 max-w-6xl">
-        <div className="text-center max-w-2xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+    <section className="bg-background">
+      <div className="container mx-auto px-4 py-20 md:py-28 max-w-5xl">
+        <div className="text-center max-w-xl mx-auto mb-14">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
             How it works
           </h2>
-          <p className="mt-4 text-base md:text-lg text-muted-foreground">
-            From idea to full itinerary in under 60 seconds
+          <p className="mt-3 text-muted-foreground">
+            Three steps. One minute. Done.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-10 md:gap-8 md:grid-cols-3">
+        <div className="grid gap-12 md:gap-8 md:grid-cols-3">
           {steps.map((step, i) => {
             const Icon = step.icon;
             return (
               <div key={step.title} className="flex flex-col items-center text-center">
-                <div className="relative mb-5">
-                  <div className="w-14 h-14 rounded-2xl border border-border bg-card flex items-center justify-center">
-                    <Icon className="h-6 w-6 text-foreground" />
-                  </div>
-                  <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-foreground text-background text-xs font-semibold flex items-center justify-center">
-                    {i + 1}
-                  </span>
+                <div className="w-12 h-12 rounded-full bg-foreground/5 border border-border flex items-center justify-center mb-4">
+                  <Icon className="h-5 w-5 text-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-xs">
+                <h3 className="text-base font-semibold">{step.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-[260px]">
                   {step.description}
                 </p>
               </div>
