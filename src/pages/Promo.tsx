@@ -14,15 +14,14 @@ import {
   Clock,
   Sun,
   Moon,
-  Cherry,
+  Volume2,
 } from "lucide-react";
 import Logo, { LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 
 /**
- * /promo — fast-paced cinematic showcase of Jolliday.
- *
- * 10 scenes, ~42 seconds total. Screen-record friendly.
+ * /promo — cinematic showcase with voice narration + transition sounds.
+ * Records as a full promo video when you screen-capture this page.
  */
 
 type Scene =
@@ -33,22 +32,19 @@ type Scene =
   | "itinerary"
   | "hotel"
   | "map"
-  | "proof"
   | "cta"
   | "end";
 
-// Faster pacing — punchy like TikTok
 const SCENE_DURATIONS: Record<Scene, number> = {
-  intro: 2500,
-  problem: 3500,
-  typing: 4500,
-  chat: 4500,
-  itinerary: 6000,
-  hotel: 5000,
-  map: 5000,
-  proof: 4500,
-  cta: 3500,
-  end: 3500,
+  intro: 3000,
+  problem: 4000,
+  typing: 5000,
+  chat: 5000,
+  itinerary: 6500,
+  hotel: 5500,
+  map: 5500,
+  cta: 4000,
+  end: 4000,
 };
 
 const SCENE_ORDER: Scene[] = [
@@ -59,17 +55,28 @@ const SCENE_ORDER: Scene[] = [
   "itinerary",
   "hotel",
   "map",
-  "proof",
   "cta",
   "end",
 ];
+
+// Voice-over text per scene — matches what's on screen
+const SCENE_NARRATION: Record<Scene, string> = {
+  intro: "Meet Jolliday. Your AI trip planner.",
+  problem: "Stop juggling twenty browser tabs. Just ask Jolliday.",
+  typing: "Describe any trip, anywhere in the world.",
+  chat: "Jolliday builds your entire plan in under a minute.",
+  itinerary: "Day by day. Every neighborhood. Every experience.",
+  hotel: "Real flights. Real hotels. Real prices.",
+  map: "Every stop pinned on a map. Walking times included.",
+  cta: "Your next trip is one message away.",
+  end: "Jolliday dot online. Try it free.",
+};
 
 const TOTAL_DURATION = SCENE_ORDER.reduce(
   (sum, s) => sum + SCENE_DURATIONS[s],
   0
 );
 
-// Verified stable Unsplash IDs (known to resolve)
 const TOKYO_IMAGES = {
   shibuya:
     "https://images.unsplash.com/photo-1554797589-7241bb691973?w=600&h=800&q=80&auto=format&fit=crop",
@@ -85,18 +92,20 @@ const TOKYO_IMAGES = {
     "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=450&q=80&auto=format&fit=crop",
 };
 
+// The exact sentence shown in text box AND chat bubble
+const PROMPT_TEXT = "5 days in Tokyo for a couple, love food 🍣";
+
 const Promo = () => {
   const [scene, setScene] = useState<Scene>("intro");
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [typedText, setTypedText] = useState("");
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const startTimeRef = useRef<number>(0);
   const rafRef = useRef<number>();
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
-  const TYPE_TARGET = "5 days in Tokyo for a couple, love food";
-
-  // Preload all images before playing
+  // Preload images
   useEffect(() => {
     const urls = Object.values(TOKYO_IMAGES);
     let loaded = 0;
@@ -108,11 +117,75 @@ const Promo = () => {
       };
       img.src = url;
     });
-    // Safety timeout — start anyway after 2s
-    const t = setTimeout(() => setImagesLoaded(true), 2000);
+    const t = setTimeout(() => setImagesLoaded(true), 2500);
     return () => clearTimeout(t);
   }, []);
 
+  // Transition sound — short synthesized whoosh
+  const playTransitionSound = () => {
+    if (!audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
+    const now = ctx.currentTime;
+
+    // High-pitched rising tone for punchy transition
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  };
+
+  // Play narration for a scene
+  const speakScene = (s: Scene) => {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(SCENE_NARRATION[s]);
+    u.rate = 1.05;
+    u.pitch = 1;
+    u.volume = 1;
+    // Prefer a clean english voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferred =
+      voices.find((v) => /(Samantha|Google US|Microsoft Aria|Alex|Jenny)/i.test(v.name)) ||
+      voices.find((v) => v.lang === "en-US") ||
+      voices[0];
+    if (preferred) u.voice = preferred;
+    window.speechSynthesis.speak(u);
+  };
+
+  const startPlayback = () => {
+    // Init audio context (requires user gesture)
+    if (!audioCtxRef.current) {
+      try {
+        audioCtxRef.current = new (window.AudioContext ||
+          (window as any).webkitAudioContext)();
+      } catch {}
+    }
+
+    // Trigger voices to load in some browsers
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+    }
+
+    setScene("intro");
+    setProgress(0);
+    setPlaying(true);
+
+    // Kick off first scene sound + narration immediately
+    setTimeout(() => {
+      playTransitionSound();
+      speakScene("intro");
+    }, 50);
+  };
+
+  // Scene transitions with sound/narration
   useEffect(() => {
     if (!playing || !imagesLoaded) return;
 
@@ -123,7 +196,11 @@ const Promo = () => {
     SCENE_ORDER.forEach((s, i) => {
       if (i === 0) return;
       elapsed += SCENE_DURATIONS[SCENE_ORDER[i - 1]];
-      const t = setTimeout(() => setScene(s), elapsed);
+      const t = setTimeout(() => {
+        setScene(s);
+        playTransitionSound();
+        speakScene(s);
+      }, elapsed);
       timeouts.push(t);
     });
 
@@ -142,36 +219,71 @@ const Promo = () => {
     return () => {
       timeouts.forEach(clearTimeout);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     };
   }, [playing, imagesLoaded]);
 
+  // Typewriter — iterate by graphemes so emoji counts as 1 character
   useEffect(() => {
     if (scene !== "typing") return;
     setTypedText("");
+    const chars = [...PROMPT_TEXT]; // grapheme-aware split
     let i = 0;
     const interval = setInterval(() => {
       i++;
-      setTypedText(TYPE_TARGET.slice(0, i));
-      if (i >= TYPE_TARGET.length) clearInterval(interval);
-    }, 65); // Faster typing
+      setTypedText(chars.slice(0, i).join(""));
+      if (i >= chars.length) clearInterval(interval);
+    }, 75);
     return () => clearInterval(interval);
   }, [scene]);
 
   const replay = () => {
-    setScene("intro");
-    setProgress(0);
-    setPlaying(true);
+    startPlayback();
   };
 
-  // Loading state
-  if (!imagesLoaded) {
+  // Show play screen until user clicks
+  if (!playing && progress === 0) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <LogoMark size={32} color="white" />
+      <div
+        className="fixed inset-0 flex items-center justify-center overflow-hidden"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, hsl(234 62% 25%) 0%, hsl(234 62% 8%) 50%, black 100%)",
+        }}
+      >
+        <div className="text-center px-6">
+          <div className="mb-8 flex justify-center">
+            <div
+              className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-[0_0_80px_hsl(234_62%_60%/0.5)]"
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+              }}
+            >
+              <LogoMark size={54} color="white" />
+            </div>
           </div>
-          <p className="text-white/60 text-sm">Loading promo…</p>
+          <h1 className="text-white text-5xl sm:text-6xl font-extrabold tracking-tight mb-3">
+            Jolliday
+          </h1>
+          <p className="text-white/60 mb-8">A quick tour with sound</p>
+          <Button
+            onClick={startPlayback}
+            disabled={!imagesLoaded}
+            size="lg"
+            className="h-14 px-8 rounded-full gap-3 text-base font-bold"
+            style={{
+              background:
+                "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+            }}
+          >
+            <Play className="h-5 w-5 fill-white" />
+            {imagesLoaded ? "Play with sound" : "Loading…"}
+            <Volume2 className="h-5 w-5" />
+          </Button>
+          <p className="mt-4 text-white/40 text-xs">
+            Unmute your device to hear the narration
+          </p>
         </div>
       </div>
     );
@@ -264,10 +376,10 @@ const Promo = () => {
         </div>
       )}
 
-      {/* SCENE 2: PROBLEM */}
+      {/* SCENE 2: PROBLEM — fixed bottom text clipping */}
       {scene === "problem" && (
         <div className="absolute inset-0 flex items-center justify-center bg-[hsl(0_0%_6%)]">
-          <div className="max-w-4xl px-8 text-center">
+          <div className="max-w-4xl px-8 text-center py-8">
             <div className="grid grid-cols-4 gap-2 mb-10">
               {[
                 "Kayak",
@@ -282,27 +394,28 @@ const Promo = () => {
                 <div
                   key={tab}
                   className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/40 text-sm truncate animate-promo-tab-fly"
-                  style={{ animationDelay: `${i * 0.06}s` }}
+                  style={{ animationDelay: `${i * 0.05}s` }}
                 >
                   {tab}
                 </div>
               ))}
             </div>
             <h2
-              className="text-white text-5xl sm:text-6xl font-extrabold tracking-tight animate-promo-fade-up"
-              style={{ animationDelay: "0.7s" }}
+              className="text-white text-4xl sm:text-5xl font-extrabold tracking-tight animate-promo-fade-up leading-tight"
+              style={{ animationDelay: "0.6s" }}
             >
               Planning a trip?
             </h2>
             <h2
-              className="mt-2 text-4xl sm:text-5xl font-extrabold tracking-tight animate-promo-slide-in-right"
+              className="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight animate-promo-fade-up leading-tight pb-2"
               style={{
-                animationDelay: "1.4s",
+                animationDelay: "1.2s",
                 background:
                   "linear-gradient(135deg, hsl(234 62% 62%), hsl(260 70% 65%))",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
+                paddingBottom: "0.15em",
               }}
             >
               Just ask Jolliday.
@@ -348,13 +461,13 @@ const Promo = () => {
         </div>
       )}
 
-      {/* SCENE 4: CHAT */}
+      {/* SCENE 4: CHAT — same prompt text */}
       {scene === "chat" && (
         <div className="absolute inset-0 flex items-center justify-center bg-white">
           <div className="w-full max-w-2xl px-6">
             <div className="flex justify-end mb-4 animate-promo-slide-in-right">
               <div className="max-w-sm rounded-2xl rounded-tr-sm bg-primary text-white px-4 py-3 text-sm">
-                5 days in Tokyo for a couple, love food
+                {PROMPT_TEXT}
               </div>
             </div>
 
@@ -381,14 +494,14 @@ const Promo = () => {
                 </div>
                 <div
                   className="animate-promo-slide-in-left bg-muted/40 rounded-xl px-3 py-2 inline-flex items-center gap-2 text-xs text-muted-foreground"
-                  style={{ animationDelay: "1.4s" }}
+                  style={{ animationDelay: "1.5s" }}
                 >
                   <Sparkles className="h-3 w-3 text-primary animate-pulse" />
                   <span className="font-medium">Finding sushi spots…</span>
                 </div>
                 <div
                   className="animate-promo-slide-in-left bg-muted/40 rounded-xl px-3 py-2 inline-flex items-center gap-2 text-xs text-muted-foreground"
-                  style={{ animationDelay: "2.2s" }}
+                  style={{ animationDelay: "2.4s" }}
                 >
                   <Sparkles className="h-3 w-3 text-primary animate-pulse" />
                   <span className="font-medium">Pricing it out…</span>
@@ -396,7 +509,7 @@ const Promo = () => {
                 <div
                   className="animate-promo-scale-in rounded-xl px-4 py-2.5 inline-flex items-center gap-2 text-sm font-semibold text-white shadow-lg"
                   style={{
-                    animationDelay: "3s",
+                    animationDelay: "3.3s",
                     background:
                       "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
                   }}
@@ -410,7 +523,7 @@ const Promo = () => {
         </div>
       )}
 
-      {/* SCENE 5: ITINERARY with real places */}
+      {/* SCENE 5: ITINERARY */}
       {scene === "itinerary" && (
         <div
           className="absolute inset-0 flex flex-col items-center justify-center"
@@ -434,36 +547,11 @@ const Promo = () => {
 
             <div className="grid grid-cols-5 gap-3">
               {[
-                {
-                  day: "Day 1",
-                  title: "Shibuya Crossing",
-                  image: TOKYO_IMAGES.shibuya,
-                  tag: "Neon · Streets",
-                },
-                {
-                  day: "Day 2",
-                  title: "Senso-ji Temple",
-                  image: TOKYO_IMAGES.senso,
-                  tag: "Culture · History",
-                },
-                {
-                  day: "Day 3",
-                  title: "Tsukiji Market",
-                  image: TOKYO_IMAGES.sushi,
-                  tag: "Sushi · Seafood",
-                },
-                {
-                  day: "Day 4",
-                  title: "Shinjuku",
-                  image: TOKYO_IMAGES.shinjuku,
-                  tag: "Nightlife · Views",
-                },
-                {
-                  day: "Day 5",
-                  title: "Harajuku",
-                  image: TOKYO_IMAGES.harajuku,
-                  tag: "Fashion · Cafés",
-                },
+                { day: "Day 1", title: "Shibuya Crossing", image: TOKYO_IMAGES.shibuya, tag: "Neon · Streets" },
+                { day: "Day 2", title: "Senso-ji Temple", image: TOKYO_IMAGES.senso, tag: "Culture · History" },
+                { day: "Day 3", title: "Tsukiji Market", image: TOKYO_IMAGES.sushi, tag: "Sushi · Seafood" },
+                { day: "Day 4", title: "Shinjuku", image: TOKYO_IMAGES.shinjuku, tag: "Nightlife · Views" },
+                { day: "Day 5", title: "Harajuku", image: TOKYO_IMAGES.harajuku, tag: "Fashion · Cafés" },
               ].map((d, i) => (
                 <div
                   key={d.day}
@@ -523,7 +611,7 @@ const Promo = () => {
         </div>
       )}
 
-      {/* SCENE 6: HOTEL + FLIGHT with real prices */}
+      {/* SCENE 6: HOTEL + FLIGHT */}
       {scene === "hotel" && (
         <div
           className="absolute inset-0 flex items-center justify-center"
@@ -538,7 +626,6 @@ const Promo = () => {
             </h2>
 
             <div className="grid grid-cols-2 gap-5">
-              {/* Flight card */}
               <div
                 className="rounded-2xl border border-border bg-white shadow-xl p-5 animate-promo-slide-in-left"
                 style={{ animationDelay: "0.2s" }}
@@ -553,9 +640,7 @@ const Promo = () => {
                 </div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-2xl font-extrabold text-foreground">
-                      JFK
-                    </p>
+                    <p className="text-2xl font-extrabold text-foreground">JFK</p>
                     <p className="text-xs text-muted-foreground">7:45 PM</p>
                   </div>
                   <div className="flex-1 mx-3 relative">
@@ -563,9 +648,7 @@ const Promo = () => {
                     <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-extrabold text-foreground">
-                      HND
-                    </p>
+                    <p className="text-2xl font-extrabold text-foreground">HND</p>
                     <p className="text-xs text-muted-foreground">11:20 PM+1</p>
                   </div>
                 </div>
@@ -573,13 +656,10 @@ const Promo = () => {
                   <span className="text-xs text-muted-foreground">
                     ANA · Direct · 14h 05m
                   </span>
-                  <span className="text-lg font-extrabold text-primary">
-                    $612
-                  </span>
+                  <span className="text-lg font-extrabold text-primary">$612</span>
                 </div>
               </div>
 
-              {/* Hotel card */}
               <div
                 className="rounded-2xl border border-border bg-white shadow-xl overflow-hidden animate-promo-slide-in-right"
                 style={{ animationDelay: "0.35s" }}
@@ -611,12 +691,8 @@ const Promo = () => {
                     Shibuya · 5 min to station · Rooftop bar
                   </p>
                   <div className="flex items-center justify-between pt-2 border-t border-border">
-                    <span className="text-xs text-muted-foreground">
-                      5 nights
-                    </span>
-                    <span className="text-lg font-extrabold text-primary">
-                      $485
-                    </span>
+                    <span className="text-xs text-muted-foreground">5 nights</span>
+                    <span className="text-lg font-extrabold text-primary">$485</span>
                   </div>
                 </div>
               </div>
@@ -663,12 +739,7 @@ const Promo = () => {
                 preserveAspectRatio="none"
               >
                 <defs>
-                  <pattern
-                    id="grid"
-                    width="40"
-                    height="40"
-                    patternUnits="userSpaceOnUse"
-                  >
+                  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
                     <path
                       d="M 40 0 L 0 0 0 40"
                       fill="none"
@@ -738,59 +809,7 @@ const Promo = () => {
         </div>
       )}
 
-      {/* SCENE 8: PROOF */}
-      {scene === "proof" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[hsl(0_0%_5%)]">
-          <div className="w-full max-w-3xl px-8 text-center">
-            <h2 className="text-white text-4xl sm:text-5xl font-extrabold tracking-tight mb-10 animate-promo-fade-up">
-              Trusted by travellers
-            </h2>
-            <div className="grid grid-cols-3 gap-6 mb-8">
-              {[
-                { num: "48K+", label: "Trips planned" },
-                { num: "4.9★", label: "Avg rating" },
-                { num: "60s", label: "Avg plan time" },
-              ].map((s, i) => (
-                <div
-                  key={s.label}
-                  className="animate-promo-stat-pop"
-                  style={{ animationDelay: `${0.2 + i * 0.15}s` }}
-                >
-                  <div
-                    className="text-5xl sm:text-6xl font-extrabold bg-clip-text text-transparent"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(135deg, hsl(234 62% 62%), hsl(260 70% 65%))",
-                    }}
-                  >
-                    {s.num}
-                  </div>
-                  <div className="text-white/60 mt-2 text-sm">{s.label}</div>
-                </div>
-              ))}
-            </div>
-            <div
-              className="max-w-xl mx-auto rounded-2xl border border-white/10 bg-white/[0.03] p-5 animate-promo-fade-up"
-              style={{ animationDelay: "0.9s" }}
-            >
-              <div className="flex gap-0.5 justify-center mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className="h-4 w-4 fill-amber-400 text-amber-400"
-                  />
-                ))}
-              </div>
-              <p className="text-white/90 text-base italic leading-relaxed">
-                "Planned our honeymoon in 3 minutes. Would have taken hours on my own."
-              </p>
-              <p className="text-white/50 text-xs mt-2">— Sofia, Bali</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SCENE 9: CTA */}
+      {/* SCENE 8: CTA */}
       {scene === "cta" && (
         <div
           className="absolute inset-0 flex items-center justify-center"
@@ -815,6 +834,8 @@ const Promo = () => {
                     "linear-gradient(135deg, hsl(234 62% 72%), hsl(260 70% 75%))",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
+                  paddingBottom: "0.15em",
+                  display: "inline-block",
                 }}
               >
                 away.
@@ -824,7 +845,7 @@ const Promo = () => {
         </div>
       )}
 
-      {/* SCENE 10: END CARD */}
+      {/* SCENE 9: END */}
       {scene === "end" && (
         <div
           className="absolute inset-0 flex items-center justify-center"
@@ -858,28 +879,12 @@ const Promo = () => {
               jolliday.online
             </p>
             <p
-              className="mt-3 text-white/50 text-sm animate-promo-fade-up"
+              className="mt-3 text-white/60 text-base animate-promo-fade-up"
               style={{ animationDelay: "0.75s" }}
             >
-              Try free · 3-day trial
+              Try free
             </p>
           </div>
-        </div>
-      )}
-
-      {!playing && progress === 0 && imagesLoaded && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black">
-          <Button
-            onClick={() => setPlaying(true)}
-            size="lg"
-            className="h-16 px-10 rounded-full gap-3 text-lg font-bold"
-            style={{
-              background:
-                "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
-            }}
-          >
-            <Play className="h-5 w-5 fill-white" /> Play promo
-          </Button>
         </div>
       )}
     </div>
