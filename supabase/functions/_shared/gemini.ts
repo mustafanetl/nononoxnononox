@@ -2,7 +2,7 @@
 // Swap provider by changing BASE_URL and MODEL.
 
 const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = "google/gemini-3.1-flash-lite:free";
+const MODEL = ""; // Set in OpenRouter dashboard
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -27,7 +27,7 @@ export async function streamGemini(
       "X-Title": "Jolliday AI Trip Planner",
     },
     body: JSON.stringify({
-      model: MODEL,
+      ...(MODEL ? { model: MODEL } : {}),
       messages,
       stream: true,
       max_tokens: maxTokens,
@@ -70,7 +70,7 @@ export async function callGemini(
         "X-Title": "Jolliday AI Trip Planner",
       },
       body: JSON.stringify({
-        model: MODEL,
+        ...(MODEL ? { model: MODEL } : {}),
         messages,
         max_tokens: maxTokens,
         temperature: 0.8,
