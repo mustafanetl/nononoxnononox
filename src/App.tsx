@@ -21,6 +21,7 @@ import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import Promo from "./pages/Promo";
+import Promox from "./pages/Promox";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/promo" element={<Promo />} />
+              <Route path="/promox" element={<Promox />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
