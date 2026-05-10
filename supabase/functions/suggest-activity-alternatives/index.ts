@@ -5,6 +5,7 @@ import {
   rateLimitResponse,
   resolveAuth,
 } from "../_shared/auth.ts";
+import { callGemini, type ChatMessage } from "../_shared/gemini.ts";
 
 const TIMEOUT_MS = 8000;
 function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
@@ -68,8 +69,9 @@ serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const GOOGLE_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("AI service not configured");
+    if (!GEMINI_API_KEY && !LOVABLE_API_KEY) throw new Error("AI service not configured");
 
     const exclusions = [activity.name, ...(Array.isArray(excludeNames) ? excludeNames : [])].filter(Boolean);
 
@@ -90,26 +92,41 @@ Respond with ONLY a JSON array, no prose, no markdown fences:
 
 Rules: only famous, easy-to-verify venues. Realistic prices. Same currency as original (${activity.currency || "$"}).`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: "You are a travel expert. Respond with ONLY valid JSON, no prose, no code fences." },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
+    // Prefer direct Gemini; fall back to Lovable if only that key is set.
+    let content = "";
+    if (GEMINI_API_KEY) {
+      const messages: ChatMessage[] = [
+        { role: "system", content: "You are a travel expert. Respond with ONLY valid JSON, no prose, no code fences." },
+        { role: "user", content: prompt },
+      ];
+      const result = await callGemini(messages, GEMINI_API_KEY, 2048);
+      if (result.error) {
+        console.error("Gemini error:", result.status, result.error);
+        return new Response(JSON.stringify({ error: "AI request failed" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      content = result.text;
+    } else {
+      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: "You are a travel expert. Respond with ONLY valid JSON, no prose, no code fences." },
+            { role: "user", content: prompt },
+          ],
+        }),
+      });
 
-    if (!aiRes.ok) {
-      const errText = await aiRes.text();
-      console.error("AI gateway error:", aiRes.status, errText);
-      return new Response(JSON.stringify({ error: "AI request failed" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (!aiRes.ok) {
+        const errText = await aiRes.text();
+        console.error("AI gateway error:", aiRes.status, errText);
+        return new Response(JSON.stringify({ error: "AI request failed" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const aiData = await aiRes.json();
+      content = aiData.choices?.[0]?.message?.content || "";
     }
-
-    const aiData = await aiRes.json();
-    let content: string = aiData.choices?.[0]?.message?.content || "";
     content = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 
     let suggestions: any[] = [];

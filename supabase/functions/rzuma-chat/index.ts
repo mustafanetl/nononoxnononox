@@ -7,6 +7,7 @@ import {
   sanitizePreferences,
   sanitizeRevisionIssues,
 } from "../_shared/auth.ts";
+import { streamGemini, type ChatMessage } from "../_shared/gemini.ts";
 
 const SYSTEM_PROMPT = `You are Jolliday — a professional travel concierge. You communicate clearly, politely, and efficiently, like a knowledgeable advisor — not a casual friend.
 
@@ -277,16 +278,17 @@ serve(async (req) => {
     const revisionRequest = sanitizeRevisionIssues(rawRevision);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY && !LOVABLE_API_KEY) {
+      console.error("Neither GEMINI_API_KEY nor LOVABLE_API_KEY configured");
       throw new Error("AI service is not configured");
     }
 
     console.log(
-      `rzuma-chat tier=${ctx.tier} userId=${ctx.userId ?? ctx.ip} msgs=${trimmedMessages.length} remaining=${limitCheck.remaining}`,
+      `rzuma-chat tier=${ctx.tier} userId=${ctx.userId ?? ctx.ip} msgs=${trimmedMessages.length} remaining=${limitCheck.remaining} provider=${GEMINI_API_KEY ? "gemini" : "lovable"}`,
     );
 
-    const systemMessages: any[] = [{ role: "system", content: SYSTEM_PROMPT }];
+    const systemMessages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }];
 
     if (preferences) {
       const parts: string[] = [];
@@ -318,7 +320,7 @@ serve(async (req) => {
 
       if (parts.length > 0) {
         systemMessages.push({
-          role: "system",
+          role: "system" as const,
           content: `USER PROFILE:\n${parts.join(".\n")}.\n\nUse this info naturally — like a friend who knows them well. Don't list back their preferences, just USE them.`,
         });
       }
@@ -327,7 +329,7 @@ serve(async (req) => {
     // Premium check is ALWAYS server-side now — never trust the client.
     if (ctx.isPremium) {
       systemMessages.push({
-        role: "system",
+        role: "system" as const,
         content:
           "The user is a PREMIUM subscriber with full access. Do NOT suggest starting a free trial, do NOT mention upgrading, and do NOT include \"Start 3-day free trial\" in quickreplies. They already have everything unlocked.",
       });
@@ -336,11 +338,45 @@ serve(async (req) => {
     if (revisionRequest.length > 0) {
       const issuesText = revisionRequest.map((s, i) => `${i + 1}. ${s}`).join("\n");
       systemMessages.push({
-        role: "system",
+        role: "system" as const,
         content: `REVISION REQUEST — A QA reviewer flagged the previous plan with these specific problems. You MUST fix ALL of them and re-emit the FULL plan with ALL the original blocks (flights/hotels/activities/itinerary/travelinfo/destination_enrich/quickreplies as applicable). Do NOT just say "fixed" — re-output every block in full.\n\nIssues:\n${issuesText}\n\nRules:\n- Replace any invented venue with a REAL well-known one in the same city.\n- Fix any wrong lat/lng to realistic coords inside the destination city.\n- Re-cluster days that zig-zag geographically.\n- Keep the same destination, dates, and overall vibe — just fix the issues.\n- Output the FULL revised plan in the same code-block format as before.`,
       });
     }
 
+    // ── PROVIDER: prefer Gemini direct, fall back to Lovable gateway ──────
+    if (GEMINI_API_KEY) {
+      const geminiMessages: ChatMessage[] = [...systemMessages, ...trimmedMessages];
+      const upstream = await streamGemini(geminiMessages, GEMINI_API_KEY, 16384);
+
+      if (!upstream.ok) {
+        const errorText = await upstream.text();
+        console.error("Gemini error:", upstream.status, errorText);
+
+        if (upstream.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "AI is busy right now. Please try again in a moment." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        if (upstream.status === 400) {
+          return new Response(
+            JSON.stringify({ error: "Invalid request to AI. Please try rephrasing." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(
+          JSON.stringify({ error: "AI service temporarily unavailable" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      return new Response(upstream.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // Legacy path — Lovable gateway. Kept as a safety fallback so the site
+    // keeps working if GEMINI_API_KEY is ever unset.
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
