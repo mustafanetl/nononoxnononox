@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Compass, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import Logo from "@/components/Logo";
 import { toast } from "sonner";
 
 const ResetPassword = () => {
@@ -61,8 +62,8 @@ const ResetPassword = () => {
 
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-xl bg-foreground flex items-center justify-center mx-auto mb-4">
-            <Compass className="h-6 w-6 text-background" />
+          <div className="flex justify-center mb-4">
+            <Logo size="lg" variant="mark-only" />
           </div>
           <h1 className="text-2xl font-bold">{step === "request" ? "Reset password" : "New password"}</h1>
           <p className="text-sm text-muted-foreground mt-1">

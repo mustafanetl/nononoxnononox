@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Compass,
   ArrowRight,
   Settings,
   Menu,
@@ -12,6 +11,7 @@ import {
   Youtube,
   Mail,
 } from "lucide-react";
+import Logo from "@/components/Logo";
 import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/landing/HowItWorks";
 import WhyJolliday from "@/components/landing/WhyJolliday";
@@ -36,7 +36,6 @@ const Index = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close mobile menu on route/link click
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = "hidden";
@@ -50,26 +49,21 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Navbar */}
+      {/* Navbar — truly full-width, edge to edge */}
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-white/85 backdrop-blur-xl border-b border-border shadow-sm"
-            : "bg-white/60 backdrop-blur-md"
+            ? "bg-white/90 backdrop-blur-xl border-b border-border shadow-sm"
+            : "bg-white/70 backdrop-blur-md border-b border-transparent"
         }`}
       >
-        <nav className="w-full max-w-[1400px] mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-10 h-16 lg:h-[72px]">
-          {/* Logo — left */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-              <Compass className="h-[18px] w-[18px] text-primary-foreground" />
-            </div>
-            <span className="font-extrabold text-xl tracking-tight text-foreground">
-              Jolliday
-            </span>
+        <nav className="w-full flex items-center justify-between px-4 sm:px-6 lg:px-8 xl:px-12 h-16 lg:h-[72px]">
+          {/* Logo — far left */}
+          <Link to="/" className="shrink-0">
+            <Logo size="md" />
           </Link>
 
-          {/* Center nav — desktop only */}
+          {/* Center nav — desktop only, absolutely centered */}
           <div className="hidden lg:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
             <a
               href="#how-it-works"
@@ -97,7 +91,7 @@ const Index = () => {
             </Link>
           </div>
 
-          {/* Right side */}
+          {/* Right side — far right */}
           <div className="flex items-center gap-2 shrink-0">
             {user ? (
               <>
@@ -154,7 +148,6 @@ const Index = () => {
               </>
             )}
 
-            {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden ml-0.5 p-2 rounded-lg hover:bg-foreground/5 text-foreground"
@@ -246,21 +239,14 @@ const Index = () => {
         <FinalCTA />
       </main>
 
-      {/* Footer */}
-      <footer className="bg-[hsl(0_0%_4%)] text-white">
-        <div className="container mx-auto px-4 sm:px-6 pt-16 pb-8 max-w-6xl">
+      {/* Footer — light and refined */}
+      <footer className="bg-[hsl(0_0%_97%)] border-t border-border">
+        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 pt-16 pb-8">
           <div className="grid grid-cols-2 md:grid-cols-12 gap-8 md:gap-10 mb-12">
             {/* Brand */}
-            <div className="col-span-2 md:col-span-4">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-                  <Compass className="h-[18px] w-[18px] text-primary-foreground" />
-                </div>
-                <span className="font-extrabold text-xl tracking-tight text-white">
-                  Jolliday
-                </span>
-              </div>
-              <p className="text-sm text-white/60 leading-relaxed max-w-xs">
+            <div className="col-span-2 md:col-span-5">
+              <Logo size="md" />
+              <p className="mt-4 text-sm text-muted-foreground leading-relaxed max-w-xs">
                 Your AI travel planner. Turn any idea into a fully booked trip
                 in under a minute.
               </p>
@@ -270,44 +256,44 @@ const Index = () => {
                 <a
                   href="#"
                   aria-label="Instagram"
-                  className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-colors"
+                  className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
-                  <Instagram className="h-4 w-4 text-white/70" />
+                  <Instagram className="h-4 w-4" />
                 </a>
                 <a
                   href="#"
                   aria-label="Twitter"
-                  className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-colors"
+                  className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
-                  <Twitter className="h-4 w-4 text-white/70" />
+                  <Twitter className="h-4 w-4" />
                 </a>
                 <a
                   href="#"
                   aria-label="YouTube"
-                  className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-colors"
+                  className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
-                  <Youtube className="h-4 w-4 text-white/70" />
+                  <Youtube className="h-4 w-4" />
                 </a>
                 <a
-                  href="mailto:hello@jolliday.com"
+                  href="mailto:hello@jolliday.app"
                   aria-label="Email"
-                  className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-colors"
+                  className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
-                  <Mail className="h-4 w-4 text-white/70" />
+                  <Mail className="h-4 w-4" />
                 </a>
               </div>
             </div>
 
             {/* Product */}
             <div className="md:col-span-2">
-              <h4 className="text-xs uppercase tracking-[0.15em] text-white/40 mb-4 font-semibold">
+              <h4 className="text-xs uppercase tracking-[0.15em] text-foreground mb-4 font-bold">
                 Product
               </h4>
               <ul className="space-y-3">
                 <li>
                   <Link
                     to="/chat"
-                    className="text-sm text-white/70 hover:text-white transition-colors"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     Plan a Trip
                   </Link>
@@ -315,7 +301,7 @@ const Index = () => {
                 <li>
                   <Link
                     to="/my-trips"
-                    className="text-sm text-white/70 hover:text-white transition-colors"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     My Trips
                   </Link>
@@ -323,7 +309,7 @@ const Index = () => {
                 <li>
                   <a
                     href="#destinations"
-                    className="text-sm text-white/70 hover:text-white transition-colors"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     Destinations
                   </a>
@@ -333,14 +319,14 @@ const Index = () => {
 
             {/* Company */}
             <div className="md:col-span-2">
-              <h4 className="text-xs uppercase tracking-[0.15em] text-white/40 mb-4 font-semibold">
+              <h4 className="text-xs uppercase tracking-[0.15em] text-foreground mb-4 font-bold">
                 Company
               </h4>
               <ul className="space-y-3">
                 <li>
                   <a
                     href="#testimonials"
-                    className="text-sm text-white/70 hover:text-white transition-colors"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     Reviews
                   </a>
@@ -348,7 +334,7 @@ const Index = () => {
                 <li>
                   <Link
                     to="/contact"
-                    className="text-sm text-white/70 hover:text-white transition-colors"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     Contact
                   </Link>
@@ -356,7 +342,7 @@ const Index = () => {
                 <li>
                   <Link
                     to="/faq"
-                    className="text-sm text-white/70 hover:text-white transition-colors"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     FAQ
                   </Link>
@@ -365,56 +351,36 @@ const Index = () => {
             </div>
 
             {/* Legal */}
-            <div className="md:col-span-2">
-              <h4 className="text-xs uppercase tracking-[0.15em] text-white/40 mb-4 font-semibold">
+            <div className="md:col-span-3">
+              <h4 className="text-xs uppercase tracking-[0.15em] text-foreground mb-4 font-bold">
                 Legal
               </h4>
               <ul className="space-y-3">
                 <li>
                   <Link
                     to="/terms"
-                    className="text-sm text-white/70 hover:text-white transition-colors"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Terms
+                    Terms of Use
                   </Link>
                 </li>
                 <li>
                   <Link
                     to="/privacy"
-                    className="text-sm text-white/70 hover:text-white transition-colors"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Privacy
+                    Privacy Policy
                   </Link>
                 </li>
               </ul>
             </div>
-
-            {/* Newsletter */}
-            <div className="col-span-2 md:col-span-2">
-              <h4 className="text-xs uppercase tracking-[0.15em] text-white/40 mb-4 font-semibold">
-                Get Inspired
-              </h4>
-              <p className="text-sm text-white/60 mb-3 leading-relaxed">
-                Travel tips in your inbox.
-              </p>
-              <Link to="/chat">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-10 rounded-full bg-white text-black hover:bg-white/90 border-0 font-medium gap-1.5"
-                >
-                  Start Planning
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
-            </div>
           </div>
 
-          <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <p className="text-xs sm:text-sm text-white/50">
+          <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               &copy; {new Date().getFullYear()} Jolliday. All rights reserved.
             </p>
-            <p className="text-xs sm:text-sm text-white/50">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Made with <span className="text-primary">♥</span> for travellers
             </p>
           </div>

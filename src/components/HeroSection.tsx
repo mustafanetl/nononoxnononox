@@ -1,13 +1,33 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Star } from "lucide-react";
+import {
+  ArrowUp,
+  Sparkles,
+  Star,
+  MapPin,
+  Plane,
+  Calendar,
+  Users,
+} from "lucide-react";
+
+const suggestions = [
+  { icon: MapPin, label: "Weekend in Paris", query: "Plan a weekend in Paris" },
+  { icon: Plane, label: "7 days in Japan", query: "Plan 7 days in Japan" },
+  { icon: Calendar, label: "Bali honeymoon", query: "Plan a Bali honeymoon" },
+  {
+    icon: Users,
+    label: "Family Europe trip",
+    query: "Plan a family trip to Europe",
+  },
+];
 
 const HeroSection = () => {
   const [query, setQuery] = useState("");
   const [tripCount, setTripCount] = useState(0);
   const navigate = useNavigate();
   const counterRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasAnimated = useRef(false);
 
   const TARGET_COUNT = 48293;
@@ -42,9 +62,24 @@ const HeroSection = () => {
     requestAnimationFrame(tick);
   };
 
+  // Auto-grow textarea
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
+  }, [query]);
+
   const handleSubmit = (q: string) => {
     const trimmed = q.trim();
     if (trimmed) navigate(`/chat?q=${encodeURIComponent(trimmed)}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(query);
+    }
   };
 
   return (
@@ -54,7 +89,7 @@ const HeroSection = () => {
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 90% 70% at 50% 0%, hsl(234 62% 47% / 0.08) 0%, transparent 65%), linear-gradient(180deg, hsl(0 0% 99.5%) 0%, hsl(0 0% 100%) 100%)",
+            "radial-gradient(ellipse 100% 70% at 50% 0%, hsl(234 62% 47% / 0.09) 0%, transparent 65%), linear-gradient(180deg, hsl(0 0% 99.5%) 0%, hsl(0 0% 100%) 100%)",
         }}
       />
 
@@ -72,8 +107,8 @@ const HeroSection = () => {
       <div className="absolute top-1/4 -left-32 w-96 h-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-16 sm:py-20 md:py-24 lg:py-28">
-        <div className="max-w-5xl mx-auto text-center">
+      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-12 sm:py-16 md:py-20">
+        <div className="max-w-4xl mx-auto text-center">
           {/* Trust badge */}
           <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white border border-border shadow-sm mb-6 md:mb-8 animate-fade-in">
             <div className="flex -space-x-2">
@@ -102,12 +137,21 @@ const HeroSection = () => {
             </div>
           </div>
 
-          {/* Main headline — larger, more responsive */}
-          <h1 className="font-display text-[2.5rem] leading-[1.05] sm:text-5xl md:text-6xl lg:text-7xl xl:text-[5.5rem] font-extrabold tracking-tight text-foreground">
+          {/* Main headline */}
+          <h1 className="font-display text-[2.75rem] leading-[1.02] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[5.5rem] xl:text-[6.25rem] font-extrabold tracking-[-0.03em] text-foreground">
             Plan your dream trip
-            <br className="hidden sm:block" />
+            <br />
+            in{" "}
             <span className="relative inline-block">
-              in <span className="text-primary">minutes</span>
+              <span
+                className="bg-clip-text text-transparent"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(135deg, hsl(234 62% 52%), hsl(260 70% 60%))",
+                }}
+              >
+                minutes
+              </span>
               <svg
                 className="absolute -bottom-1 sm:-bottom-2 left-0 w-full h-3 text-primary/40"
                 viewBox="0 0 200 12"
@@ -122,46 +166,96 @@ const HeroSection = () => {
                 />
               </svg>
             </span>
-            <span>,</span>
-            <br />
-            not weeks.
+            .
           </h1>
 
           {/* Subtitle */}
           <p className="mt-6 md:mt-8 text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-2">
-            Tell us where you want to go. Get a complete itinerary with flights,
-            hotels, and things to do — ready to book in under 60 seconds.
+            Tell me where you want to go. I'll build a complete itinerary with
+            flights, hotels, and things to do — ready to book in 60 seconds.
           </p>
 
-          {/* Search bar — primary CTA */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit(query);
-            }}
-            className="mt-8 md:mt-10 flex items-center gap-1.5 sm:gap-2 max-w-2xl mx-auto border-2 border-border rounded-full pl-4 sm:pl-6 pr-1.5 sm:pr-2 py-1.5 sm:py-2 bg-white shadow-lg shadow-primary/5 hover:border-primary/30 focus-within:border-primary focus-within:shadow-xl focus-within:shadow-primary/10 transition-all duration-200"
-          >
-            <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
-            <input
-              type="text"
-              placeholder="Where do you want to go?"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="flex-1 min-w-0 bg-transparent py-2.5 sm:py-3 text-sm sm:text-base md:text-lg text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
-            />
-            <Button
-              type="submit"
-              size="lg"
-              className="h-11 sm:h-12 px-4 sm:px-6 rounded-full gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 shadow-md font-semibold text-sm sm:text-base"
-            >
-              <span className="hidden sm:inline">Plan my trip</span>
-              <span className="sm:hidden">Plan</span>
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </form>
+          {/* BIG composer-style input (Layla-style) */}
+          <div className="mt-10 md:mt-12 max-w-2xl mx-auto">
+            <div className="relative rounded-3xl border-2 border-border bg-white shadow-[0_4px_24px_-4px_rgba(45,66,179,0.08)] hover:border-primary/30 focus-within:border-primary focus-within:shadow-[0_8px_40px_-8px_rgba(45,66,179,0.25)] transition-all duration-200">
+              {/* Label above */}
+              <div className="flex items-center gap-2 px-5 pt-4 pb-1">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold text-primary tracking-wide uppercase">
+                  Tell me about your trip
+                </span>
+              </div>
 
-          {/* Secondary CTAs */}
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground">
+              <textarea
+                ref={textareaRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="e.g. Plan a 5-day trip to Japan for a couple in April with a mid-range budget..."
+                rows={2}
+                className="w-full px-5 pt-2 pb-3 text-base sm:text-lg text-foreground placeholder:text-muted-foreground/50 bg-transparent focus:outline-none resize-none leading-relaxed min-h-[80px] max-h-[200px]"
+              />
+
+              {/* Action row */}
+              <div className="flex items-center justify-between gap-3 px-3 pb-3 pt-1">
+                {/* Quick pills on the left */}
+                <div className="hidden sm:flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-hide pl-2">
+                  {suggestions.slice(0, 3).map((s) => {
+                    const Icon = s.icon;
+                    return (
+                      <button
+                        key={s.label}
+                        type="button"
+                        onClick={() => setQuery(s.query)}
+                        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-muted-foreground bg-foreground/[0.03] hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20 transition-all"
+                      >
+                        <Icon className="h-3 w-3" />
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Submit button */}
+                <Button
+                  type="button"
+                  onClick={() => handleSubmit(query)}
+                  disabled={!query.trim()}
+                  size="lg"
+                  className="h-12 px-5 rounded-2xl gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 shadow-md font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: query.trim()
+                      ? "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))"
+                      : undefined,
+                  }}
+                >
+                  <span className="hidden sm:inline">Plan my trip</span>
+                  <ArrowUp className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Mobile suggestions — below input */}
+            <div className="sm:hidden mt-4 flex gap-2 overflow-x-auto scrollbar-hide px-1">
+              {suggestions.slice(0, 3).map((s) => {
+                const Icon = s.icon;
+                return (
+                  <button
+                    key={s.label}
+                    type="button"
+                    onClick={() => handleSubmit(s.query)}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-muted-foreground bg-white border border-border hover:border-primary/30 hover:text-primary transition-all"
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Trust indicators */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
               Free 3-day trial
@@ -174,26 +268,6 @@ const HeroSection = () => {
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
               Cancel anytime
             </div>
-          </div>
-
-          {/* Try examples */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              Try:
-            </span>
-            {[
-              "Weekend in Paris",
-              "7 days in Japan",
-              "Bali honeymoon",
-            ].map((example) => (
-              <Link
-                key={example}
-                to={`/chat?q=${encodeURIComponent(example)}`}
-                className="px-3 py-1.5 text-xs sm:text-sm rounded-full border border-border bg-white hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all duration-200 text-muted-foreground"
-              >
-                {example}
-              </Link>
-            ))}
           </div>
 
           {/* Stats */}

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Compass, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const Terms = () => (
   <div className="min-h-screen bg-background">
@@ -8,12 +9,9 @@ const Terms = () => (
         <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-foreground flex items-center justify-center">
-            <Compass className="h-3.5 w-3.5 text-background" />
-          </div>
-          <span className="font-semibold">Jolliday</span>
-        </div>
+        <Link to="/">
+          <Logo size="sm" />
+        </Link>
       </nav>
     </header>
 
