@@ -2,7 +2,7 @@
 // Swap provider by changing BASE_URL and MODEL.
 
 const BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "llama-3.3-70b-versatile";
+const MODEL = "llama-3.1-8b-instant";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -28,7 +28,7 @@ export async function streamGemini(
       model: MODEL,
       messages,
       stream: true,
-      max_tokens: maxTokens,
+      max_tokens: 4096,
       temperature: 0.8,
     }),
   });
