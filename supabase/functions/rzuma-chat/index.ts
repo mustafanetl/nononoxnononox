@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  corsHeaders,
+  enforceRateLimit,
+  rateLimitResponse,
+  resolveAuth,
+  sanitizePreferences,
+  sanitizeRevisionIssues,
+} from "../_shared/auth.ts";
 
 const SYSTEM_PROMPT = `You are Jolliday — a professional travel concierge. You communicate clearly, politely, and efficiently, like a knowledgeable advisor — not a casual friend.
 
@@ -229,6 +232,14 @@ serve(async (req) => {
   }
 
   try {
+    // ── AUTH + RATE LIMIT ─────────────────────────────────────────
+    const ctx = await resolveAuth(req);
+    const limitCheck = await enforceRateLimit(ctx, "rzuma-chat");
+    if (!limitCheck.ok) {
+      return rateLimitResponse(limitCheck.limit);
+    }
+
+    // ── PARSE BODY ────────────────────────────────────────────────
     let body: any;
     try {
       body = await req.json();
@@ -239,7 +250,7 @@ serve(async (req) => {
       );
     }
 
-    const { messages, preferences, revisionRequest } = body;
+    const { messages, preferences: rawPrefs, revisionRequest: rawRevision } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -257,65 +268,76 @@ serve(async (req) => {
       }
     }
 
+    // Hard-cap message history length to prevent runaway token use.
+    // Last 40 messages is plenty for Jolliday's multi-turn flow.
+    const trimmedMessages = messages.slice(-40);
+
+    // Sanitize user-controlled strings BEFORE they touch the system prompt.
+    const preferences = sanitizePreferences(rawPrefs);
+    const revisionRequest = sanitizeRevisionIssues(rawRevision);
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
     if (!LOVABLE_API_KEY) {
       console.error("LOVABLE_API_KEY is not configured");
       throw new Error("AI service is not configured");
     }
 
-    console.log("Processing chat request with", messages.length, "messages", preferences ? "with preferences" : "");
+    console.log(
+      `rzuma-chat tier=${ctx.tier} userId=${ctx.userId ?? ctx.ip} msgs=${trimmedMessages.length} remaining=${limitCheck.remaining}`,
+    );
 
     const systemMessages: any[] = [{ role: "system", content: SYSTEM_PROMPT }];
-    
+
     if (preferences) {
       const parts: string[] = [];
-      
-      if (preferences.displayName) {
-        parts.push(`The user's name is ${preferences.displayName}`);
-      }
-      if (preferences.homeCity) {
-        parts.push(`They live in ${preferences.homeCity}`);
-      }
-      if (preferences.travelStyle) {
+      if (preferences.displayName) parts.push(`The user's name is ${preferences.displayName}`);
+      if (preferences.homeCity) parts.push(`They live in ${preferences.homeCity}`);
+      if (preferences.travelStyle)
         parts.push(`Their travel style is ${preferences.travelStyle} — match all price suggestions to this level`);
+      if (Array.isArray(preferences.dietaryRestrictions) && preferences.dietaryRestrictions.length > 0) {
+        parts.push(
+          `Dietary restrictions: ${preferences.dietaryRestrictions.join(", ")}. NEVER suggest food/restaurants that conflict — silently filter`,
+        );
       }
-      if (preferences.dietaryRestrictions?.length > 0) {
-        parts.push(`Dietary restrictions: ${preferences.dietaryRestrictions.join(", ")}. NEVER suggest food/restaurants that conflict — silently filter`);
-      }
-      if (preferences.pastTrips?.length > 0) {
+      if (Array.isArray(preferences.pastTrips) && preferences.pastTrips.length > 0) {
         parts.push(`Past trips: ${preferences.pastTrips.join(", ")}. Reference naturally when relevant`);
       }
-      if (preferences.visitedPlaces?.length > 0) {
-        parts.push(`Previously visited places: ${preferences.visitedPlaces.map((p: any) => `${p.name} (${p.rating})`).join(", ")}`);
+      if (Array.isArray(preferences.visitedPlaces) && preferences.visitedPlaces.length > 0) {
+        parts.push(
+          `Previously visited places: ${preferences.visitedPlaces
+            .map((p: any) => `${p.name} (${p.rating})`)
+            .join(", ")}`,
+        );
       }
-      if (preferences.likedCategories?.length > 0) {
+      if (Array.isArray(preferences.likedCategories) && preferences.likedCategories.length > 0) {
         parts.push(`Likes: ${preferences.likedCategories.join(", ")} — lean into these`);
       }
-      if (preferences.dislikedCategories?.length > 0) {
+      if (Array.isArray(preferences.dislikedCategories) && preferences.dislikedCategories.length > 0) {
         parts.push(`Dislikes: ${preferences.dislikedCategories.join(", ")} — silently avoid`);
       }
-      
-      if (parts.length > 0) {
-        systemMessages.push({ 
-          role: "system", 
-          content: `USER PROFILE:\n${parts.join(".\n")}.\n\nUse this info naturally — like a friend who knows them well. Don't list back their preferences, just USE them.` 
-        });
-      }
 
-      if (preferences.isPremium) {
+      if (parts.length > 0) {
         systemMessages.push({
           role: "system",
-          content: "The user is a PREMIUM subscriber with full access. Do NOT suggest starting a free trial, do NOT mention upgrading, and do NOT include \"Start 3-day free trial\" in quickreplies. They already have everything unlocked."
+          content: `USER PROFILE:\n${parts.join(".\n")}.\n\nUse this info naturally — like a friend who knows them well. Don't list back their preferences, just USE them.`,
         });
       }
     }
 
-    if (Array.isArray(revisionRequest) && revisionRequest.length > 0) {
-      const issuesText = revisionRequest.map((s: any, i: number) => `${i + 1}. ${String(s)}`).join("\n");
+    // Premium check is ALWAYS server-side now — never trust the client.
+    if (ctx.isPremium) {
       systemMessages.push({
         role: "system",
-        content: `REVISION REQUEST — A QA reviewer flagged the previous plan with these specific problems. You MUST fix ALL of them and re-emit the FULL plan with ALL the original blocks (flights/hotels/activities/itinerary/travelinfo/destination_enrich/quickreplies as applicable). Do NOT just say "fixed" — re-output every block in full.\n\nIssues:\n${issuesText}\n\nRules:\n- Replace any invented venue with a REAL well-known one in the same city.\n- Fix any wrong lat/lng to realistic coords inside the destination city.\n- Re-cluster days that zig-zag geographically.\n- Keep the same destination, dates, and overall vibe — just fix the issues.\n- Output the FULL revised plan in the same code-block format as before.`
+        content:
+          "The user is a PREMIUM subscriber with full access. Do NOT suggest starting a free trial, do NOT mention upgrading, and do NOT include \"Start 3-day free trial\" in quickreplies. They already have everything unlocked.",
+      });
+    }
+
+    if (revisionRequest.length > 0) {
+      const issuesText = revisionRequest.map((s, i) => `${i + 1}. ${s}`).join("\n");
+      systemMessages.push({
+        role: "system",
+        content: `REVISION REQUEST — A QA reviewer flagged the previous plan with these specific problems. You MUST fix ALL of them and re-emit the FULL plan with ALL the original blocks (flights/hotels/activities/itinerary/travelinfo/destination_enrich/quickreplies as applicable). Do NOT just say "fixed" — re-output every block in full.\n\nIssues:\n${issuesText}\n\nRules:\n- Replace any invented venue with a REAL well-known one in the same city.\n- Fix any wrong lat/lng to realistic coords inside the destination city.\n- Re-cluster days that zig-zag geographically.\n- Keep the same destination, dates, and overall vibe — just fix the issues.\n- Output the FULL revised plan in the same code-block format as before.`,
       });
     }
 
@@ -327,10 +349,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        messages: [
-          ...systemMessages,
-          ...messages,
-        ],
+        messages: [...systemMessages, ...trimmedMessages],
         stream: true,
         max_tokens: 16384,
       }),
@@ -339,10 +358,10 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
+          JSON.stringify({ error: "AI service is busy. Please try again in a moment." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -352,14 +371,12 @@ serve(async (req) => {
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
+
       return new Response(
         JSON.stringify({ error: "AI service temporarily unavailable" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    console.log("Streaming response to client");
 
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },

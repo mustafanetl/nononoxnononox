@@ -39,6 +39,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { getAuthHeader } from "@/lib/authFetch";
 import { setWikimediaImage } from "@/utils/cityImages";
 import { Link, useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
@@ -93,13 +94,14 @@ const fetchEnrichment = async (destination: string, travelMonth?: string, activi
   if (enrichmentCache[cacheKey]) return enrichmentCache[cacheKey];
 
   try {
+    const authHeader = await getAuthHeader();
     const res = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/enrich-destination`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: authHeader,
         },
         body: JSON.stringify({ destination, travelMonth, activities: activityNames, hotelNames, imageOnly }),
       }

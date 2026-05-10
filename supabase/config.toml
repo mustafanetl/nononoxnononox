@@ -5,7 +5,14 @@ project_id = "lnaqgtimdxlcpvfmqvyn"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  # AI endpoints: we accept the anon key at the edge (verify_jwt=false so
+  # anonymous users can still make rate-limited calls), then do our own
+  # auth + rate-limit + premium check inside the function via _shared/auth.ts.
   [functions.rzuma-chat]
+    verify_jwt = false
+  [functions.review-trip-plan]
+    verify_jwt = false
+  [functions.suggest-activity-alternatives]
     verify_jwt = false
   [functions.send-transactional-email]
     verify_jwt = true

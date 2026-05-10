@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  corsHeaders,
+  enforceRateLimit,
+  rateLimitResponse,
+  resolveAuth,
+} from "../_shared/auth.ts";
 
 /**
  * AI2 reviewer — replaced by a real Google Places fact-checker.
@@ -181,6 +182,15 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Auth + rate limit. The reviewer runs per-chat-response (up to 3x via
+    // revision loop), so it gets its own bucket. Same limits as rzuma-chat
+    // are plenty; the main bottleneck is the chat call itself.
+    const ctx = await resolveAuth(req);
+    const limitCheck = await enforceRateLimit(ctx, "review-trip-plan");
+    if (!limitCheck.ok) {
+      return rateLimitResponse(limitCheck.limit);
+    }
+
     const body = await req.json().catch(() => null);
     if (!body || typeof body.planText !== "string" || !body.planText.trim()) {
       return new Response(

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getAuthHeader } from "@/lib/authFetch";
 
 type Message = {
   role: "user" | "assistant";
@@ -295,11 +296,12 @@ export const useRzumaChat = () => {
 
       // Stream one AI1 response. Returns the full text streamed.
       const runStream = async (revisionRequest?: string[]): Promise<string> => {
+        const authHeader = await getAuthHeader();
         const resp = await fetch(CHAT_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: authHeader,
           },
           body: JSON.stringify({ messages: baseMessages, preferences: fullPrefs, revisionRequest }),
         });
@@ -387,11 +389,12 @@ export const useRzumaChat = () => {
           setQaStatus("verifying");
           let review: { approved: boolean; issues?: string[]; enrichedPlan?: string } = { approved: true };
           try {
+            const reviewAuth = await getAuthHeader();
             const reviewResp = await fetch(REVIEW_URL, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                Authorization: reviewAuth,
               },
               body: JSON.stringify({
                 planText,

@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  corsHeaders,
+  enforceRateLimit,
+  rateLimitResponse,
+  resolveAuth,
+} from "../_shared/auth.ts";
 
 const TIMEOUT_MS = 8000;
 function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
@@ -51,6 +52,13 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Auth + rate-limit (swap feature gets the same daily bucket as chat).
+    const ctx = await resolveAuth(req);
+    const limitCheck = await enforceRateLimit(ctx, "suggest-activity-alternatives");
+    if (!limitCheck.ok) {
+      return rateLimitResponse(limitCheck.limit);
+    }
+
     const body = await req.json().catch(() => null);
     if (!body) return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
