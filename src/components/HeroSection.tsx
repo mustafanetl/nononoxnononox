@@ -29,17 +29,17 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="relative min-h-[100svh] flex flex-col items-center justify-center bg-white">
-      <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 pt-24 pb-20 sm:pt-32 sm:pb-24 md:pt-36 md:pb-28 flex flex-col items-center text-center">
+    <section className="relative min-h-[100svh] flex flex-col items-center justify-center bg-white px-4 sm:px-6">
+      <div className="w-full max-w-3xl mx-auto pt-28 pb-12 sm:pt-32 sm:pb-16 md:pt-40 md:pb-20 flex flex-col items-center text-center">
         {/* Headline */}
-        <h1 className="font-display text-[2.75rem] leading-[1.02] sm:text-[3.75rem] md:text-[5rem] lg:text-[6rem] xl:text-[7rem] font-extrabold tracking-[-0.03em] text-foreground">
+        <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-[-0.03em] text-foreground leading-[1.05]">
           Your trip.
           <br />
           Planned in minutes.
         </h1>
 
-        {/* Big text box — the main CTA, clear and obvious */}
-        <div className="mt-12 md:mt-16 w-full max-w-2xl">
+        {/* Big text box */}
+        <div className="mt-10 sm:mt-14 md:mt-16 w-full">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -52,18 +52,18 @@ const HeroSection = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Describe your dream trip... e.g. 5 days in Tokyo for a couple, mid-range budget, love food and culture"
+                placeholder="Describe your dream trip... e.g. 5 days in Tokyo for a couple, mid-range budget"
                 rows={3}
-                className="w-full px-5 sm:px-6 pt-5 pb-3 text-base sm:text-lg text-foreground placeholder:text-muted-foreground/50 bg-transparent focus:outline-none resize-none leading-relaxed min-h-[120px] max-h-[160px]"
+                className="w-full px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3 text-[15px] sm:text-lg text-foreground placeholder:text-muted-foreground/50 bg-transparent focus:outline-none resize-none leading-relaxed min-h-[100px] sm:min-h-[120px] max-h-[160px]"
               />
-              <div className="flex items-center justify-between px-4 pb-4">
+              <div className="flex items-center justify-between px-3 sm:px-4 pb-3 sm:pb-4">
                 <p className="text-xs text-muted-foreground hidden sm:block">
-                  Press Enter to plan · Shift+Enter for new line
+                  Press Enter to plan
                 </p>
                 <Button
                   type="submit"
                   disabled={!query.trim()}
-                  className="h-11 px-6 rounded-xl gap-2 font-semibold text-sm sm:text-base bg-primary text-primary-foreground hover:bg-primary/90 shadow-md disabled:opacity-40 disabled:shadow-none"
+                  className="h-10 sm:h-11 px-4 sm:px-6 rounded-xl gap-2 font-semibold text-sm sm:text-base bg-primary text-primary-foreground hover:bg-primary/90 shadow-md disabled:opacity-40 disabled:shadow-none ml-auto"
                 >
                   Plan my trip
                   <Send className="h-4 w-4" />
@@ -73,13 +73,12 @@ const HeroSection = () => {
           </form>
         </div>
 
-        {/* Three action links below the box */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+        {/* Action links */}
+        <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
           <Link to="/chat">
             <Button
               variant="ghost"
-              size="lg"
-              className="h-12 px-6 rounded-full text-sm sm:text-base font-medium gap-2 text-foreground hover:bg-foreground/5"
+              className="h-10 sm:h-12 px-4 sm:px-6 rounded-full text-sm font-medium gap-1.5 text-foreground hover:bg-foreground/5"
             >
               <ArrowRight className="h-4 w-4 text-primary" />
               Create a new trip
@@ -88,33 +87,21 @@ const HeroSection = () => {
           <Link to="/chat?q=Inspire me where to go">
             <Button
               variant="ghost"
-              size="lg"
-              className="h-12 px-6 rounded-full text-sm sm:text-base font-medium gap-2 text-foreground hover:bg-foreground/5"
+              className="h-10 sm:h-12 px-4 sm:px-6 rounded-full text-sm font-medium gap-1.5 text-foreground hover:bg-foreground/5"
             >
               <Sparkles className="h-4 w-4 text-primary" />
-              Inspire me where to go
+              Inspire me
             </Button>
           </Link>
           <Link to="/chat?q=What can you help me with?">
             <Button
               variant="ghost"
-              size="lg"
-              className="h-12 px-6 rounded-full text-sm sm:text-base font-medium gap-2 text-foreground hover:bg-foreground/5"
+              className="h-10 sm:h-12 px-4 sm:px-6 rounded-full text-sm font-medium gap-1.5 text-foreground hover:bg-foreground/5"
             >
               <Play className="h-4 w-4 text-primary" />
-              See how I can help you
+              See how I help
             </Button>
           </Link>
-        </div>
-
-        {/* Trip counter */}
-        <div className="mt-14 md:mt-20">
-          <span className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-foreground tabular-nums">
-            48,293
-          </span>
-          <p className="text-sm sm:text-base text-muted-foreground mt-2">
-            Trips Planned
-          </p>
         </div>
       </div>
     </section>
