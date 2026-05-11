@@ -32,20 +32,23 @@ export const LogoMark = ({
   <svg
     width={size}
     height={size}
-    viewBox="0 0 64 64"
+    viewBox="0 0 40 40"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
     aria-hidden="true"
   >
-    {/* Modern ghost silhouette — smooth, minimal, Phantom-inspired */}
+    {/* 
+      Phantom-style ghost: fills the viewBox properly.
+      Smooth dome, body fills width, 3 rounded legs at bottom.
+      Centered and balanced.
+    */}
     <path
-      d="M32 10C20.954 10 12 18.954 12 30v18c0 1.5 1.2 2.2 2.4 1.4 1.8-1.2 3.6 0 5.4 1.2 1.8 1.2 3.6 0 5.4-1.2 1.8-1.2 3.6 0 5.4 1.2 1.8 1.2 3.6 0 5.4-1.2 1.8-1.2 3.6 0 5.4 1.2 1.8 1.2 3.6 0 5.4-1.2 1.8-1.2 3.6 0 5.4 1.2C53.8 52.2 52 51.5 52 50V30c0-11.046-8.954-20-20-20z"
+      d="M20 4C12.268 4 6 10.268 6 18v13.5c0 .8.6 1.1 1.2.7.9-.6 1.8-.1 2.7.5.6.4 1.2.4 1.8 0l1.3-.9c.6-.4 1.2-.4 1.8 0l1.3.9c.6.4 1.2.4 1.8 0l1.3-.9c.6-.4 1.2-.4 1.8 0l1.3.9c.6.4 1.2.4 1.8 0l1.3-.9c.6-.4 1.2-.4 1.8 0l1.3.9c.6.4 1.2.4 1.8 0 .9-.6 1.8-1.1 2.7-.5.6.4 1.2.1 1.2-.7V18c0-7.732-6.268-14-14-14z"
       fill={color}
     />
-    {/* Two minimal dots for eyes */}
-    <circle cx="24.5" cy="32" r="3" fill={color === "white" ? "hsl(234, 62%, 47%)" : "white"} />
-    <circle cx="39.5" cy="32" r="3" fill={color === "white" ? "hsl(234, 62%, 47%)" : "white"} />
+    <circle cx="15" cy="20" r="2.5" fill={color === "white" ? "#3d52d5" : "white"} />
+    <circle cx="25" cy="20" r="2.5" fill={color === "white" ? "#3d52d5" : "white"} />
   </svg>
 );
 
