@@ -38,11 +38,22 @@ export const LogoMark = ({
     className={className}
     aria-hidden="true"
   >
+    {/* Phantom-inspired friendly ghost/spirit shape — rounded top, wavy bottom */}
     <path
-      d="M32 12 C32.7 20.5 34.8 28.4 41.8 30.4 C48.8 32.4 48.8 31.2 50.8 32 C48.8 32.8 48.8 31.6 41.8 33.6 C34.8 35.6 32.7 43.5 32 52 C31.3 43.5 29.2 35.6 22.2 33.6 C15.2 31.6 15.2 32.8 13.2 32 C15.2 31.2 15.2 32.4 22.2 30.4 C29.2 28.4 31.3 20.5 32 12 Z"
+      d="M32 8 C18 8 12 18 12 28 L12 44 C12 46 13 47 14.5 46 C16 45 17.5 46 19 47 C20.5 48 22 47 23.5 46 C25 45 26.5 46 28 47 C29.5 48 31 47 32 46 C33 47 34.5 48 36 47 C37.5 46 39 45 40.5 46 C42 47 43.5 48 45 47 C46.5 46 48 45 49.5 46 C51 47 52 46 52 44 L52 28 C52 18 46 8 32 8 Z"
       fill={color}
     />
-    <circle cx="32" cy="32" r="2" fill={color} opacity="0.35" />
+    {/* Eyes */}
+    <circle cx="24" cy="30" r="4.5" fill={color === "white" ? "hsl(234, 62%, 47%)" : "white"} />
+    <circle cx="40" cy="30" r="4.5" fill={color === "white" ? "hsl(234, 62%, 47%)" : "white"} />
+    {/* Subtle smile */}
+    <path
+      d="M26 39 Q32 43 38 39"
+      stroke={color === "white" ? "hsl(234, 62%, 47%)" : "white"}
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      fill="none"
+    />
   </svg>
 );
 

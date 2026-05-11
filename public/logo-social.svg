@@ -4,17 +4,13 @@
       <stop offset="0%" stop-color="#5469e8"/>
       <stop offset="100%" stop-color="#2d42b3"/>
     </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="4" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
   <rect width="512" height="512" rx="128" fill="url(#bg)"/>
-  <g filter="url(#glow)">
-    <path d="M256 96 C261.6 164 278.4 227.2 334.4 243.2 C390.4 259.2 390.4 249.6 406.4 256 C390.4 262.4 390.4 252.8 334.4 268.8 C278.4 284.8 261.6 348 256 416 C250.4 348 233.6 284.8 177.6 268.8 C121.6 252.8 121.6 262.4 105.6 256 C121.6 249.6 121.6 259.2 177.6 243.2 C233.6 227.2 250.4 164 256 96 Z" fill="white"/>
-  </g>
-  <circle cx="256" cy="256" r="12" fill="#5469e8"/>
+  <!-- Ghost/spirit shape -->
+  <path d="M256 80 C160 80 120 152 120 216 L120 340 C120 352 128 356 136 352 C144 348 152 352 160 356 C168 360 176 356 184 352 C192 348 200 352 208 356 C216 360 224 356 232 352 C240 348 248 352 256 356 C264 360 272 356 280 352 C288 348 296 352 304 356 C312 360 320 356 328 352 C336 348 344 352 352 356 C360 360 368 356 376 352 C384 348 392 340 392 340 L392 216 C392 152 352 80 256 80 Z" fill="white"/>
+  <!-- Eyes -->
+  <circle cx="200" cy="228" r="32" fill="#3d52d5"/>
+  <circle cx="312" cy="228" r="32" fill="#3d52d5"/>
+  <!-- Smile -->
+  <path d="M212 300 Q256 328 300 300" stroke="#3d52d5" stroke-width="16" stroke-linecap="round" fill="none"/>
 </svg>
