@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,6 +7,165 @@ const corsHeaders = {
 };
 
 const TIMEOUT_MS = 8000;
+const CACHE_TTL_HOURS = 24 * 7; // 7 days cache for images
+
+function getAdminClient() {
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+
+function normalizeDestination(dest: string): string {
+  return dest.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
+}
+
+/** Check if we have cached hero images for this destination (less than CACHE_TTL old) */
+async function getCachedImages(destination: string): Promise<any[] | null> {
+  try {
+    const db = getAdminClient();
+    const norm = normalizeDestination(destination);
+    const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000).toISOString();
+
+    const { data } = await db
+      .from("destination_media")
+      .select("*")
+      .eq("destination", norm)
+      .eq("type", "hero")
+      .gte("updated_at", cutoff)
+      .order("created_at", { ascending: true });
+
+    if (data && data.length > 0) {
+      return data.map((row: any) => ({
+        url: row.url,
+        thumbUrl: row.thumb_url,
+        width: row.metadata?.width || 1200,
+        height: row.metadata?.height || 800,
+        attributions: row.metadata?.attributions || [],
+        cached: true,
+      }));
+    }
+    return null;
+  } catch (e) {
+    console.warn("Cache read failed:", e);
+    return null;
+  }
+}
+
+/** Check if we have cached activity/hotel photos */
+async function getCachedActivityPhotos(destination: string, names: string[]): Promise<Record<string, any> | null> {
+  if (names.length === 0) return null;
+  try {
+    const db = getAdminClient();
+    const norm = normalizeDestination(destination);
+    const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000).toISOString();
+
+    const { data } = await db
+      .from("destination_media")
+      .select("*")
+      .eq("destination", norm)
+      .in("type", ["activity", "hotel"])
+      .gte("updated_at", cutoff);
+
+    if (!data || data.length === 0) return null;
+
+    // Build lookup by name
+    const result: Record<string, any> = {};
+    for (const row of data) {
+      if (!row.name) continue;
+      result[row.name] = {
+        photo: row.url,
+        thumbPhoto: row.thumb_url,
+        photos: row.metadata?.photos || [row.url],
+        rating: row.metadata?.rating || null,
+        address: row.metadata?.address || null,
+        verified: true,
+        hasRealPhoto: true,
+        matchedName: row.name,
+        lat: row.metadata?.lat || null,
+        lng: row.metadata?.lng || null,
+      };
+    }
+
+    // Check if we have at least 50% of requested names cached
+    const hits = names.filter((n) => result[n] || result[n.toLowerCase()]);
+    if (hits.length >= names.length * 0.5) return result;
+    return null;
+  } catch (e) {
+    console.warn("Activity cache read failed:", e);
+    return null;
+  }
+}
+
+/** Store images in cache */
+async function cacheImages(destination: string, images: any[]) {
+  try {
+    const db = getAdminClient();
+    const norm = normalizeDestination(destination);
+
+    const rows = images.map((img: any) => ({
+      destination: norm,
+      type: "hero",
+      name: null,
+      url: img.url,
+      thumb_url: img.thumbUrl || img.url,
+      source: "google_places",
+      metadata: {
+        width: img.width,
+        height: img.height,
+        attributions: img.attributions || [],
+      },
+      updated_at: new Date().toISOString(),
+    }));
+
+    // Upsert: delete old hero images for this destination, insert new ones
+    await db.from("destination_media").delete().eq("destination", norm).eq("type", "hero").eq("source", "google_places");
+    if (rows.length > 0) await db.from("destination_media").insert(rows);
+  } catch (e) {
+    console.warn("Cache write failed:", e);
+  }
+}
+
+/** Store activity/hotel photos in cache */
+async function cacheActivityPhotos(destination: string, photos: Record<string, any>, type: "activity" | "hotel") {
+  try {
+    const db = getAdminClient();
+    const norm = normalizeDestination(destination);
+
+    const rows = Object.entries(photos)
+      .filter(([_, v]) => (v as any)?.hasRealPhoto)
+      .map(([name, v]: [string, any]) => ({
+        destination: norm,
+        type,
+        name,
+        url: v.photo || v.thumbPhoto,
+        thumb_url: v.thumbPhoto || v.photo,
+        source: "google_places",
+        metadata: {
+          photos: v.photos || [],
+          rating: v.rating,
+          address: v.address,
+          lat: v.lat,
+          lng: v.lng,
+          matchedName: v.matchedName,
+        },
+        updated_at: new Date().toISOString(),
+      }));
+
+    if (rows.length > 0) {
+      // Delete old cached entries for these specific names
+      for (const row of rows) {
+        await db.from("destination_media").delete()
+          .eq("destination", norm)
+          .eq("type", type)
+          .eq("name", row.name)
+          .eq("source", "google_places");
+      }
+      await db.from("destination_media").insert(rows);
+    }
+  } catch (e) {
+    console.warn("Activity cache write failed:", e);
+  }
+}
 
 function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
@@ -499,9 +659,17 @@ serve(async (req) => {
     // imageOnly mode: just fetch Google Places photos, skip everything else
     if (imageOnly) {
       console.log(`Image-only enrichment for: ${destination}`);
-      // Request a wider pool so the landscape-strict hero candidates dominate
-      // (filler/portrait photos only kick in if the pool is exhausted).
+      // Check cache first
+      const cached = await getCachedImages(destination);
+      if (cached) {
+        console.log(`Cache HIT (imageOnly) for ${destination}: ${cached.length} images`);
+        return new Response(JSON.stringify({ destination, images: cached }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const images = await getGooglePlacePhotos(destination, 8);
+      // Store in cache for next time
+      if (images.length > 0) await cacheImages(destination, images);
       return new Response(JSON.stringify({ destination, images }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -509,27 +677,46 @@ serve(async (req) => {
 
     console.log(`Enriching destination: ${destination}`, activities?.length ? `with ${activities.length} activities` : "");
 
+    // ── CACHE CHECK: hero images ──
+    const cachedHeroImages = await getCachedImages(destination);
+    const activityNames: string[] = Array.isArray(activities) ? activities : [];
+    const hotelNamesList: string[] = Array.isArray(hotelNames) ? hotelNames : [];
+    const cachedActivityPhotos = await getCachedActivityPhotos(destination, activityNames);
+    const cachedHotelPhotos = await getCachedActivityPhotos(destination, hotelNamesList);
+
+    if (cachedHeroImages) {
+      console.log(`Cache HIT for ${destination}: ${cachedHeroImages.length} hero images`);
+    }
+
     const geo = await geocode(destination);
     if (!geo) {
-      // Fail-soft: enrichment is a progressive enhancement. Return photos-only
-      // so the plan still renders instead of breaking the UI with a 404.
       console.warn(`Geocode failed for "${destination}" — returning photos-only enrichment`);
-      const images = await getGooglePlacePhotos(destination, 6).catch(() => []);
+      const images = cachedHeroImages || await getGooglePlacePhotos(destination, 6).catch(() => []);
+      if (!cachedHeroImages && images.length > 0) await cacheImages(destination, images);
       return new Response(JSON.stringify({ destination, images, partial: true }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // All APIs in parallel
-    const activityNames: string[] = Array.isArray(activities) ? activities : [];
-    const hotelNamesList: string[] = Array.isArray(hotelNames) ? hotelNames : [];
+    // All APIs in parallel — skip Google calls if we have cache
     const [countryData, googleImages, activityResults, hotelResults] = await Promise.all([
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
-      getGooglePlacePhotos(destination),
-      activityNames.length > 0 ? searchAndValidateActivities(activityNames, destination) : Promise.resolve({}),
-      hotelNamesList.length > 0 ? searchAndValidateHotels(hotelNamesList, destination) : Promise.resolve({}),
+      cachedHeroImages ? Promise.resolve(cachedHeroImages) : getGooglePlacePhotos(destination),
+      cachedActivityPhotos ? Promise.resolve(cachedActivityPhotos) : (activityNames.length > 0 ? searchAndValidateActivities(activityNames, destination) : Promise.resolve({})),
+      cachedHotelPhotos ? Promise.resolve(cachedHotelPhotos) : (hotelNamesList.length > 0 ? searchAndValidateHotels(hotelNamesList, destination) : Promise.resolve({})),
     ]);
+
+    // ── CACHE WRITE: store fresh results for next time ──
+    if (!cachedHeroImages && Array.isArray(googleImages) && googleImages.length > 0) {
+      await cacheImages(destination, googleImages);
+    }
+    if (!cachedActivityPhotos && activityResults && Object.keys(activityResults).length > 0) {
+      await cacheActivityPhotos(destination, activityResults, "activity");
+    }
+    if (!cachedHotelPhotos && hotelResults && Object.keys(hotelResults).length > 0) {
+      await cacheActivityPhotos(destination, hotelResults, "hotel");
+    }
 
     let currencyCode = "";
     let currencyName = "";
