@@ -28,36 +28,23 @@ export const LogoMark = ({
   size?: number;
   color?: string;
   className?: string;
-}) => {
-  const eyeColor = color === "white" ? "#3d52d5" : "white";
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 36 36"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-    >
-      {/* Ghost body — slightly tilted, rounded, fills the space */}
-      <g transform="rotate(-6 18 18)">
-        <path
-          d="M18 3C11.373 3 6 8.373 6 15v12.5c0 .6.4.8.8.5.6-.4 1.2.1 1.8.5s1.2.1 1.8-.3c.6-.4 1.2-.1 1.8.3.6.4 1.2.1 1.8-.3.6-.4 1.2-.1 1.8.3.6.4 1.2.1 1.8-.3.6-.4 1.2-.1 1.8.3.6.4 1.2.1 1.8-.3.6-.4 1.2-.1 1.8.3.6.4 1.2.1 1.8-.3.6-.4 1.2-.1 1.8.3.4.3.8.1.8-.5V15c0-6.627-5.373-12-12-12z"
-          fill={color}
-        />
-        {/* Round glasses frame */}
-        <circle cx="13.5" cy="16.5" r="3.8" stroke={eyeColor} strokeWidth="1.4" fill="none" />
-        <circle cx="22.5" cy="16.5" r="3.8" stroke={eyeColor} strokeWidth="1.4" fill="none" />
-        {/* Bridge between glasses */}
-        <path d="M17.3 16.5 Q18 15.2 18.7 16.5" stroke={eyeColor} strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        {/* Eyes (pupils inside glasses) */}
-        <circle cx="14" cy="17" r="1.6" fill={eyeColor} />
-        <circle cx="23" cy="17" r="1.6" fill={eyeColor} />
-      </g>
-    </svg>
-  );
-};
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 64 64"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    aria-hidden="true"
+  >
+    <path
+      d="M32 12 C32.7 20.5 34.8 28.4 41.8 30.4 C48.8 32.4 48.8 31.2 50.8 32 C48.8 32.8 48.8 31.6 41.8 33.6 C34.8 35.6 32.7 43.5 32 52 C31.3 43.5 29.2 35.6 22.2 33.6 C15.2 31.6 15.2 32.8 13.2 32 C15.2 31.2 15.2 32.4 22.2 30.4 C29.2 28.4 31.3 20.5 32 12 Z"
+      fill={color}
+    />
+    <circle cx="32" cy="32" r="2" fill={color} opacity="0.35" />
+  </svg>
+);
 
 const Logo = ({
   size = "md",
