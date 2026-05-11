@@ -723,7 +723,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     return undefined;
   }, [craftingPlan?.destination, enrichedData]);
 
-  const shouldShowCraftingMap = isCraftingPlan && !!craftingPlan;
+  const shouldShowCraftingMap = false; // Disabled — let cards stream in naturally
 
   // When the crafting map first appears, gently scroll it into view so the
   // user actually sees the animation instead of a static prompt above the fold.
@@ -1358,8 +1358,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   }
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
-                  // Hide the latest assistant response entirely while streaming or crafting so only the map loader is visible.
-                  const hideLatestResponse = isLastAssistant && (isLoading || shouldShowCraftingMap);
+                  // Show the response as it streams — no blocking animation
+                  const hideLatestResponse = false;
 
                   // Determine if this is a "full trip plan" (has multiple card types)
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
