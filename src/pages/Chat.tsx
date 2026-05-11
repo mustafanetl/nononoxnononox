@@ -1403,49 +1403,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             {/* Full plan → show summary card; otherwise show inline cards */}
                             {/* Hide plan cards while crafting animation is still running */}
                             {isFullPlan && destination && !hideLatestResponse ? (
-                              subLoading || isPremium ? (
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
                                   destination={destination}
                                   enrichedImages={enrichData?.images}
                                 />
-                              ) : (
-                                <PlanPreviewGate
-                                  data={parsed as TripPlanData}
-                                  destination={destination}
-                                  enrichedImages={enrichData?.images}
-                                  onUpgrade={() => {
-                                    setPaywallContext({
-                                      destination,
-                                      tripStats: {
-                                        activities: parsed.activities.length,
-                                        hotels: parsed.hotels.length,
-                                        days: parsed.itinerary.length,
-                                      },
-                                    });
-                                    setShowPaywall(true);
-                                  }}
-                                />
-                              )
                             ) : !hideLatestResponse && (
                               <>
-                                {/* If plan already generated and user is free, gate ALL card blocks */}
-                                {planGenerated && !isPremium && !subLoading ? (
-                                  (parsed.flights.length > 0 || parsed.hotels.length > 0 || parsed.activities.length > 0 || parsed.itinerary.length > 0) ? (
-                                    <div className="mt-4 p-4 rounded-xl border border-border bg-muted/30 text-center">
-                                      <p className="text-sm font-medium text-foreground mb-2">🔒 Unlock your full plan</p>
-                                      <p className="text-xs text-muted-foreground mb-3">Start your free trial to see everything</p>
-                                      <Button size="sm" onClick={() => setShowPaywall(true)} className="gap-1.5">
-                                        <Crown className="h-3.5 w-3.5" /> Start Free Trial
-                                      </Button>
-                                      <p className="text-center text-muted-foreground mt-2" style={{ fontSize: "12px" }}>
-                                        3-day free trial · Cancel anytime
-                                      </p>
-                                    </div>
-                                  ) : null
-                                ) : (
-                                  <>
-                                    {parsed.timeline.length > 0 && (
+                                {/* Show all card blocks — paywall disabled */}
+                                {parsed.timeline.length > 0 && (
                                       <TripTimeline legs={parsed.timeline} />
                                     )}
                                     {parsed.places.length > 0 && (
@@ -1493,14 +1459,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                         )}
                                       </>
                                     )}
-                                  </>
-                                )}
                               </>
                             )}
 
-                            {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && !(planGenerated && !isPremium) && (
+                            {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && (
                               <QuickReplies replies={parsed.quickReplies} onSelect={(reply) => {
-                                if (planGenerated && !isPremium) { setShowPaywall(true); return; }
                                 sendMessage(reply);
                               }} />
                             )}
