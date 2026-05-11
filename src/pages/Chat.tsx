@@ -1407,6 +1407,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                   data={parsed as TripPlanData}
                                   destination={destination}
                                   enrichedImages={enrichData?.images}
+                                  origin={
+                                    promptDest && lastUserMsg
+                                      ? inferCitiesFromPrompt(lastUserMsg.content || "").origin || originCity || undefined
+                                      : originCity || undefined
+                                  }
                                 />
                             ) : !hideLatestResponse && (
                               <>

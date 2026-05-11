@@ -3,7 +3,7 @@ import { LogoMark } from "@/components/Logo";
 import { useState } from "react";
 import { getCityImage } from "@/utils/cityImages";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
-import { TripPlanData, StatTile, DayRailMini } from "@/components/TripSummaryCard";
+import { TripPlanData, StatTile, DayRailMini, RouteRecap } from "@/components/TripSummaryCard";
 import { getCurrencyPrices } from "@/utils/currencyLocale";
 import { useAuth } from "@/hooks/useAuth";
 import { startCheckout } from "@/lib/stripeCheckout";
@@ -13,6 +13,7 @@ interface PlanPreviewGateProps {
   data: TripPlanData;
   destination: string;
   enrichedImages?: any[];
+  origin?: string;
   onUpgrade: () => void;
 }
 
@@ -23,7 +24,8 @@ const features = [
   "PDF export & sharing",
 ];
 
-const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanPreviewGateProps) => {
+const PlanPreviewGate = ({ data, destination, enrichedImages, origin, onUpgrade }: PlanPreviewGateProps) => {
+  const resolvedOrigin = (origin || data.flights[0]?.from || "").trim();
   const [selectedPlan, setSelectedPlan] = useState<"annual" | "monthly">("annual");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const { user } = useAuth();
@@ -94,9 +96,19 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, onUpgrade }: PlanP
         </div>
       </div>
 
+      {/* ── Route recap ── */}
+      {resolvedOrigin && (
+        <div className="px-5 pt-5 animate-hero-rise" style={{ animationDelay: "0.58s" }}>
+          <RouteRecap origin={resolvedOrigin} destination={destination} />
+        </div>
+      )}
+
       {/* ── Day rail teaser ── */}
       {days > 0 && (
-        <div className="px-5 pt-5 animate-hero-rise" style={{ animationDelay: "0.6s" }}>
+        <div
+          className={`px-5 ${resolvedOrigin ? "pt-4" : "pt-5"} animate-hero-rise`}
+          style={{ animationDelay: "0.62s" }}
+        >
           <DayRailMini itinerary={data.itinerary} />
         </div>
       )}

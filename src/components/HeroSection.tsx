@@ -73,6 +73,24 @@ const HeroSection = () => {
           </form>
         </div>
 
+        {/* Route-style example chips */}
+        <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center gap-2">
+          {[
+            "Stockholm → Amsterdam for 4 days",
+            "Tokyo → Kyoto for a week",
+            "NYC → Lisbon, long weekend",
+          ].map((ex) => (
+            <button
+              key={ex}
+              type="button"
+              onClick={() => handleSubmit(ex)}
+              className="px-3.5 py-1.5 rounded-full border border-border bg-white text-xs sm:text-sm text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 active:scale-95 transition-all"
+            >
+              {ex}
+            </button>
+          ))}
+        </div>
+
         {/* Action links */}
         <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
           <Link to="/chat">
