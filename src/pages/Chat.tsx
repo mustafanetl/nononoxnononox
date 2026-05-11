@@ -451,16 +451,16 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
     craftingIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - craftingStartTimeRef.current;
-      // Adaptive min duration: feels intentional but never holds too long.
-      // 9s baseline, but if streaming is already done we settle in 6s.
-      const minDuration = streamingDoneRef.current ? 6000 : 9000;
+      // Adaptive min duration: quick but not jarring.
+      // 4s baseline, 2.5s if streaming is already done.
+      const minDuration = streamingDoneRef.current ? 2500 : 4000;
 
       if (craftingProgressRef.current < 90) {
-        craftingProgressRef.current = Math.min(90, craftingProgressRef.current + (90 - craftingProgressRef.current) * 0.04);
+        craftingProgressRef.current = Math.min(90, craftingProgressRef.current + (90 - craftingProgressRef.current) * 0.08);
         setCraftingPlan(prev => prev ? { ...prev, progress: craftingProgressRef.current } : null);
       }
 
-      if (streamingDoneRef.current && elapsed >= minDuration && craftingProgressRef.current >= 88) {
+      if (streamingDoneRef.current && elapsed >= minDuration && craftingProgressRef.current >= 60) {
         craftingProgressRef.current = 100;
         setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
 
