@@ -272,6 +272,10 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
   // Hook must be called unconditionally — call before any early return.
   const stockHeroImg = useCityHeroImage(tripData?.destination || "");
+  // Fallback-chain state for the hero image. If the preferred URL 404s, we
+  // swap to stock; if stock 404s we show the gradient placeholder.
+  const [heroSrcFinal, setHeroSrcFinal] = useState<string | undefined>(undefined);
+  const [heroFallbackStage, setHeroFallbackStage] = useState<"enriched" | "stock" | "none">("enriched");
 
   if (!tripData) return null;
   const { data, destination } = tripData;
@@ -291,10 +295,26 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
     enrichedImgs.find((i: any) => i && i !== heroPick)?.url ||
     enrichedImgs.find((i: any) => i && i !== heroPick)?.thumbUrl;
 
-  // Hero photo: prefer a curated stock photo (instant), fall back to
-  // Wikipedia's lead image (always actually the right city), and only then
-  // to a Google Places photo.
-  const heroImgFinal = stockHeroImg || heroImg;
+  // Hero photo: prefer the verified Google Places photo when available
+  // (always actually the right city), fall back to curated stock. Stock
+  // fires first paint because it's synchronous.
+  const primaryHero = heroImg || stockHeroImg;
+  // Keep the render-side `heroSrcFinal` in sync with the preferred URL,
+  // but allow an onError handler to degrade through the chain.
+  useEffect(() => {
+    setHeroSrcFinal(primaryHero || undefined);
+    setHeroFallbackStage("enriched");
+  }, [primaryHero]);
+
+  const handleHeroImgError = () => {
+    if (heroFallbackStage === "enriched" && stockHeroImg && stockHeroImg !== primaryHero) {
+      setHeroSrcFinal(stockHeroImg);
+      setHeroFallbackStage("stock");
+      return;
+    }
+    setHeroSrcFinal(undefined);
+    setHeroFallbackStage("none");
+  };
 
   const days = data.itinerary.length || 1;
   const flightsCost = data.flights.reduce((s, f) => s + f.price, 0);
@@ -626,8 +646,9 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       </div>
       {/* ── Cinematic Hero ── */}
       <div className="relative h-[62vh] min-h-[460px] max-h-[680px] overflow-hidden">
-        {heroImgFinal ? (
-          <img src={heroImgFinal} alt={destination}
+        {heroSrcFinal ? (
+          <img src={heroSrcFinal} alt={destination}
+            onError={handleHeroImgError}
             className="w-full h-full object-cover animate-ken-burns animate-punch-in" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30 flex items-center justify-center">

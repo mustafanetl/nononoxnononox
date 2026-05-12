@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plane } from "lucide-react";
 import { LogoMark } from "@/components/Logo";
+import { useCityHeroImage } from "@/hooks/useCityHeroImage";
 
 export type CraftActivity = { name: string; photo?: string };
 export type CraftGeo = { lat: number; lng: number };
@@ -18,45 +18,51 @@ type Props = {
    PlanCraftingMap
    A cinematic "your plan is being built" moment.
 
-   Replaces the old static loader with an actual animated map:
-   • Gradient sky canvas with soft dot grid & noise
-   • Dashed quadratic-bezier arc from origin → destination,
-     revealed progressively via stroke-dashoffset
-   • Plane icon sliding along the arc based on progress
-   • Destination pulse pin + cluster of dropping activity pins
-     that land as the AI streams venue names
-   • Rotating stage labels under the title
-   • Live progress bar + activity stream list
+   Every frame must feel like motion — the user isn't waiting, they're
+   watching the plan come to life.
 
-   Origin is optional. When empty, the arc & origin pin are
-   hidden and the destination & pin cluster center the canvas.
+   Layout:
+     • Hero strip: destination photo (curated stock / Wikipedia /
+       Google Places) behind a gradient wash.
+     • Route arc: dashed origin→destination curve revealed via
+       stroke-dashoffset tied to progress; a plane glyph slides
+       along the arc at the matching t.
+     • Destination pulse + dropping numbered activity pins as
+       venue names stream back.
+     • Live % + rotating stage label + progress bar.
+     • Activity stream list with shimmer placeholders before
+       names arrive, animating in as they do.
+
+   Falls back to destination-only layout when origin is empty
+   (e.g. LOCAL/DATE mode or user has no home city saved).
    ───────────────────────────────────────────────────────────── */
 
 // SVG viewBox dimensions
 const VB_W = 420;
-const VB_H = 260;
+const VB_H = 240;
 
 // Arc control points
-const ORIGIN = { x: 60, y: 150 };
-const DEST = { x: 360, y: 130 };
-const CONTROL = { x: 210, y: 40 };
+const ORIGIN = { x: 62, y: 152 };
+const DEST = { x: 358, y: 128 };
+const CONTROL = { x: 210, y: 28 };
 
 // Deterministic jitter for activity pins around destination
 const PIN_OFFSETS: { dx: number; dy: number }[] = [
   { dx: -34, dy: -44 },
   { dx: 22, dy: -36 },
-  { dx: -12, dy: 28 },
-  { dx: 36, dy: 12 },
-  { dx: -28, dy: -12 },
+  { dx: -12, dy: 30 },
+  { dx: 38, dy: 14 },
+  { dx: -28, dy: -10 },
   { dx: 10, dy: 42 },
   { dx: -44, dy: 6 },
 ];
 
 const STAGES = [
-  "Scoping the vibe",
-  "Picking neighborhoods",
+  "Locking in the vibe",
+  "Scouting neighborhoods",
+  "Picking iconic stops",
   "Sequencing the days",
-  "Pricing it out",
+  "Booking the details",
   "Polishing the plan",
 ];
 
@@ -70,10 +76,13 @@ const quadBezier = (t: number) => {
   return { x, y, angle };
 };
 
+const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+
 const PlanCraftingMap = ({
   originCity,
   destinationCity,
   activities,
+  destinationPhoto,
   progress,
 }: Props) => {
   const hasOrigin = !!originCity?.trim();
@@ -82,6 +91,12 @@ const PlanCraftingMap = ({
     () => activities.filter((a) => a.name?.trim()),
     [activities],
   );
+
+  // Synchronous, always-available city hero photo. Used both as the tiny
+  // hero strip and as the map's parallax background — so even before the
+  // AI streams anything, the canvas feels like it's "about" a real place.
+  const stockHero = useCityHeroImage(destinationCity);
+  const heroImg = destinationPhoto || stockHero;
 
   // Typewriter effect for destination
   const targetDest = hasDestination ? destinationCity : "Your trip";
@@ -100,47 +115,47 @@ const PlanCraftingMap = ({
     return () => clearInterval(id);
   }, [targetDest]);
 
-  // Rotating stage label
+  // Rotating stage label — advances at a calm cadence regardless of stream speed.
   const [stageIdx, setStageIdx] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setStageIdx((i) => (i + 1) % STAGES.length), 2400);
+    const id = setInterval(() => setStageIdx((i) => (i + 1) % STAGES.length), 2000);
     return () => clearInterval(id);
   }, []);
 
-  // Progress → plane position (0..0.96 so it doesn't disappear into dest)
-  const t = Math.min(0.96, Math.max(0, progress / 100));
+  // Progress → plane position (cap so the icon stays visible over the dest pin).
+  const t = Math.min(0.96, Math.max(0.02, progress / 100));
   const plane = quadBezier(t);
 
-  // How many pins are "dropped" — based on both streamed names and progress
+  // How many pins are "dropped" — driven by both streamed names and progress.
   const pinsByProgress = Math.min(
     PIN_OFFSETS.length,
-    Math.max(0, Math.ceil((progress - 20) / 12)),
+    Math.max(0, Math.ceil((progress - 18) / 11)),
   );
   const pinsTarget = Math.max(filled.length, pinsByProgress);
 
   return (
     <div className="w-full max-w-md mx-auto animate-fade-in">
       <div className="rounded-3xl border border-border bg-white shadow-xl overflow-hidden">
-        {/* ─── Header: destination + stage ─── */}
+        {/* ─── Header: destination + stage + progress ─── */}
         <div
-          className="relative px-6 pt-6 pb-5 overflow-hidden"
+          className="relative px-5 pt-5 pb-4 overflow-hidden text-white"
           style={{
             background:
-              "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 38%))",
+              "linear-gradient(135deg, hsl(234 62% 48%) 0%, hsl(234 62% 36%) 100%)",
           }}
         >
-          {/* Drifting orb */}
+          {/* Ambient glow orbs — sells that something is happening. */}
           <div
-            className="absolute -top-16 -right-10 w-48 h-48 rounded-full bg-white/10 blur-2xl"
+            className="absolute -top-16 -right-10 w-48 h-48 rounded-full bg-white/12 blur-2xl"
             style={{ animation: "craft-drift 7s ease-in-out infinite" }}
           />
           <div
-            className="absolute -bottom-20 -left-10 w-40 h-40 rounded-full bg-white/5 blur-2xl"
+            className="absolute -bottom-24 -left-12 w-44 h-44 rounded-full bg-white/5 blur-2xl"
             style={{ animation: "craft-drift2 9s ease-in-out infinite" }}
           />
 
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="min-w-0">
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-md bg-white/15 backdrop-blur-sm flex items-center justify-center">
                   <LogoMark size={14} color="white" className="animate-spin" />
@@ -149,10 +164,11 @@ const PlanCraftingMap = ({
                   Crafting your plan
                 </span>
               </div>
-              <h2 className="text-2xl font-bold text-white tracking-tight leading-tight truncate">
+              <h2 className="text-2xl font-bold tracking-tight leading-tight truncate">
                 {hasOrigin ? (
                   <span className="text-white/70 font-medium">
-                    {originCity} <span className="mx-1 opacity-70">→</span>{" "}
+                    {truncate(originCity, 14)}{" "}
+                    <span className="mx-1 opacity-70">→</span>{" "}
                   </span>
                 ) : null}
                 <span>{typed || "\u00A0"}</span>
@@ -160,7 +176,7 @@ const PlanCraftingMap = ({
               </h2>
               <p
                 key={stageIdx}
-                className="mt-1 text-xs text-white/80 animate-stage-fade"
+                className="mt-1 text-xs text-white/85 animate-stage-fade font-medium"
               >
                 {STAGES[stageIdx]}…
               </p>
@@ -170,7 +186,7 @@ const PlanCraftingMap = ({
               className="shrink-0 text-right"
               aria-label={`${Math.round(progress)}% complete`}
             >
-              <div className="text-2xl font-bold text-white tabular-nums leading-none">
+              <div className="text-2xl font-bold tabular-nums leading-none">
                 {Math.round(progress)}
                 <span className="text-sm opacity-70">%</span>
               </div>
@@ -178,6 +194,19 @@ const PlanCraftingMap = ({
                 built
               </div>
             </div>
+          </div>
+
+          {/* Thin progress bar right under the header content. */}
+          <div className="relative mt-3 h-1 rounded-full bg-white/15 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-[width] duration-500 ease-out"
+              style={{
+                width: `${Math.min(100, Math.max(4, progress))}%`,
+                background:
+                  "linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.75) 100%)",
+                boxShadow: "0 0 12px rgba(255,255,255,0.6)",
+              }}
+            />
           </div>
         </div>
 
@@ -189,6 +218,28 @@ const PlanCraftingMap = ({
               "linear-gradient(180deg, hsl(234 62% 97%) 0%, hsl(234 40% 92%) 70%, hsl(234 30% 94%) 100%)",
           }}
         >
+          {/* Ambient city photo behind the map — always paints something real. */}
+          {heroImg && (
+            <div
+              aria-hidden
+              className="absolute inset-0 pointer-events-none opacity-35 animate-ken-burns"
+              style={{
+                backgroundImage: `url(${heroImg})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                filter: "blur(2px) saturate(1.1)",
+              }}
+            />
+          )}
+          {/* Soft white wash so map lines stay readable over the photo. */}
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.6) 60%, rgba(255,255,255,0.9) 100%)",
+            }}
+          />
           {/* Subtle dot grid */}
           <div
             className="absolute inset-0 pointer-events-none opacity-60"
@@ -199,13 +250,14 @@ const PlanCraftingMap = ({
             }}
           />
           {/* Soft noise */}
-          <div className="absolute inset-0 pointer-events-none noise-overlay opacity-30" />
+          <div className="absolute inset-0 pointer-events-none noise-overlay opacity-25" />
 
           <svg
             viewBox={`0 0 ${VB_W} ${VB_H}`}
             className="relative block w-full h-auto"
             role="img"
             aria-label="Trip route map"
+            style={{ fontFamily: "var(--font-display), 'Plus Jakarta Sans', 'Inter', sans-serif" }}
           >
             <defs>
               <linearGradient id="arcStroke" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -220,16 +272,26 @@ const PlanCraftingMap = ({
             {/* Flight arc (origin known) */}
             {hasOrigin && (
               <>
+                {/* Underlying ghost track so the path is always visible. */}
+                <path
+                  d={`M ${ORIGIN.x} ${ORIGIN.y} Q ${CONTROL.x} ${CONTROL.y} ${DEST.x} ${DEST.y}`}
+                  fill="none"
+                  stroke="hsl(234 62% 47% / 0.15)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeDasharray="4 5"
+                />
+                {/* Revealed arc tied to progress. */}
                 <path
                   d={`M ${ORIGIN.x} ${ORIGIN.y} Q ${CONTROL.x} ${CONTROL.y} ${DEST.x} ${DEST.y}`}
                   fill="none"
                   stroke="url(#arcStroke)"
-                  strokeWidth="2"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeDasharray="5 6"
                   pathLength={100}
                   style={{
-                    strokeDashoffset: 100 - Math.min(100, progress * 1.05),
+                    strokeDashoffset: Math.max(0, 100 - Math.min(100, progress * 1.05)),
                     transition: "stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1)",
                   }}
                 />
@@ -241,26 +303,21 @@ const PlanCraftingMap = ({
                 </g>
                 <text
                   x={ORIGIN.x}
-                  y={ORIGIN.y + 30}
+                  y={ORIGIN.y + 26}
                   textAnchor="middle"
                   className="fill-foreground"
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    fontFamily: "var(--font-display)",
-                  }}
+                  style={{ fontSize: 10.5, fontWeight: 600 }}
                 >
-                  {originCity.length > 14 ? originCity.slice(0, 13) + "…" : originCity}
+                  {truncate(originCity, 14)}
                 </text>
 
-                {/* Plane sliding along the arc */}
+                {/* Plane sliding along the arc — starts moving on frame 1. */}
                 <g
                   transform={`translate(${plane.x}, ${plane.y}) rotate(${plane.angle})`}
                   style={{ transition: "transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)" }}
                 >
                   <circle r="11" fill="white" opacity="0.95" filter="url(#pinShadow)" />
                   <g transform="translate(-7, -7)">
-                    {/* inline plane icon */}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                       <path
                         d="M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19.5 2.5 18 1 16 1 14.5 2.5L11 6 2.8 4.2c-.5-.1-.9.1-1.1.5-.2.4-.1.8.3 1.1L8 10l-2 3H3l-1 1 3 2 2 3 1-1v-3l3-2 4.2 6c.3.4.7.5 1.1.3.4-.2.6-.6.5-1.1Z"
@@ -277,14 +334,14 @@ const PlanCraftingMap = ({
               <circle r="10" fill="hsl(234 62% 47%)" opacity="0.15">
                 <animate
                   attributeName="r"
-                  values="10;22;10"
-                  dur="2.2s"
+                  values="10;26;10"
+                  dur="2s"
                   repeatCount="indefinite"
                 />
                 <animate
                   attributeName="opacity"
-                  values="0.3;0;0.3"
-                  dur="2.2s"
+                  values="0.35;0;0.35"
+                  dur="2s"
                   repeatCount="indefinite"
                 />
               </circle>
@@ -298,15 +355,9 @@ const PlanCraftingMap = ({
               y={DEST.y - 18}
               textAnchor="middle"
               className="fill-foreground"
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                fontFamily: "var(--font-display)",
-              }}
+              style={{ fontSize: 12, fontWeight: 700 }}
             >
-              {destinationCity.length > 18
-                ? destinationCity.slice(0, 17) + "…"
-                : destinationCity}
+              {truncate(destinationCity, 18)}
             </text>
 
             {/* Activity pins dropping around the destination */}
@@ -325,7 +376,6 @@ const PlanCraftingMap = ({
                     transformOrigin: `${cx}px ${cy}px`,
                   }}
                 >
-                  {/* connector line back to destination */}
                   <line
                     x1={DEST.x}
                     y1={DEST.y}
@@ -363,33 +413,15 @@ const PlanCraftingMap = ({
                       y={cy + 22}
                       textAnchor="middle"
                       className="fill-muted-foreground"
-                      style={{
-                        fontSize: 9,
-                        fontWeight: 500,
-                        fontFamily: "var(--font-sans)",
-                      }}
+                      style={{ fontSize: 9, fontWeight: 500 }}
                     >
-                      {label.length > 16 ? label.slice(0, 15) + "…" : label}
+                      {truncate(label, 16)}
                     </text>
                   )}
                 </g>
               );
             })}
           </svg>
-
-          {/* Progress bar overlay */}
-          <div className="absolute bottom-2.5 left-4 right-4">
-            <div className="h-1.5 rounded-full bg-foreground/10 overflow-hidden backdrop-blur-sm">
-              <div
-                className="h-full rounded-full transition-[width] duration-500 ease-out"
-                style={{
-                  width: `${Math.min(100, Math.max(4, progress))}%`,
-                  background:
-                    "linear-gradient(90deg, hsl(234 62% 52%), hsl(234 62% 72%))",
-                }}
-              />
-            </div>
-          </div>
         </div>
 
         {/* ─── Activity stream ─── */}
@@ -399,14 +431,15 @@ const PlanCraftingMap = ({
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl bg-muted/40"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl bg-muted/40 animate-fade-in"
+                  style={{ animationDelay: `${i * 120}ms` }}
                 >
                   <div className="w-6 h-6 rounded-full bg-muted shrink-0" />
                   <div className="flex-1 h-3 rounded-full bg-muted relative overflow-hidden">
                     <div
-                      className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-foreground/5 to-transparent"
+                      className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-foreground/10 to-transparent"
                       style={{
-                        animation: "craft-shimmer 1.5s ease-in-out infinite",
+                        animation: "craft-shimmer 1.4s ease-in-out infinite",
                         animationDelay: `${i * 180}ms`,
                       }}
                     />

@@ -1,6 +1,6 @@
 import { Plane, Hotel, Sparkles, MapPin, Calendar, ArrowRight, Check, Lock, Star, Loader2, CalendarDays } from "lucide-react";
 import { LogoMark } from "@/components/Logo";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getCityImage } from "@/utils/cityImages";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
 import { TripPlanData, StatTile, DayRailMini, RouteRecap } from "@/components/TripSummaryCard";
@@ -36,22 +36,36 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, origin, onUpgrade 
     0,
   ) || data.activities.length;
   const stockHero = useCityHeroImage(destination);
-  const heroImg =
-    stockHero ||
-    enrichedImages?.[0]?.url ||
-    enrichedImages?.[0]?.thumbUrl ||
-    getCityImage(destination, 800, 500);
+  const enrichedHero = enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl;
+  const preferredHero = enrichedHero || stockHero || getCityImage(destination, 800, 500);
+  const [heroSrc, setHeroSrc] = useState<string | undefined>(preferredHero);
+  useEffect(() => {
+    if (preferredHero && preferredHero !== heroSrc) setHeroSrc(preferredHero);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferredHero]);
+  const handleHeroError = () => {
+    if (heroSrc === enrichedHero && stockHero && stockHero !== enrichedHero) {
+      setHeroSrc(stockHero);
+      return;
+    }
+    setHeroSrc(undefined);
+  };
   const prices = getCurrencyPrices();
 
   return (
     <div className="mt-4 w-full max-w-md rounded-3xl border border-border bg-card overflow-hidden shadow-xl animate-stagger-in">
       {/* ── Cinematic hero ── */}
       <div className="relative h-64 overflow-hidden">
-        <img
-          src={heroImg}
-          alt={destination}
-          className="w-full h-full object-cover animate-ken-burns animate-punch-in"
-        />
+        {heroSrc ? (
+          <img
+            src={heroSrc}
+            alt={destination}
+            onError={handleHeroError}
+            className="w-full h-full object-cover animate-ken-burns animate-punch-in"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/80" />
         <div className="absolute inset-0 noise-overlay opacity-40" />
         <div className="absolute bottom-0 left-0 right-0 p-5">

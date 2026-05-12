@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plane,
@@ -78,8 +78,25 @@ const TripSummaryCard = ({
 
   const resolvedOrigin = (origin || data.flights[0]?.from || "").trim();
   const stockHero = useCityHeroImage(destination);
-  const heroImg =
-    stockHero || enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl;
+  const enrichedHero = enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl;
+  // Prefer the verified Google Places photo when we have one, because it's
+  // always actually the right city. Stock is an excellent fast-first-paint
+  // fallback while enrichment is in flight.
+  const preferredHero = enrichedHero || stockHero;
+  const [heroSrc, setHeroSrc] = useState<string | undefined>(preferredHero);
+  // If the preferred hero URL changes (e.g. enrichment arrives late), swap it in.
+  useEffect(() => {
+    if (preferredHero && preferredHero !== heroSrc) setHeroSrc(preferredHero);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferredHero]);
+  // Fallback chain for onError: enrichedHero → stockHero → none.
+  const handleHeroError = () => {
+    if (heroSrc === enrichedHero && stockHero && stockHero !== enrichedHero) {
+      setHeroSrc(stockHero);
+      return;
+    }
+    setHeroSrc(undefined);
+  };
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -122,10 +139,11 @@ const TripSummaryCard = ({
     >
       {/* ── Cinematic hero ── */}
       <div className="relative h-64 overflow-hidden">
-        {heroImg ? (
+        {heroSrc ? (
           <img
-            src={heroImg}
+            src={heroSrc}
             alt={destination}
+            onError={handleHeroError}
             className="w-full h-full object-cover animate-ken-burns animate-punch-in"
           />
         ) : (

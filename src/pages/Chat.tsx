@@ -24,9 +24,9 @@ import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
 import PlanPreviewGate from "@/components/PlanPreviewGate";
 import PlanCraftingMap, { type CraftActivity } from "@/components/PlanCraftingMap";
-import PlaceShowcase from "@/components/PlaceShowcase";
 import PlacesGallery, { PlaceItem } from "@/components/PlacesGallery";
 import PaywallModal from "@/components/PaywallModal";
+import { extractBlock as extractBlockShared, stripFencedBlocks } from "@/utils/planParser";
 import { useSubscription } from "@/hooks/useSubscription";
 import { HotelData, useTripContext } from "@/contexts/TripContext";
 import { shareTripSummary } from "@/utils/tripSummary";
@@ -115,97 +115,48 @@ const fetchEnrichment = async (destination: string, travelMonth?: string, activi
   }
 };
 
-// Parse message content to extract all block types
+// Parse message content to extract all block types.
+// Uses the shared planParser util so backticks inside JSON strings can't
+// prematurely close a fence. See src/utils/planParser.ts for details.
 const parseMessageContent = (content: string) => {
-  let flights: FlightData[] = [];
-  let activities: ActivityData[] = [];
-  let hotels: HotelData[] = [];
-  let itinerary: ItineraryData[] = [];
-  let timeline: TimelineLeg[] = [];
-  let travelInfo: TravelInfoData | null = null;
-  let weather: any = null;
-  let quickReplies: string[] = [];
-  let destinationEnrich: { destination: string; travelMonth?: string } | null = null;
-  let placeImages: { place: string; vibes?: string[] }[] = [];
-  let places: PlaceItem[] = [];
-  let text = content;
+  const allRanges: [number, number][] = [];
 
-  const extractBlock = (blockType: string) => {
-    const regex = new RegExp("```" + blockType + "\\s*([\\s\\S]*?)```", "g");
-    const items: any[] = [];
-    for (const match of text.matchAll(regex)) {
-      let raw = match[1].trim();
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) items.push(...parsed);
-        else items.push(parsed);
-      } catch {
-        // Try auto-closing incomplete JSON during streaming
-        try {
-          if (raw.startsWith("[")) {
-            // Count open/close braces and brackets
-            const openBraces = (raw.match(/{/g) || []).length;
-            const closeBraces = (raw.match(/}/g) || []).length;
-            const openBrackets = (raw.match(/\[/g) || []).length;
-            const closeBrackets = (raw.match(/\]/g) || []).length;
-            let fixed = raw;
-            // Remove trailing comma
-            fixed = fixed.replace(/,\s*$/, "");
-            for (let j = 0; j < openBraces - closeBraces; j++) fixed += "}";
-            for (let j = 0; j < openBrackets - closeBrackets; j++) fixed += "]";
-            const parsed2 = JSON.parse(fixed);
-            if (Array.isArray(parsed2)) items.push(...parsed2);
-            else items.push(parsed2);
-          } else if (raw.startsWith("{")) {
-            let fixed = raw.replace(/,\s*$/, "");
-            const openBraces = (fixed.match(/{/g) || []).length;
-            const closeBraces = (fixed.match(/}/g) || []).length;
-            for (let j = 0; j < openBraces - closeBraces; j++) fixed += "}";
-            items.push(JSON.parse(fixed));
-          }
-        } catch { /* truly broken, skip */ }
-      }
-      text = text.replace(match[0], "");
-    }
-    // FALLBACK: AI sometimes drops the triple-backtick fences and emits
-    //   activities
-    //   [{...}]
-    // Recover those so cards still render.
-    const unfencedRegex = new RegExp(
-      "(^|\\n)\\s*" + blockType + "\\s*\\n\\s*([\\[{][\\s\\S]*?[\\]}])\\s*(?=\\n\\s*\\n|\\n\\s*[a-z_]+\\s*\\n[\\[{]|\\n*$)",
-      "gi"
-    );
-    for (const match of Array.from(text.matchAll(unfencedRegex))) {
-      const raw = match[2].trim();
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) items.push(...parsed);
-        else items.push(parsed);
-        text = text.replace(match[0], "\n");
-      } catch { /* leave it; could be partial stream */ }
-    }
+  const pick = (type: string) => {
+    const { items, ranges } = extractBlockShared(content, type);
+    allRanges.push(...ranges);
     return items;
   };
 
-  flights = extractBlock("flights");
-  activities = extractBlock("activities");
-  hotels = extractBlock("hotels");
-  itinerary = extractBlock("itinerary");
-  timeline = extractBlock("timeline");
-  
-  const enrichArr = extractBlock("destination_enrich");
-  if (enrichArr.length > 0) destinationEnrich = enrichArr[0];
+  const flights: FlightData[] = pick("flights");
+  const activities: ActivityData[] = pick("activities");
+  const hotels: HotelData[] = pick("hotels");
+  const itinerary: ItineraryData[] = pick("itinerary");
+  const timeline: TimelineLeg[] = pick("timeline");
 
-  const travelInfoArr = extractBlock("travelinfo");
-  if (travelInfoArr.length > 0) travelInfo = travelInfoArr[0];
-  
-  const weatherArr = extractBlock("weather");
-  if (weatherArr.length > 0) weather = weatherArr[0];
-  
-  const qrArr = extractBlock("quickreplies");
-  if (qrArr.length > 0) {
-    quickReplies = Array.isArray(qrArr[0]) ? qrArr[0] : qrArr;
-  }
+  const enrichArr = pick("destination_enrich");
+  const destinationEnrich: { destination: string; travelMonth?: string } | null =
+    enrichArr.length > 0 ? enrichArr[0] : null;
+
+  const travelInfoArr = pick("travelinfo");
+  const travelInfo: TravelInfoData | null = travelInfoArr.length > 0 ? travelInfoArr[0] : null;
+
+  const weatherArr = pick("weather");
+  const weather: any = weatherArr.length > 0 ? weatherArr[0] : null;
+
+  const qrArr = pick("quickreplies");
+  let quickReplies: string[] =
+    qrArr.length > 0 ? (Array.isArray(qrArr[0]) ? qrArr[0] : qrArr) : [];
+
+  const placesArr = pick("places");
+  const places: PlaceItem[] =
+    placesArr.length > 0
+      ? placesArr
+          .filter((p: any) => p && typeof p.name === "string" && typeof p.location === "string")
+          .slice(0, 12)
+          .map((p: any) => ({ name: p.name, location: p.location, why: p.why, category: p.category }))
+      : [];
+
+  let text = stripFencedBlocks(content, allRanges);
 
   // Fallback: parse plain-text quickreplies like `quickreplies: ["a", "b"]`
   if (quickReplies.length === 0) {
@@ -219,30 +170,22 @@ const parseMessageContent = (content: string) => {
     }
   }
 
-  const piArr = extractBlock("place_images");
-  if (piArr.length > 0) {
-    placeImages = piArr.map((p: any) => ({ place: p.place || "", vibes: p.vibes }));
-  }
-
-  const placesArr = extractBlock("places");
-  if (placesArr.length > 0) {
-    places = placesArr
-      .filter((p: any) => p && typeof p.name === "string" && typeof p.location === "string")
-      .slice(0, 12)
-      .map((p: any) => ({ name: p.name, location: p.location, why: p.why, category: p.category }));
-  }
-
-  // Strip incomplete/unterminated code blocks during streaming to prevent raw JSON leaking
-  const blockTypes = ["flights", "activities", "hotels", "itinerary", "timeline", "destination_enrich", "travelinfo", "weather", "quickreplies", "place_images", "places"];
-  for (const bt of blockTypes) {
-    // Match an opening ```blocktype that has NO closing ```
-    const openPattern = new RegExp("```" + bt + "\\s[\\s\\S]*$");
-    if (openPattern.test(text) && !(new RegExp("```" + bt + "\\s[\\s\\S]*?```")).test(text)) {
-      text = text.replace(openPattern, "");
-    }
-  }
-
-  return { text: text.trim(), flights, activities, hotels, itinerary, timeline, travelInfo, weather, quickReplies, destinationEnrich, placeImages, places };
+  // NOTE: the legacy `place_images` block was removed — the system prompt
+  // forbids it and no UI renders it.
+  return {
+    text: text.trim(),
+    flights,
+    activities,
+    hotels,
+    itinerary,
+    timeline,
+    travelInfo,
+    weather,
+    quickReplies,
+    destinationEnrich,
+    placeImages: [] as { place: string; vibes?: string[] }[],
+    places,
+  };
 };
 
 const cleanTripLocation = (value: string) =>
@@ -298,7 +241,10 @@ const extractStructuredDestination = (content: string) => {
     }
   }
 
-  const plainMatch = content.match(/"destination"\s*:\s*"([^"]+)"/i);
+  // Only accept the plain-regex fallback when it's clearly a COMPLETED field
+  // (closing quote present). Without this, during streaming "destination":"Stock
+  // matches and the crafting map flickers "Stock" → "Stockholm".
+  const plainMatch = content.match(/"destination"\s*:\s*"([^"]+)"\s*(,|\})/i);
   return plainMatch?.[1]?.trim() || "";
 };
 
@@ -314,10 +260,19 @@ const isPlanConfirmationMessage = (text: string) => {
 
 const hasCraftingSignals = (content: string) => /(?:```)?(activities|itinerary|hotels|flights|travelinfo|destination_enrich)\b/i.test(content);
 
+// Cheap heuristic to detect a "full" plan during streaming. Previously this
+// ran parseMessageContent which does all the JSON work and is expensive;
+// all we need is a presence check of 2+ block fences.
 const hasRenderableFullPlan = (content: string) => {
-  const parsed = parseMessageContent(content);
-  const blockTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
-  return blockTypeCount >= 2;
+  const types = ["flights", "hotels", "activities", "itinerary"];
+  let count = 0;
+  for (const t of types) {
+    // Opening fence with any content after it is enough — even a partially
+    // streamed block means the model committed to that block type.
+    if (new RegExp("```" + t + "\\s", "i").test(content)) count++;
+    if (count >= 2) return true;
+  }
+  return false;
 };
 
 const HorizontalCarousel = forwardRef<HTMLDivElement, { children: React.ReactNode }>(({ children }, ref) => {
@@ -446,7 +401,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     craftingStartTimeRef.current = Date.now();
     setCraftingPlanType(/```(flights|hotels)/s.test(content) ? "full" : "local");
     setCraftingOriginCity(origin.trim());
-    setCraftingPlan({ destination: cleanedDestination, progress: 0 });
+    // Seed with a small non-zero progress so the bar looks alive from frame 1.
+    // The curve then eases up toward 90% until the AI actually streams back.
+    craftingProgressRef.current = 12;
+    setCraftingPlan({ destination: cleanedDestination, progress: 12 });
     setCraftingActive(true);
 
     craftingIntervalRef.current = setInterval(() => {
@@ -513,21 +471,36 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       recoveredDestination ||
       "your trip";
 
-    // Only START the crafting animation when we're CONFIDENT the AI is about
-    // to actually build the plan — not while it's still asking clarifying
-    // questions. Triggers:
-    //  1) The user message itself is a "make/prepare the plan" confirmation.
-    //  2) The PREVIOUS assistant message asked the "Shall I prepare the plan?"
-    //     style confirmation, and the user's reply reads as a yes.
+    // Start the crafting animation the instant we're confident the AI will
+    // build a plan this turn. We don't wait for the AI to start streaming
+    // fenced blocks (that's the "hang" the user hated). Triggers:
+    //  1) Explicit "prepare/create/make the plan" phrasing.
+    //  2) Prior assistant message asked to prepare; user replied yes.
+    //  3) The user message itself *is* a plan request — contains both a
+    //     destination AND some duration signal ("3 days", "a week",
+    //     "weekend", a date-range), OR contains explicit travel verbs
+    //     ("plan a trip to...", "trip to X for Y days", "from X to Y").
     const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
     const lastAssistantAskedToPrepare = lastAssistant
       ? /(shall i (prepare|build|create|make) (the )?(full )?plan|ready to (prepare|build|create|make) (your |the )?plan|prepare the (full )?plan\??)/i.test(lastAssistant.content)
       : false;
     const userSaidYes = /^\s*(yes|yep|yeah|sure|ok(ay)?|do it|go ahead|please do|sounds good|let's go|let's do it|prepare it|make it)\b[\s.!?]*$/i.test(latestUser.content);
 
+    const userMsgText = latestUser.content || "";
+    const hasDestinationInUserMsg = !!latestCities.destination;
+    const hasDurationHint =
+      /\b\d+\s*(?:day|days|night|nights|week|weeks)\b/i.test(userMsgText) ||
+      /\b(?:weekend|long\s*weekend|a\s+week|two\s+weeks|couple\s+of\s+days|few\s+days|quick\s+getaway)\b/i.test(userMsgText);
+    const hasTravelVerb =
+      /\b(?:trip|travel|vacation|holiday|plan\s+a|visit|explore|itinerary)\b/i.test(userMsgText) ||
+      /\bfrom\s+[^.\n]+?\s+to\s+[^.\n]+/i.test(userMsgText);
+    const looksLikePlanRequest =
+      hasDestinationInUserMsg && (hasDurationHint || hasTravelVerb);
+
     const shouldStart =
       isPlanConfirmationMessage(latestUser.content) ||
-      (lastAssistantAskedToPrepare && userSaidYes);
+      (lastAssistantAskedToPrepare && userSaidYes) ||
+      looksLikePlanRequest;
 
     if (!shouldStart) return;
 
@@ -1373,15 +1346,19 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
                   // Treat as a "plan" when we have an itinerary OR multiple card types — local plans (activities + itinerary, no flights/hotels) count too.
                   const isFullPlan = cardTypeCount >= 2 || parsed.itinerary.length > 0;
-                  // Pull destination from anything available, including the user's prompt as a last resort, so local plans get a hero/title.
+                  // Resolve a CITY-level destination — prefer user prompt + destination_enrich
+                  // over neighborhood-scoped fallbacks (activities[0].neighborhood was often
+                  // a district like "Jordaan" instead of "Amsterdam", which broke city hero
+                  // image lookup and share cards).
                   const lastUserMsg = [...parsedMessages].reverse().find((m) => m.role === "user");
                   const promptDest = lastUserMsg ? inferCitiesFromPrompt(lastUserMsg.content || "").destination : "";
                   const destination = parsed.travelInfo?.destination
-                    || parsed.flights[0]?.cityImage
-                    || parsed.hotels[0]?.location?.split(",")[0]
-                    || parsed.activities[0]?.neighborhood
+                    || (parsed as any).destinationEnrich?.destination
                     || craftingPlan?.destination
                     || promptDest
+                    || parsed.hotels[0]?.location?.split(",")[0]
+                    || parsed.flights[0]?.cityImage
+                    || parsed.activities[0]?.neighborhood
                     || "";
 
                   return (
