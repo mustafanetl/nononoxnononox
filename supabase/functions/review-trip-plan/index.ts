@@ -82,6 +82,156 @@ function collectVenues(blocks: Block[]): { name: string; kind: "activity" | "hot
   return venues;
 }
 
+/**
+ * Structural completeness checks — independent of Google verification.
+ *
+ * A plan can have every venue pass verification and still be garbage
+ * (e.g. day 2 is an empty array, or a day has no dinner). These checks
+ * catch the "quarter-a-plan" failure mode the AI sometimes falls into on
+ * short trips.
+ *
+ * Mode-aware:
+ *   TRIP  = has flights OR hotels, or multi-day itinerary → strict rules
+ *           (6-8 slots/day, breakfast + lunch + dinner every day).
+ *   LOCAL = single-day plan with no flights/hotels (date night, things to
+ *           do tonight, etc.) → loose rules (≥ 3 slots, no meal requirement).
+ */
+function checkItineraryCompleteness(blocks: Block[]): string[] {
+  const issues: string[] = [];
+  const itineraryBlock = blocks.find((b) => b.type === "itinerary");
+  const hasFlights = blocks.some((b) => b.type === "flights");
+  const hasHotels = blocks.some((b) => b.type === "hotels");
+  if (!itineraryBlock) {
+    // Presence of an itinerary is enforced by the trip-mode flow in the
+    // client (we only run the reviewer on structured plans). We still want
+    // to call it out when it's missing entirely for a trip-mode response.
+    const hasActivities = blocks.some((b) => b.type === "activities");
+    if (hasActivities) {
+      issues.push(
+        `Plan is missing an itinerary block. Emit a \`\`\`itinerary\`\`\` block with every day from day:1 onward, each with 6-8 slots including breakfast, lunch, and dinner.`,
+      );
+    }
+    return issues;
+  }
+
+  const days = Array.isArray(itineraryBlock.json) ? itineraryBlock.json : [];
+  if (days.length === 0) {
+    issues.push(
+      `Itinerary array is empty. Emit at least one day with 6-8 slots including breakfast, lunch, and dinner.`,
+    );
+    return issues;
+  }
+
+  // LOCAL/DATE detection: single-day plan with no flights AND no hotels.
+  const isLocalMode = !hasFlights && !hasHotels && days.length === 1;
+  const minSlotsPerDay = isLocalMode ? 3 : 6;
+  const enforceMeals = !isLocalMode;
+
+  // Detect day-number gaps (e.g. day 1 and day 3 but no day 2).
+  // Only meaningful for TRIP mode (LOCAL is always single-day).
+  const dayNums = days
+    .map((d: any) => (typeof d?.day === "number" ? d.day : null))
+    .filter((n: number | null): n is number => n !== null)
+    .sort((a, b) => a - b);
+  if (!isLocalMode && dayNums.length > 0) {
+    const maxDay = dayNums[dayNums.length - 1];
+    for (let i = 1; i <= maxDay; i++) {
+      if (!dayNums.includes(i)) {
+        issues.push(
+          `Itinerary is missing day ${i}. Every day from day:1 through day:${maxDay} must be present with 6-8 slots.`,
+        );
+      }
+    }
+  }
+
+  for (const day of days) {
+    const dayNum = typeof day?.day === "number" ? day.day : "?";
+    const slots = Array.isArray(day?.slots) ? day.slots : [];
+
+    if (slots.length === 0) {
+      issues.push(
+        isLocalMode
+          ? `Day ${dayNum} has no slots. Add 3-6 real stops with specific venue names, times, and neighborhoods.`
+          : `Day ${dayNum} has no slots. Add 6-8 real slots with specific venue names, covering breakfast, lunch, dinner, and sightseeing in between.`,
+      );
+      continue;
+    }
+
+    if (slots.length < minSlotsPerDay) {
+      issues.push(
+        isLocalMode
+          ? `Day ${dayNum} only has ${slots.length} slot${slots.length === 1 ? "" : "s"} — this plan needs at least ${minSlotsPerDay}. Add more real stops.`
+          : `Day ${dayNum} only has ${slots.length} slot${slots.length === 1 ? "" : "s"} — minimum is ${minSlotsPerDay} per day. Add more real stops (cafés, neighborhood walks, dessert spots, sunset bars, museums) to reach 6-8.`,
+      );
+    }
+
+    // Meals check only applies to TRIP-mode plans. Date-night / things-to-do
+    // plans cover an evening or afternoon and don't need breakfast/lunch.
+    if (enforceMeals) {
+      const toMinutes = (t: string): number | null => {
+        const m = (t || "").match(/^(\d{1,2}):(\d{2})/);
+        if (!m) return null;
+        return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+      };
+      const mealRegex =
+        /breakfast|brunch|lunch|dinner|café|cafe|restaurant|bakery|bistro|trattoria|izakaya|ramen|sushi|market|food hall/i;
+
+      let hasBreakfast = false;
+      let hasLunch = false;
+      let hasDinner = false;
+
+      for (const s of slots) {
+        const text = `${s?.activity || ""} ${s?.venue || ""}`;
+        const minutes = toMinutes(s?.time || "");
+        const looksLikeMeal = mealRegex.test(text);
+        if (!looksLikeMeal && minutes === null) continue;
+
+        if (
+          (minutes !== null && minutes >= 7 * 60 && minutes <= 10 * 60 + 30 && looksLikeMeal) ||
+          /breakfast|brunch|bakery/i.test(text)
+        ) {
+          hasBreakfast = true;
+        }
+        if (
+          (minutes !== null && minutes >= 11 * 60 + 30 && minutes <= 14 * 60 + 30 && looksLikeMeal) ||
+          /\blunch\b/i.test(text)
+        ) {
+          hasLunch = true;
+        }
+        if (
+          (minutes !== null && minutes >= 18 * 60 + 30 && minutes <= 21 * 60 + 30 && looksLikeMeal) ||
+          /\bdinner\b/i.test(text)
+        ) {
+          hasDinner = true;
+        }
+      }
+
+      const missingMeals: string[] = [];
+      if (!hasBreakfast) missingMeals.push("breakfast (7:00-10:00)");
+      if (!hasLunch) missingMeals.push("lunch (11:30-14:30)");
+      if (!hasDinner) missingMeals.push("dinner (18:30-21:30)");
+      if (missingMeals.length > 0) {
+        issues.push(
+          `Day ${dayNum} is missing ${missingMeals.join(", ")}. Add a slot at a real, named venue for each missing meal.`,
+        );
+      }
+    }
+
+    // Catch generic placeholder venues that will fail Google verification anyway
+    const placeholders =
+      /\b(local café|local cafe|nearby restaurant|a local|your hotel|hotel area|nearby bar|unnamed|tbd|local spot)\b/i;
+    for (const s of slots) {
+      if (typeof s?.venue === "string" && placeholders.test(s.venue)) {
+        issues.push(
+          `Day ${dayNum} slot "${s.venue}" uses a generic placeholder. Replace with a real, famous venue name in the destination.`,
+        );
+      }
+    }
+  }
+
+  return issues;
+}
+
 async function geocodeCountry(destination: string): Promise<{ countryCode: string; lat: number; lng: number } | null> {
   if (!destination) return null;
   try {
@@ -218,6 +368,21 @@ serve(async (req) => {
     }
 
     const venues = collectVenues(blocks);
+
+    // Structural completeness check first — independent of Google verification.
+    // Catches the "short trip, empty day 2" failure mode even when venues
+    // themselves are real. Fail-fast: if the plan is structurally broken,
+    // skip the (more expensive) Places verification and ask the AI to fix
+    // the structure before we re-verify on the next pass.
+    const structuralIssues = checkItineraryCompleteness(blocks);
+    if (structuralIssues.length > 0) {
+      console.log(`Plan rejected (structural): ${structuralIssues.length} issue(s)`);
+      return new Response(
+        JSON.stringify({ approved: false, issues: structuralIssues.slice(0, 12) }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (venues.length === 0) {
       return new Response(JSON.stringify({ approved: true, issues: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

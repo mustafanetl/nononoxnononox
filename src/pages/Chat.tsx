@@ -844,9 +844,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       if (msg.parsed.destinationEnrich && !enrichedData[msg.parsed.destinationEnrich.destination]) {
         const { destination, travelMonth } = msg.parsed.destinationEnrich;
         if (isPremium) {
+          // Include BOTH activity names AND itinerary slot venues so every
+          // stop in the plan gets a chance to resolve to a real Google Places
+          // photo. Without this, a short trip where day 2 has slots that
+          // aren't also in the activities block ends up with no photos.
           const activityNames = msg.parsed.activities.map((a: any) => a.name).filter(Boolean);
+          const slotVenues = msg.parsed.itinerary.flatMap((d: any) =>
+            Array.isArray(d?.slots) ? d.slots.map((s: any) => s?.venue).filter(Boolean) : [],
+          );
+          const uniqueNames = Array.from(new Set([...activityNames, ...slotVenues]));
           const hotelNamesList = msg.parsed.hotels.map((h: any) => h.name).filter(Boolean);
-          fetchEnrichment(destination, travelMonth, activityNames, false, hotelNamesList).then((data) => {
+          fetchEnrichment(destination, travelMonth, uniqueNames, false, hotelNamesList).then((data) => {
             if (data) {
               warmEnrichmentAssets(data);
               setEnrichedData((prev) => ({ ...prev, [destination]: mergeEnrichmentData(prev[destination], data) }));
