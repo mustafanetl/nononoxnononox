@@ -51,9 +51,13 @@ async function getCachedImages(destination: string): Promise<any[] | null> {
   }
 }
 
-/** Check if we have cached activity/hotel photos */
-async function getCachedActivityPhotos(destination: string, names: string[]): Promise<Record<string, any> | null> {
-  if (names.length === 0) return null;
+/**
+ * Check if we have cached activity/hotel photos for any of the requested
+ * names. Returns whatever we have cached (even partial hits) so callers
+ * can fetch only the misses from Google Places.
+ */
+async function getCachedActivityPhotos(destination: string, names: string[]): Promise<Record<string, any>> {
+  if (names.length === 0) return {};
   try {
     const db = getAdminClient();
     const norm = normalizeDestination(destination);
@@ -66,13 +70,13 @@ async function getCachedActivityPhotos(destination: string, names: string[]): Pr
       .in("type", ["activity", "hotel"])
       .gte("updated_at", cutoff);
 
-    if (!data || data.length === 0) return null;
+    if (!data || data.length === 0) return {};
 
-    // Build lookup by name
+    // Build lookup by name (case-insensitive key included so loose matching works).
     const result: Record<string, any> = {};
     for (const row of data) {
       if (!row.name) continue;
-      result[row.name] = {
+      const entry = {
         photo: row.url,
         thumbPhoto: row.thumb_url,
         photos: row.metadata?.photos || [row.url],
@@ -84,16 +88,19 @@ async function getCachedActivityPhotos(destination: string, names: string[]): Pr
         lat: row.metadata?.lat || null,
         lng: row.metadata?.lng || null,
       };
+      result[row.name] = entry;
+      result[row.name.toLowerCase()] = entry;
     }
-
-    // Check if we have at least 50% of requested names cached
-    const hits = names.filter((n) => result[n] || result[n.toLowerCase()]);
-    if (hits.length >= names.length * 0.5) return result;
-    return null;
+    return result;
   } catch (e) {
     console.warn("Activity cache read failed:", e);
-    return null;
+    return {};
   }
+}
+
+/** Which of the requested names did NOT hit the cache? */
+function cacheMisses(names: string[], cached: Record<string, any>): string[] {
+  return names.filter((n) => !cached[n] && !cached[n.toLowerCase()]);
 }
 
 /** Store images in cache */
@@ -699,24 +706,39 @@ serve(async (req) => {
       });
     }
 
-    // All APIs in parallel — skip Google calls if we have cache
-    const [countryData, googleImages, activityResults, hotelResults] = await Promise.all([
+    // Determine cache misses — only call Google Places for names we don't already have.
+    const activityMisses = cacheMisses(activityNames, cachedActivityPhotos);
+    const hotelMisses = cacheMisses(hotelNamesList, cachedHotelPhotos);
+    const hasHeroCache = !!cachedHeroImages;
+    const hasAnyActivityCache = Object.keys(cachedActivityPhotos).length > 0;
+    const hasAnyHotelCache = Object.keys(cachedHotelPhotos).length > 0;
+
+    // All APIs in parallel — cache provides the base, fresh calls fill the gaps.
+    const [countryData, googleImages, freshActivityResults, freshHotelResults] = await Promise.all([
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
-      cachedHeroImages ? Promise.resolve(cachedHeroImages) : getGooglePlacePhotos(destination),
-      cachedActivityPhotos ? Promise.resolve(cachedActivityPhotos) : (activityNames.length > 0 ? searchAndValidateActivities(activityNames, destination) : Promise.resolve({})),
-      cachedHotelPhotos ? Promise.resolve(cachedHotelPhotos) : (hotelNamesList.length > 0 ? searchAndValidateHotels(hotelNamesList, destination) : Promise.resolve({})),
+      hasHeroCache ? Promise.resolve(cachedHeroImages) : getGooglePlacePhotos(destination),
+      activityMisses.length > 0 ? searchAndValidateActivities(activityMisses, destination) : Promise.resolve({}),
+      hotelMisses.length > 0 ? searchAndValidateHotels(hotelMisses, destination) : Promise.resolve({}),
     ]);
 
-    // ── CACHE WRITE: store fresh results for next time ──
-    if (!cachedHeroImages && Array.isArray(googleImages) && googleImages.length > 0) {
+    // Merge cached + fresh — fresh wins on conflict (shouldn't happen because misses are disjoint).
+    const activityResults = { ...cachedActivityPhotos, ...freshActivityResults };
+    const hotelResults = { ...cachedHotelPhotos, ...freshHotelResults };
+
+    // ── CACHE WRITE: store only the fresh results for next time ──
+    if (!hasHeroCache && Array.isArray(googleImages) && googleImages.length > 0) {
       await cacheImages(destination, googleImages);
     }
-    if (!cachedActivityPhotos && activityResults && Object.keys(activityResults).length > 0) {
-      await cacheActivityPhotos(destination, activityResults, "activity");
+    if (Object.keys(freshActivityResults).length > 0) {
+      await cacheActivityPhotos(destination, freshActivityResults, "activity");
     }
-    if (!cachedHotelPhotos && hotelResults && Object.keys(hotelResults).length > 0) {
-      await cacheActivityPhotos(destination, hotelResults, "hotel");
+    if (Object.keys(freshHotelResults).length > 0) {
+      await cacheActivityPhotos(destination, freshHotelResults, "hotel");
     }
+
+    // Silence lint warnings for the unused "any cache" flags — they're helpful for debugging.
+    void hasAnyActivityCache;
+    void hasAnyHotelCache;
 
     let currencyCode = "";
     let currencyName = "";

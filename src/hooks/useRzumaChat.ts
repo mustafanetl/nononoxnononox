@@ -245,9 +245,19 @@ export const useRzumaChat = () => {
 
     let assistantContent = "";
 
-    const updateAssistant = (chunk: string) => {
-      assistantContent += chunk;
-      const content = assistantContent;
+    // rAF-batched conversation update so streaming tokens don't re-render
+    // (and re-parse) the whole plan on every delta. The chat edge function
+    // can deliver 100+ tiny chunks per second for a 2000-token plan; without
+    // this throttle, parseMessageContent runs once per token which is a
+    // noticeable frame drop on slower devices.
+    let pendingContent: string | null = null;
+    let rafId: number | null = null;
+
+    const flushPending = () => {
+      rafId = null;
+      if (pendingContent === null) return;
+      const content = pendingContent;
+      pendingContent = null;
       setConversations(prev => prev.map(c => {
         if (c.id !== currentId) return c;
         const msgs = c.messages;
@@ -257,6 +267,26 @@ export const useRzumaChat = () => {
         }
         return { ...c, messages: [...msgs, { role: "assistant", content }], updatedAt: Date.now() };
       }));
+    };
+
+    const updateAssistant = (chunk: string) => {
+      assistantContent += chunk;
+      pendingContent = assistantContent;
+      if (rafId === null && typeof requestAnimationFrame === "function") {
+        rafId = requestAnimationFrame(flushPending);
+      } else if (rafId === null) {
+        // SSR / test environment fallback — flush synchronously.
+        flushPending();
+      }
+    };
+
+    // Ensures the final chunk lands even if the last rAF was scheduled.
+    const finalizeStream = () => {
+      if (rafId !== null && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = null;
+      flushPending();
     };
 
     try {
@@ -276,23 +306,11 @@ export const useRzumaChat = () => {
       };
       const hasPrefs = Object.values(prefsContext).some(v => v !== undefined);
 
-      let isPremiumUser = false;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { data: sub } = await supabase
-            .from("subscriptions")
-            .select("plan, status, expires_at")
-            .eq("user_id", session.user.id)
-            .eq("status", "active")
-            .maybeSingle();
-          if (sub && (!sub.expires_at || new Date(sub.expires_at) > new Date())) {
-            isPremiumUser = true;
-          }
-        }
-      } catch { /* ignore */ }
-
-      const fullPrefs = hasPrefs ? { ...prefsContext, isPremium: isPremiumUser } : (isPremiumUser ? { isPremium: true } : undefined);
+      // Build preferences payload. We deliberately do NOT include isPremium
+      // from the client — the edge function resolves premium server-side via
+      // the JWT in resolveAuth(). Trusting a client flag would be a security
+      // hole. Client still reads sub state for UI (paywall gating) elsewhere.
+      const fullPrefs = hasPrefs ? prefsContext : undefined;
 
       // Stream one AI1 response. Returns the full text streamed.
       const runStream = async (revisionRequest?: string[]): Promise<string> => {
@@ -377,6 +395,9 @@ export const useRzumaChat = () => {
           }
         }
 
+        // Flush any pending rAF update so the final content is committed
+        // before downstream QA logic reads `collected`.
+        finalizeStream();
         return collected;
       };
 
@@ -385,6 +406,7 @@ export const useRzumaChat = () => {
 
       // === QA loop (AI2) — only if AI1 produced a structured plan ===
       if (hasStructuredPlan(planText)) {
+        let lastIssuesSig = "";
         for (let attempt = 0; attempt < MAX_REVISIONS; attempt++) {
           setQaStatus("verifying");
           let review: { approved: boolean; issues?: string[]; enrichedPlan?: string } = { approved: true };
@@ -429,6 +451,15 @@ export const useRzumaChat = () => {
             break;
           }
 
+          // Short-circuit: if the reviewer returns the exact same issues as
+          // last revision, the AI is stuck. Stop burning tokens on a loop.
+          const issuesSig = review.issues.slice().sort().join("|");
+          if (issuesSig === lastIssuesSig) {
+            console.warn("Revision loop detected — same issues after retry, accepting current plan");
+            break;
+          }
+          lastIssuesSig = issuesSig;
+
           // Need a revision
           setQaStatus("fixing");
           try {
@@ -445,6 +476,14 @@ export const useRzumaChat = () => {
       console.error("Chat error:", e);
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
+      // Guarantee: no leaked rAF, no stuck QA spinner, no stuck loader —
+      // even if the stream aborts mid-revision.
+      try {
+        if (rafId !== null && typeof cancelAnimationFrame === "function") {
+          cancelAnimationFrame(rafId);
+        }
+        flushPending();
+      } catch { /* best-effort */ }
       setIsLoading(false);
       setQaStatus(null);
     }

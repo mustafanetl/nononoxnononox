@@ -1,15 +1,9 @@
+import { extractBlock as extractBlockShared } from "./planParser";
+
 type Message = { role: string; content: string };
 
 const extractBlock = (content: string, type: string): any[] => {
-  const regex = new RegExp("```" + type + "\\s*([\\s\\S]*?)```", "g");
-  const items: any[] = [];
-  for (const match of content.matchAll(regex)) {
-    try {
-      const parsed = JSON.parse(match[1]);
-      if (Array.isArray(parsed)) items.push(...parsed);
-    } catch { /* skip */ }
-  }
-  return items;
+  return extractBlockShared(content, type).items;
 };
 
 export const generateTripSummary = (messages: Message[]): string => {

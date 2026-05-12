@@ -7,7 +7,7 @@ import {
   sanitizePreferences,
   sanitizeRevisionIssues,
 } from "../_shared/auth.ts";
-import { streamGemini, type ChatMessage } from "../_shared/gemini.ts";
+import { streamChat, type ChatMessage } from "../_shared/aiProvider.ts";
 
 const SYSTEM_PROMPT = `You are Jolliday — a professional travel concierge. You communicate clearly, politely, and efficiently, like a knowledgeable advisor — not a casual friend.
 
@@ -144,7 +144,7 @@ AFTER generating the plan, add a short closing:
   quickreplies: ["Make it cheaper", "Add more food spots", "Change the hotel", "Looks great!"]
 
 CRITICAL RULES:
-- NEVER show place_images. This block type does NOT exist. Never use it.
+- NEVER emit a \`place_images\` block. It does not exist.
 - Generate the plan as FAST as possible. 0-2 questions max, then full plan.
 - If user gives destination + duration in one message → generate IMMEDIATELY, same turn.
 - ALWAYS end messages with quickreplies.
@@ -340,8 +340,10 @@ serve(async (req) => {
     }
 
     // Hard-cap message history length to prevent runaway token use.
-    // Last 40 messages is plenty for Jolliday's multi-turn flow.
-    const trimmedMessages = messages.slice(-40);
+    // Last 30 messages is plenty for Jolliday's multi-turn flow and leaves
+    // headroom for the system prompt, revision context, and the plan itself
+    // within any 32k-context model.
+    const trimmedMessages = messages.slice(-30);
 
     // Sanitize user-controlled strings BEFORE they touch the system prompt.
     const preferences = sanitizePreferences(rawPrefs);
@@ -422,13 +424,13 @@ serve(async (req) => {
       });
     }
 
-    // ── AI CALL: direct Gemini, no Lovable fallback ──────────
-    const geminiMessages: ChatMessage[] = [...systemMessages, ...trimmedMessages];
-    const upstream = await streamGemini(geminiMessages, AI_KEY, 16384);
+    // ── AI CALL ──────────────
+    const aiMessages: ChatMessage[] = [...systemMessages, ...trimmedMessages];
+    const upstream = await streamChat(aiMessages, AI_KEY, 16384);
 
     if (!upstream.ok) {
       const errorText = await upstream.text();
-      console.error("Gemini error:", upstream.status, errorText);
+      console.error("AI upstream error:", upstream.status, errorText);
 
       if (upstream.status === 429) {
         return new Response(
@@ -445,7 +447,7 @@ serve(async (req) => {
       if (upstream.status === 403) {
         return new Response(
           JSON.stringify({
-            error: "Gemini API access denied. Check the API key is valid and 'Generative Language API' is enabled in Google Cloud.",
+            error: "AI API access denied. Verify the API key and AI_BASE_URL env match, and that the model is enabled for the account.",
           }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
@@ -455,6 +457,11 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    // Only charge the rate-limit quota now that upstream confirmed OK.
+    // Fire-and-forget — we don't want to hold the stream open for the
+    // counter upsert.
+    limitCheck.commit().catch(() => {});
 
     return new Response(upstream.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },

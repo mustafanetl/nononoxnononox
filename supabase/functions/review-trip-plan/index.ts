@@ -5,6 +5,7 @@ import {
   rateLimitResponse,
   resolveAuth,
 } from "../_shared/auth.ts";
+import { extractBlocksWithRaw } from "../_shared/planParser.ts";
 
 /**
  * AI2 reviewer — replaced by a real Google Places fact-checker.
@@ -20,13 +21,9 @@ const BLOCK_TYPES = ["activities", "hotels", "itinerary"];
 function extractBlocks(planText: string): Block[] {
   const blocks: Block[] = [];
   for (const type of BLOCK_TYPES) {
-    const re = new RegExp("```" + type + "\\s*([\\s\\S]*?)```", "g");
-    for (const m of planText.matchAll(re)) {
-      const raw = m[1].trim();
-      try {
-        const json = JSON.parse(raw);
-        blocks.push({ type, raw, json, fullMatch: m[0] });
-      } catch { /* skip un-parseable */ }
+    const found = extractBlocksWithRaw(planText, type);
+    for (const b of found) {
+      blocks.push({ type, raw: b.raw, json: b.json, fullMatch: b.fullMatch });
     }
   }
   return blocks;
@@ -34,19 +31,13 @@ function extractBlocks(planText: string): Block[] {
 
 function inferDestination(planText: string, hint?: string): string {
   if (hint && hint.trim()) return hint.trim();
-  const m = planText.match(/```destination_enrich\s*([\s\S]*?)```/);
-  if (m) {
-    try {
-      const j = JSON.parse(m[1].trim());
-      if (j.destination) return String(j.destination);
-    } catch { /* */ }
+  const enrich = extractBlocksWithRaw(planText, "destination_enrich");
+  if (enrich.length > 0 && typeof enrich[0].json?.destination === "string") {
+    return String(enrich[0].json.destination);
   }
-  const ti = planText.match(/```travelinfo\s*([\s\S]*?)```/);
-  if (ti) {
-    try {
-      const j = JSON.parse(ti[1].trim());
-      if (j.destination) return String(j.destination);
-    } catch { /* */ }
+  const travelInfo = extractBlocksWithRaw(planText, "travelinfo");
+  if (travelInfo.length > 0 && typeof travelInfo[0].json?.destination === "string") {
+    return String(travelInfo[0].json.destination);
   }
   return "";
 }
@@ -377,6 +368,7 @@ serve(async (req) => {
     const structuralIssues = checkItineraryCompleteness(blocks);
     if (structuralIssues.length > 0) {
       console.log(`Plan rejected (structural): ${structuralIssues.length} issue(s)`);
+      limitCheck.commit().catch(() => {});
       return new Response(
         JSON.stringify({ approved: false, issues: structuralIssues.slice(0, 12) }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -384,6 +376,7 @@ serve(async (req) => {
     }
 
     if (venues.length === 0) {
+      limitCheck.commit().catch(() => {});
       return new Response(JSON.stringify({ approved: true, issues: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -411,17 +404,20 @@ serve(async (req) => {
       const r = verifications[v.name];
       if (r?.matched) {
         // Country enforcement: reject venues that resolve outside the
-        // destination country. Use ISO country code first, fall back to
-        // a 300km radius check from the city center if Google didn't
-        // return address components.
+        // destination country. ISO country code is the primary signal; a
+        // tight 150 km haversine radius is only a last-resort fallback
+        // when Google didn't return address components. 300 km was too
+        // loose — Stockholm's 300 km circle covers Denmark, Norway,
+        // Finland, and the Baltic states.
         let outsideCountry = false;
         if (destCountry && r.countryCode && r.countryCode !== destCountry) {
           outsideCountry = true;
         } else if (
           destGeo &&
+          !r.countryCode &&
           typeof r.lat === "number" &&
           typeof r.lng === "number" &&
-          haversineKm(destGeo.lat, destGeo.lng, r.lat, r.lng) > 300
+          haversineKm(destGeo.lat, destGeo.lng, r.lat, r.lng) > 150
         ) {
           outsideCountry = true;
         }
@@ -454,6 +450,7 @@ serve(async (req) => {
 
     if (issues.length > 0) {
       console.log(`Plan rejected: ${issues.length} unverified venues`);
+      limitCheck.commit().catch(() => {});
       return new Response(JSON.stringify({ approved: false, issues: issues.slice(0, 12) }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -461,6 +458,7 @@ serve(async (req) => {
 
     const enrichedPlan = rebuildPlanText(planText, blocks);
     console.log(`Plan approved: ${uniqueNames.length} venues all verified`);
+    limitCheck.commit().catch(() => {});
     return new Response(JSON.stringify({ approved: true, issues: [], enrichedPlan }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

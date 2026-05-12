@@ -5,7 +5,7 @@ import {
   rateLimitResponse,
   resolveAuth,
 } from "../_shared/auth.ts";
-import { callGemini, type ChatMessage } from "../_shared/gemini.ts";
+import { callChat, type ChatMessage } from "../_shared/aiProvider.ts";
 
 const TIMEOUT_MS = 8000;
 function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
@@ -71,10 +71,14 @@ serve(async (req) => {
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY");
     const AI_KEY = OPENROUTER_API_KEY || GROQ_API_KEY || GEMINI_API_KEY;
-    if (!AI_KEY && !LOVABLE_API_KEY) throw new Error("AI service not configured");
+    if (!AI_KEY) {
+      return new Response(
+        JSON.stringify({ error: "AI service not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const exclusions = [activity.name, ...(Array.isArray(excludeNames) ? excludeNames : [])].filter(Boolean);
 
@@ -95,41 +99,20 @@ Respond with ONLY a JSON array, no prose, no markdown fences:
 
 Rules: only famous, easy-to-verify venues. Realistic prices. Same currency as original (${activity.currency || "$"}).`;
 
-    // Prefer direct AI call; fall back to Lovable if only that key is set.
-    let content = "";
-    if (AI_KEY) {
-      const messages: ChatMessage[] = [
-        { role: "system", content: "You are a travel expert. Respond with ONLY valid JSON, no prose, no code fences." },
-        { role: "user", content: prompt },
-      ];
-      const result = await callGemini(messages, AI_KEY, 2048);
-      if (result.error) {
-        console.error("Gemini error:", result.status, result.error);
-        return new Response(JSON.stringify({ error: "AI request failed" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      content = result.text;
-    } else {
-      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            { role: "system", content: "You are a travel expert. Respond with ONLY valid JSON, no prose, no code fences." },
-            { role: "user", content: prompt },
-          ],
-        }),
-      });
-
-      if (!aiRes.ok) {
-        const errText = await aiRes.text();
-        console.error("AI gateway error:", aiRes.status, errText);
-        return new Response(JSON.stringify({ error: "AI request failed" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
-      const aiData = await aiRes.json();
-      content = aiData.choices?.[0]?.message?.content || "";
+    // Single AI path through the shared provider wrapper.
+    const messages: ChatMessage[] = [
+      { role: "system", content: "You are a travel expert. Respond with ONLY valid JSON, no prose, no code fences." },
+      { role: "user", content: prompt },
+    ];
+    const result = await callChat(messages, AI_KEY, 2048);
+    if (result.error) {
+      console.error("AI error:", result.status, result.error);
+      return new Response(
+        JSON.stringify({ error: "AI request failed" }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
+    let content = result.text;
     content = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 
     let suggestions: any[] = [];
@@ -185,11 +168,13 @@ Rules: only famous, easy-to-verify venues. Realistic prices. Same currency as or
       const cleaned = enriched.filter((e) => !isExcluded(e.name));
       const withPhotos = cleaned.filter((e) => e.realPhoto);
       const out = (withPhotos.length > 0 ? withPhotos : cleaned).slice(0, 3);
+      limitCheck.commit().catch(() => {});
       return new Response(JSON.stringify({ suggestions: out }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    limitCheck.commit().catch(() => {});
     return new Response(JSON.stringify({ suggestions: suggestions.slice(0, 3) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

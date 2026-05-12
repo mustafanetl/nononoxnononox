@@ -85,23 +85,28 @@ export async function resolveAuth(req: Request): Promise<AuthContext> {
 }
 
 /**
- * Check + increment the per-day usage counter.
- * Anonymous users are bucketed by IP. Returns { ok, remaining, limit }.
- * If ok=false, caller should 429.
+ * Check the per-day usage counter without incrementing it.
+ * Anonymous users are bucketed by IP. Returns { ok, remaining, limit, commit }.
+ *
+ * `commit` is an async function the caller MUST invoke after the protected
+ * work succeeds, so we don't burn quota on upstream failures (429s, 500s,
+ * client disconnects). Premium users skip everything — commit is a no-op.
  */
 export async function enforceRateLimit(
   ctx: AuthContext,
   endpoint: string,
-): Promise<{ ok: boolean; remaining: number | null; limit: number | null }> {
+): Promise<{ ok: boolean; remaining: number | null; limit: number | null; commit: () => Promise<void> }> {
   const limit = RATE_LIMITS[ctx.tier];
-  // Premium = unlimited, skip entirely
-  if (limit === null) return { ok: true, remaining: null, limit: null };
+  // Premium = unlimited, skip entirely.
+  if (limit === null) {
+    return { ok: true, remaining: null, limit: null, commit: async () => {} };
+  }
 
   const admin = getAdminClient();
   const bucket = ctx.userId ? `user:${ctx.userId}` : `ip:${ctx.ip}`;
   const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
 
-  // Read current count
+  // Read current count.
   const { data: row } = await admin
     .from("api_usage")
     .select("count")
@@ -112,19 +117,26 @@ export async function enforceRateLimit(
 
   const current = row?.count ?? 0;
   if (current >= limit) {
-    return { ok: false, remaining: 0, limit };
+    return { ok: false, remaining: 0, limit, commit: async () => {} };
   }
 
-  // Upsert increment (race-free enough for our purposes; worst case a user
-  // gets 1 extra request on a race, not a security issue).
-  await admin
-    .from("api_usage")
-    .upsert(
-      { bucket, endpoint, day, count: current + 1, updated_at: new Date().toISOString() },
-      { onConflict: "bucket,endpoint,day" },
-    );
+  let committed = false;
+  const commit = async () => {
+    if (committed) return;
+    committed = true;
+    try {
+      await admin.from("api_usage").upsert(
+        { bucket, endpoint, day, count: current + 1, updated_at: new Date().toISOString() },
+        { onConflict: "bucket,endpoint,day" },
+      );
+    } catch (e) {
+      // If the upsert races with another call, we might under-count by 1
+      // — not a security risk, just a slightly generous quota.
+      console.warn("rate-limit commit failed:", e);
+    }
+  };
 
-  return { ok: true, remaining: limit - current - 1, limit };
+  return { ok: true, remaining: limit - current - 1, limit, commit };
 }
 
 /**
