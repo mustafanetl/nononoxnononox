@@ -330,17 +330,13 @@ export const useRzumaChat = () => {
         if (!resp.body) throw new Error("No response body");
 
         // On a revision, we are REPLACING the previous assistant message content.
+        // Keep the old content visible until the new stream produces structured
+        // blocks — this prevents the plan card from flickering away and back.
         if (revisionRequest && revisionRequest.length) {
           assistantContent = "";
-          setConversations(prev => prev.map(c => {
-            if (c.id !== currentId) return c;
-            const msgs = c.messages;
-            const last = msgs[msgs.length - 1];
-            if (last?.role === "assistant") {
-              return { ...c, messages: msgs.map((m, i) => i === msgs.length - 1 ? { ...m, content: "" } : m), updatedAt: Date.now() };
-            }
-            return c;
-          }));
+          // Don't wipe the visible message yet — we'll replace it once the
+          // new stream has meaningful content. The updateAssistant function
+          // will overwrite it on the first flush.
         }
 
         const reader = resp.body.getReader();

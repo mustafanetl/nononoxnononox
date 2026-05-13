@@ -496,8 +496,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     const hasTravelVerb =
       /\b(?:trip|travel|vacation|holiday|plan\s+a|visit|explore|itinerary)\b/i.test(userMsgText) ||
       /\bfrom\s+[^.\n]+?\s+to\s+[^.\n]+/i.test(userMsgText);
+    // Only trigger early crafting when we have STRONG signals — destination + duration.
+    // A travel verb alone is too weak (e.g. "visit museums in Paris" is a question, not a plan request).
     const looksLikePlanRequest =
-      hasDestinationInUserMsg && (hasDurationHint || hasTravelVerb);
+      hasDestinationInUserMsg && hasDurationHint;
 
     const shouldStart =
       isPlanConfirmationMessage(latestUser.content) ||
@@ -547,7 +549,32 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       destination: structuredDestination || prev.destination,
     } : prev);
     setCraftingPlanType(/```(flights|hotels)/s.test(content) ? "full" : "local");
-  }, [messages, isLoading, craftingPlan?.destination, craftingOriginCity, originCity, startCrafting]);
+
+    // Detect when the plan is fully streamed (quickreplies is always last).
+    // Tear down crafting even if isLoading is still true (QA loop keeps it true).
+    if (craftingActive && hasRenderableFullPlan(content) && /```quickreplies\s*\[/.test(content)) {
+      craftingProgressRef.current = 100;
+      setCraftingPlan((prev) => prev ? { ...prev, progress: 100 } : prev);
+      if (craftingIntervalRef.current) {
+        clearInterval(craftingIntervalRef.current);
+        craftingIntervalRef.current = null;
+      }
+      if (craftingFinalizeTimeoutRef.current) {
+        clearTimeout(craftingFinalizeTimeoutRef.current);
+      }
+      craftingFinalizeTimeoutRef.current = setTimeout(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            pendingCraftSeedRef.current = "";
+            setCraftingActive(false);
+            setCraftingPlan(null);
+            setCraftingOriginCity("");
+            craftingFinalizeTimeoutRef.current = null;
+          });
+        });
+      }, 300);
+    }
+  }, [messages, isLoading, craftingActive, craftingPlan?.destination, craftingOriginCity, originCity, startCrafting]);
 
   // When streaming ends, mark it and update plan type from final content
   useEffect(() => {
@@ -579,7 +606,28 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
               });
             });
           }, 200);
+        } else {
+          // AI didn't produce a plan (e.g., asked a follow-up question).
+          // Tear down the crafting animation immediately.
+          if (craftingIntervalRef.current) {
+            clearInterval(craftingIntervalRef.current);
+            craftingIntervalRef.current = null;
+          }
+          pendingCraftSeedRef.current = "";
+          setCraftingActive(false);
+          setCraftingPlan(null);
+          setCraftingOriginCity("");
         }
+      } else {
+        // No assistant message at all — tear down crafting.
+        if (craftingIntervalRef.current) {
+          clearInterval(craftingIntervalRef.current);
+          craftingIntervalRef.current = null;
+        }
+        pendingCraftSeedRef.current = "";
+        setCraftingActive(false);
+        setCraftingPlan(null);
+        setCraftingOriginCity("");
       }
     }
   }, [isLoading, messages]);
@@ -1487,14 +1535,27 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {/* Plane map — shows while AI is loading */}
-                {isLoading && (
+                {/* Plane map — only shows during active plan crafting */}
+                {craftingActive && craftingPlan && (
                   <PlanCraftingMap
                     originCity={craftingOriginCity || originCity}
-                    destinationCity={craftingPlan?.destination || latestDestination || "your destination"}
+                    destinationCity={craftingPlan.destination || "your destination"}
                     activities={[]}
-                    progress={craftingPlan?.progress ?? 30}
+                    progress={craftingPlan.progress}
                   />
+                )}
+
+                {/* Simple loading indicator for non-plan responses */}
+                {isLoading && !craftingActive && !hasStreamedContent && (
+                  <div className="flex gap-3 animate-fade-in">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" }}>
+                      <LogoMark size={16} color="white" />
+                    </div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground self-start">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      <span className="font-medium text-foreground/80">Thinking…</span>
+                    </div>
+                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
