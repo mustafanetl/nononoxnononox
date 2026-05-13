@@ -482,10 +482,22 @@ export const useRzumaChat = () => {
           if (!hasStructuredPlan(planText)) break;
         }
         setQaStatus(null);
+
+        // Ensure no stale revision content leaks into the visible message.
+        // The finally block calls flushPending() which would flush revision
+        // content if pendingContent is still set from the silent stream.
+        // Restore assistantContent to the original plan so the finally flush is safe.
+        if (!revisionApproved) {
+          assistantContent = originalPlanText;
+          pendingContent = null;
+        }
       }
     } catch (e) {
       console.error("Chat error:", e);
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      // Don't show error to user if we already have a valid plan displayed
+      if (!assistantContent || !hasStructuredPlan(assistantContent)) {
+        setError(e instanceof Error ? e.message : "Something went wrong");
+      }
     } finally {
       // Guarantee: no leaked rAF, no stuck QA spinner, no stuck loader —
       // even if the stream aborts mid-revision.
