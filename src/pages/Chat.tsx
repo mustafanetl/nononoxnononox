@@ -852,21 +852,26 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   // Auto-send query from URL params. If the user typed on the homepage
   // search box and landed here with ?q=..., always start a fresh chat so
   // they don't see a stale conversation from localStorage.
+  const forceNewChatRef = useRef(false);
   useEffect(() => {
     const q = searchParams.get("q");
     if (q && !initialQuerySent.current) {
       initialQuerySent.current = true;
-      // Force a new chat if there's already an active conversation.
-      if (messages.length > 0) {
-        clearChat();
-        // clearChat resets activeId; sendMessage will create a new convo.
-        // Use a microtask so the state flush from clearChat lands first.
-        queueMicrotask(() => sendMessage(q));
-      } else {
-        sendMessage(q);
-      }
+      // Always clear existing chat first so the user gets a fresh slate.
+      clearChat();
+      // Mark that we need to send after the clear takes effect.
+      forceNewChatRef.current = true;
     }
-  }, [searchParams, messages.length, sendMessage, clearChat]);
+  }, [searchParams, clearChat]);
+
+  // Once clearChat has flushed (messages becomes empty), fire the query.
+  useEffect(() => {
+    if (forceNewChatRef.current && messages.length === 0) {
+      forceNewChatRef.current = false;
+      const q = searchParams.get("q");
+      if (q) sendMessage(q);
+    }
+  }, [messages.length, searchParams, sendMessage]);
 
   const handleFlightClick = (flight: FlightData) => {
     setSelectedFlight(flight);

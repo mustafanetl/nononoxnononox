@@ -46,6 +46,10 @@ const PlanCraftingMap = ({
 }: Props) => {
   const hasOrigin = !!originCity?.trim();
   const hasDestination = !!destinationCity?.trim();
+  // Always show the flight arc — if no origin city is known, label it "You"
+  // so the plane animation plays regardless. Users expect to see the plane.
+  const displayOrigin = hasOrigin ? originCity.trim() : "You";
+  const showArc = true; // Always show the arc + plane
   const filled = useMemo(
     () => activities.filter((a) => a.name?.trim()),
     [activities],
@@ -113,12 +117,10 @@ const PlanCraftingMap = ({
                 </span>
               </div>
               <h2 className="text-2xl font-bold tracking-tight leading-tight truncate">
-                {hasOrigin && (
-                  <span className="text-white/70 font-medium">
-                    {truncate(originCity, 14)}{" "}
-                    <span className="mx-1 opacity-70">→</span>{" "}
-                  </span>
-                )}
+                <span className="text-white/70 font-medium">
+                  {truncate(displayOrigin, 14)}{" "}
+                  <span className="mx-1 opacity-70">→</span>{" "}
+                </span>
                 <span>{typed || "\u00A0"}</span>
                 <span className="inline-block w-0.5 h-5 bg-white/70 ml-0.5 animate-pulse align-middle" />
               </h2>
@@ -212,46 +214,40 @@ const PlanCraftingMap = ({
             </defs>
 
             {/* Ghost path (full arc, very faint) */}
-            {hasOrigin && (
-              <path
-                d="M 60 155 Q 240 20 420 135"
-                fill="none"
-                stroke="hsl(234 62% 47% / 0.12)"
-                strokeWidth="2"
-                strokeDasharray="6 8"
-                strokeLinecap="round"
-              />
-            )}
+            <path
+              d="M 60 155 Q 240 20 420 135"
+              fill="none"
+              stroke="hsl(234 62% 47% / 0.12)"
+              strokeWidth="2"
+              strokeDasharray="6 8"
+              strokeLinecap="round"
+            />
 
             {/* Revealed trail — drawn behind the plane as it flies */}
-            {hasOrigin && (
-              <path
-                d="M 60 155 Q 240 20 420 135"
-                fill="none"
-                stroke="url(#trailGrad)"
-                strokeWidth="3"
-                strokeLinecap="round"
-                pathLength={100}
-                filter="url(#glow)"
-                style={{
-                  strokeDasharray: 100,
-                  strokeDashoffset: Math.max(0, 100 - t * 100),
-                  transition: "stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1)",
-                }}
-              />
-            )}
+            <path
+              d="M 60 155 Q 240 20 420 135"
+              fill="none"
+              stroke="url(#trailGrad)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              pathLength={100}
+              filter="url(#glow)"
+              style={{
+                strokeDasharray: 100,
+                strokeDashoffset: Math.max(0, 100 - t * 100),
+                transition: "stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
+            />
 
             {/* Origin pin */}
-            {hasOrigin && (
-              <g className="craft-pin-in" style={{ animationDelay: "0ms" }}>
-                <circle cx="60" cy="155" r="16" fill="white" opacity="0.6" />
-                <circle cx="60" cy="155" r="8" fill="white" stroke="hsl(234 62% 47%)" strokeWidth="2.5" />
-                <circle cx="60" cy="155" r="3" fill="hsl(234 62% 47%)" />
-                <text x="60" y="182" textAnchor="middle" style={{ fontSize: 11, fontWeight: 700, fill: "hsl(234 62% 30%)" }}>
-                  {truncate(originCity, 14)}
-                </text>
-              </g>
-            )}
+            <g className="craft-pin-in" style={{ animationDelay: "0ms" }}>
+              <circle cx="60" cy="155" r="16" fill="white" opacity="0.6" />
+              <circle cx="60" cy="155" r="8" fill="white" stroke="hsl(234 62% 47%)" strokeWidth="2.5" />
+              <circle cx="60" cy="155" r="3" fill="hsl(234 62% 47%)" />
+              <text x="60" y="182" textAnchor="middle" style={{ fontSize: 11, fontWeight: 700, fill: "hsl(234 62% 30%)" }}>
+                {truncate(displayOrigin, 14)}
+              </text>
+            </g>
 
             {/* Destination pin with pulse */}
             <g className="craft-pin-in" style={{ animationDelay: "200ms" }}>
@@ -272,11 +268,9 @@ const PlanCraftingMap = ({
             </g>
 
             {/* ✈ Plane — flies along the arc */}
-            {hasOrigin && (
-              <g style={{ transition: "transform 0.8s cubic-bezier(0.22, 1, 0.36, 1)" }}>
-                <PlaneOnArc t={t} />
-              </g>
-            )}
+            <g style={{ transition: "transform 0.8s cubic-bezier(0.22, 1, 0.36, 1)" }}>
+              <PlaneOnArc t={t} />
+            </g>
           </svg>
         </div>
 
