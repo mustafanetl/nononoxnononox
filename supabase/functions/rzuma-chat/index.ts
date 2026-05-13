@@ -391,13 +391,9 @@ serve(async (req) => {
     const revisionRequest = sanitizeRevisionIssues(rawRevision);
 
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
-    const AI_KEY = OPENROUTER_API_KEY || GROQ_API_KEY || GEMINI_API_KEY;
-
-    if (!AI_KEY) {
-      console.error("No AI key configured");
+    if (!OPENROUTER_API_KEY) {
+      console.error("No API key configured");
       return new Response(
         JSON.stringify({
           error: "AI service not configured. Add OPENROUTER_API_KEY to Supabase secrets.",
@@ -467,7 +463,7 @@ serve(async (req) => {
 
     // ── AI CALL ──────────────
     const aiMessages: ChatMessage[] = [...systemMessages, ...trimmedMessages];
-    const upstream = await streamChat(aiMessages, AI_KEY, 16384);
+    const upstream = await streamChat(aiMessages, OPENROUTER_API_KEY);
 
     if (!upstream.ok) {
       const errorText = await upstream.text();
@@ -494,7 +490,7 @@ serve(async (req) => {
         );
       }
       return new Response(
-        JSON.stringify({ error: "AI service temporarily unavailable" }),
+        JSON.stringify({ error: `AI service error (${upstream.status}): ${errorText.slice(0, 200)}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

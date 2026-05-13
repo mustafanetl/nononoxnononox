@@ -1,32 +1,12 @@
 /**
- * AI provider wrapper.
- *
- * Currently using OpenRouter's OpenAI-compatible API. Despite the legacy
- * name "gemini" still floating around in code history, any OpenAI-style
- * chat-completions endpoint works.
- *
- * Swap provider by setting env vars — no code change required:
- *   - AI_BASE_URL   (optional) full chat-completions URL; defaults to OpenRouter
- *   - AI_MODEL      (optional) the model id; if unset, OpenRouter picks the
- *                   default configured in its dashboard for this key.
- *
- * The OPENROUTER_API_KEY, GROQ_API_KEY, and GEMINI_API_KEY env vars are
- * tried in that order — all three are passed as a bearer token to the
- * configured base URL. If you're using a Groq or Gemini key directly,
- * also set AI_BASE_URL to the matching endpoint or the call will 401.
+ * AI provider — OpenRouter with google/gemini-2.5-flash-lite.
  */
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
-const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
-
-function resolveConfig() {
-  const baseUrl = Deno.env.get("AI_BASE_URL") || DEFAULT_BASE_URL;
-  const envModel = Deno.env.get("AI_MODEL") || "";
-  // Use env model if set, otherwise default to gemini-2.5-flash-lite
-  const model = envModel || (baseUrl === DEFAULT_BASE_URL ? "google/gemini-2.5-flash-lite" : "gemini-2.5-flash-lite");
-  return { baseUrl, model };
-}
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL = "google/gemini-2.5-flash-lite";
+const DEFAULT_MAX_TOKENS = 4096;
 
 const DEFAULT_HEADERS = {
   "HTTP-Referer": "https://jolliday.online",
@@ -34,18 +14,16 @@ const DEFAULT_HEADERS = {
 };
 
 /**
- * Stream a chat completion. Returns a Response whose body is OpenAI-style SSE:
- *   data: {"choices":[{"delta":{"content":"..."}}]}\n\n
+ * Stream a chat completion via OpenRouter.
  */
 export async function streamChat(
   messages: ChatMessage[],
   apiKey: string,
-  maxTokens = 16384,
+  maxTokens = DEFAULT_MAX_TOKENS,
 ): Promise<Response> {
-  const { baseUrl, model } = resolveConfig();
-  console.log(`[ai] stream ${model || "(dashboard default)"} via ${baseUrl}, messages=${messages.length}`);
+  console.log(`[ai] stream ${MODEL} via OpenRouter, messages=${messages.length}, maxTokens=${maxTokens}`);
 
-  const res = await fetch(baseUrl, {
+  const res = await fetch(OPENROUTER_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -53,10 +31,9 @@ export async function streamChat(
       ...DEFAULT_HEADERS,
     },
     body: JSON.stringify({
-      ...(model ? { model } : {}),
+      model: MODEL,
       messages,
       stream: true,
-      max_tokens: maxTokens,
       temperature: 0.7,
     }),
   });
@@ -83,9 +60,8 @@ export async function callChat(
   apiKey: string,
   maxTokens = 4096,
 ): Promise<{ text: string; error?: string; status?: number }> {
-  const { baseUrl, model } = resolveConfig();
   try {
-    const res = await fetch(baseUrl, {
+    const res = await fetch(OPENROUTER_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -93,10 +69,10 @@ export async function callChat(
         ...DEFAULT_HEADERS,
       },
       body: JSON.stringify({
-        ...(model ? { model } : {}),
+        model: MODEL,
         messages,
         max_tokens: maxTokens,
-        temperature: 0.8,
+        temperature: 0.7,
       }),
     });
 
@@ -114,6 +90,6 @@ export async function callChat(
   }
 }
 
-/* Legacy exports — kept so existing imports don't break. Remove in a future pass. */
+/* Legacy exports */
 export const streamGemini = streamChat;
 export const callGemini = callChat;
