@@ -1,9 +1,0 @@
-Fix white-page crash, smaller plane map card
-
-- PlanCraftingMap: guard all props against null/undefined so the
-  component never crashes when craftingPlan is null.
-- Chat.tsx: use optional chaining on craftingPlan?.progress and
-  craftingPlan?.destination with fallback defaults.
-- Map card is now max-w-sm with 16:9 aspect ratio — smaller and
-  cleaner. Uses city photo as dark background with dot grid overlay.
-- Paywall fully paused, rate limits all null.

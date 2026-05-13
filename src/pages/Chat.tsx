@@ -1497,16 +1497,25 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {/* Plane map — shows whenever AI is working on a plan */}
-                {(shouldShowCraftingMap || (isLoading && !hasStreamedContent)) && (
+                {/* Plane map — shows only when crafting is active */}
+                {shouldShowCraftingMap && craftingPlan && (
                   <PlanCraftingMap
                     originCity={craftingOriginCity || originCity}
-                    destinationCity={craftingPlan?.destination || latestDestination || "your destination"}
+                    destinationCity={craftingPlan.destination || "your destination"}
                     activities={craftingActivities}
                     destinationPhoto={craftingDestinationPhoto}
                     destinationGeo={craftingDestinationGeo}
-                    progress={craftingPlan?.progress ?? 15}
+                    progress={craftingPlan.progress}
                   />
+                )}
+
+                {/* Simple typing dots when loading but crafting hasn't started */}
+                {isLoading && !shouldShowCraftingMap && !hasStreamedContent && (
+                  <div className="flex items-center gap-1.5 px-2 py-3">
+                    <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
+                    <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
+                    <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
+                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
