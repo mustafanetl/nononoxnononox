@@ -12,8 +12,8 @@ export const corsHeaders = {
 // Daily rate-limit quotas per user tier.
 // Null = unlimited. Applies to AI endpoints that cost money per call.
 export const RATE_LIMITS = {
-  anonymous: 10,
-  free: 30,
+  anonymous: null as number | null,
+  free: null as number | null,
   premium: null as number | null,
 };
 

@@ -1497,39 +1497,16 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {/* Plan crafting animation — shows the ENTIRE time AI is building a plan */}
-                {shouldShowCraftingMap && (
+                {/* Plane map — shows whenever AI is working on a plan */}
+                {(shouldShowCraftingMap || (isLoading && !hasStreamedContent)) && (
                   <PlanCraftingMap
                     originCity={craftingOriginCity || originCity}
-                    destinationCity={craftingPlan.destination || "your destination"}
+                    destinationCity={(craftingPlan?.destination) || latestDestination || "your destination"}
                     activities={craftingActivities}
                     destinationPhoto={craftingDestinationPhoto}
                     destinationGeo={craftingDestinationGeo}
-                    progress={craftingPlan.progress}
+                    progress={craftingPlan?.progress || (isLoading ? 15 : 0)}
                   />
-                )}
-
-                {isLoading && !isCraftingPlan && !hasStreamedContent && (
-                  <div className="flex gap-3 animate-fade-in">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" }}>
-                      <LogoMark size={16} color="white" className="animate-spin" />
-                    </div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                      Thinking…
-                    </div>
-                  </div>
-                )}
-                {qaStatus && !isCraftingPlan && (
-                  <div className="flex gap-3 animate-fade-in">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" }}>
-                      <LogoMark size={16} color="white" className="animate-spin" />
-                    </div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-foreground/60 animate-pulse" />
-                      {qaStatus === "verifying" ? "Double-checking places…" : "Polishing a few details…"}
-                    </div>
-                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
