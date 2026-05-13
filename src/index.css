@@ -53,11 +53,24 @@
     @apply border-border;
   }
 
+  html, body {
+    /* Prevent the whole document from scrolling sideways on mobile when a child
+       overflows a few pixels (common when cards round to subpixel widths). */
+    overflow-x: hidden;
+    /* Avoid iOS rubber-band scroll pulling the chat UI out of place. */
+    overscroll-behavior-y: none;
+    /* Critical for h-dvh / h-full chains to behave on iOS Safari. */
+    height: 100%;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
     line-height: 1.6;
     color: hsl(var(--muted-foreground));
+    /* Make sure the body itself doesn't try to scroll independently of the
+       app shell; pages that need scroll manage it internally. */
+    min-height: 100%;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -85,6 +98,21 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Respect the iPhone home-bar / Android nav inset on the chat composer. */
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+
+  /* Disable the iOS auto-zoom on input focus. The 16px rule is the primary
+     fix, but forcing text-size-adjust also blocks accidental pinch zooms. */
+  .no-ios-zoom {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   @keyframes fade-in {

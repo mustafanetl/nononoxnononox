@@ -331,7 +331,7 @@ const HorizontalCarousel = forwardRef<HTMLDivElement, { children: React.ReactNod
           <ChevronRight className="h-4 w-4" />
         </button>
       )}
-      <div ref={scrollRef} onScroll={checkScroll} className="flex gap-3 overflow-x-auto scrollbar-hide px-1 py-1">
+      <div ref={scrollRef} onScroll={checkScroll} className="flex gap-3 overflow-x-auto scrollbar-hide px-1 py-1" style={{ touchAction: "pan-x" }}>
         {children}
       </div>
     </div>
@@ -345,7 +345,7 @@ const Chat = () => {
 
   if (authLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
+      <div className="h-dvh flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
@@ -903,7 +903,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="h-screen flex bg-background">
+    <div className="h-dvh flex bg-background overflow-hidden no-ios-zoom">
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} fixed md:relative md:translate-x-0 z-40 w-72 h-full bg-[hsl(0_0%_98%)] border-r border-border flex flex-col transition-transform duration-200`}>
         {/* Sidebar header with logo */}
@@ -1006,7 +1006,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
       {sidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 md:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <main className="flex-1 flex flex-col min-w-0 bg-white">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-white overflow-hidden">
         <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-white/95 backdrop-blur-sm sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden h-9 w-9">
@@ -1058,7 +1058,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain" style={{ touchAction: "pan-y" }}>
           <div className="max-w-3xl mx-auto px-4 py-8">
             {!hasMessages ? (
               <div className="flex flex-col items-center justify-center min-h-[70vh] animate-fade-in">
@@ -1253,8 +1253,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     <div key={i}>
                       {msg.role === "user" ? (
                         <div className="flex justify-end">
-                          <div className="bg-muted rounded-2xl px-4 py-2 max-w-[80%]">
-                            <p className="text-sm">{parsed.text}</p>
+                          <div className="bg-muted rounded-2xl px-4 py-2 max-w-[85%] sm:max-w-[80%] break-words">
+                            <p className="text-sm whitespace-pre-wrap break-words">{parsed.text}</p>
                           </div>
                         </div>
                       ) : (
@@ -1288,55 +1288,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                 />
                             ) : (
                               <>
-                                {/* Show all card blocks — paywall disabled */}
+                                {/* Discovery/list responses only — never inline plan cards.
+                                    Plan-shaped data (flights/hotels/activities/itinerary) is hidden in chat;
+                                    it shows only via the TripSummaryCard above when the plan is complete.
+                                    This prevents partial-plan or update-mode messages from rendering
+                                    individual cards in the chat thread. */}
                                 {parsed.timeline.length > 0 && (
-                                      <TripTimeline legs={parsed.timeline} />
-                                    )}
-                                    {parsed.places.length > 0 && (
-                                      <PlacesGallery places={parsed.places} />
-                                    )}
-                                    {parsed.flights.length > 0 && (
-                                      <HorizontalCarousel>
-                                        {parsed.flights.map((f, idx) => (
-                                          <FlightCard key={f.id || idx} flight={f} onClick={() => handleFlightClick(f)} />
-                                        ))}
-                                      </HorizontalCarousel>
-                                    )}
-                                    {parsed.hotels.length > 0 && (
-                                      <HorizontalCarousel>
-                                        {parsed.hotels.map((h, idx) => (
-                                          <HotelCard key={h.id || idx} hotel={h} onClick={() => handleHotelClick(h)} />
-                                        ))}
-                                      </HorizontalCarousel>
-                                    )}
-                                    {parsed.activities.length > 0 && (
-                                      <HorizontalCarousel>
-                                        {parsed.activities.map((a, idx) => (
-                          <ActivityCard key={a.id || idx} activity={a} onClick={() => handleActivityClick(a, i, enrichDest || latestDestination)} />
-                                        ))}
-                                      </HorizontalCarousel>
-                                    )}
-                                    {parsed.itinerary.length > 0 && (
-                                      <HorizontalCarousel>
-                                        {parsed.itinerary.map((item, idx) => (
-                                          <ItineraryCard
-                                            key={idx}
-                                            item={item}
-                                            onSlotClick={(slot, slotIdx) =>
-                                              handleItinerarySlotClick(slot, slotIdx, item.day, i, enrichDest || latestDestination)
-                                            }
-                                          />
-                                        ))}
-                                      </HorizontalCarousel>
-                                    )}
-                                    {parsed.travelInfo && (
-                                      <>
-                                        <TravelInfoCard info={parsed.travelInfo} />
-                                        {parsed.travelInfo.currency && (
-                                          <CurrencyConverter destinationCurrency={parsed.travelInfo.currency} />
-                                        )}
-                                      </>
-                                    )}
+                                  <TripTimeline legs={parsed.timeline} />
+                                )}
+                                {parsed.places.length > 0 && (
+                                  <PlacesGallery places={parsed.places} />
+                                )}
                               </>
                             )}
 
@@ -1389,7 +1351,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           </div>
         )}
 
-        <div className="px-4 pt-2 pb-4 bg-gradient-to-t from-white via-white to-transparent">
+        <div className="px-4 pt-2 pb-4 pb-safe bg-gradient-to-t from-white via-white to-transparent shrink-0">
           <div className="max-w-3xl mx-auto">
             {planGenerated && !isPremium && !subLoading ? (
               <div className="rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-5 text-center">

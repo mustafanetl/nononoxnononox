@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Clock, DollarSign, Lightbulb, PlusCircle, CheckCircle, Camera, MapPin, Star, CheckCircle2, ChevronLeft, ChevronRight, Shuffle, Loader2, ArrowLeft } from "lucide-react";
+import { Clock, DollarSign, Lightbulb, PlusCircle, CheckCircle, Camera, MapPin, Star, CheckCircle2, ChevronLeft, ChevronRight, Shuffle, Loader2, ArrowLeft, Sparkles } from "lucide-react";
 import { ActivityData } from "./ActivityCard";
 import { useTripContext } from "@/contexts/TripContext";
 import { useEffect, useState } from "react";
@@ -29,11 +29,15 @@ const ActivityDetailModal = ({
   const [showAlternatives, setShowAlternatives] = useState(false);
   const [alternatives, setAlternatives] = useState<ActivityData[]>([]);
   const [loadingAlts, setLoadingAlts] = useState(false);
+  const [swapRequest, setSwapRequest] = useState("");
+  const [lastSwapRequest, setLastSwapRequest] = useState("");
 
   useEffect(() => {
     setPhotoIdx(0);
     setShowAlternatives(false);
     setAlternatives([]);
+    setSwapRequest("");
+    setLastSwapRequest("");
   }, [activity?.id]);
 
   if (!activity) return null;
@@ -56,11 +60,18 @@ const ActivityDetailModal = ({
       toast.error("Can't find alternatives without a destination");
       return;
     }
+    const userRequest = swapRequest.trim();
     setLoadingAlts(true);
     setShowAlternatives(true);
+    setLastSwapRequest(userRequest);
     try {
       const { data, error } = await supabase.functions.invoke("suggest-activity-alternatives", {
-        body: { activity, destination, excludeNames: excludeNames || [] },
+        body: {
+          activity,
+          destination,
+          excludeNames: excludeNames || [],
+          userRequest: userRequest || undefined,
+        },
       });
       if (error) throw error;
       const sugg = (data?.suggestions || []) as ActivityData[];
@@ -97,7 +108,11 @@ const ActivityDetailModal = ({
               <Button variant="ghost" size="sm" onClick={() => setShowAlternatives(false)} className="gap-1 -ml-2">
                 <ArrowLeft className="h-4 w-4" /> Back
               </Button>
-              <h3 className="font-semibold text-sm">Alternatives to {activity.name}</h3>
+              <h3 className="font-semibold text-sm">
+                {lastSwapRequest
+                  ? `"${lastSwapRequest}" instead of ${activity.name}`
+                  : `Alternatives to ${activity.name}`}
+              </h3>
             </div>
             {loadingAlts ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -253,13 +268,48 @@ const ActivityDetailModal = ({
 
           <div className="space-y-2">
             {onReplace && (
-              <Button
-                variant="default"
-                className="w-full gap-2"
-                onClick={fetchAlternatives}
-              >
-                <Shuffle className="h-4 w-4" /> Swap with another option
-              </Button>
+              <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Want something specific?
+                </label>
+                <input
+                  type="text"
+                  value={swapRequest}
+                  onChange={(e) => setSwapRequest(e.target.value)}
+                  placeholder="e.g. skydiving, vegan restaurant, art gallery"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && swapRequest.trim()) {
+                      e.preventDefault();
+                      fetchAlternatives();
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="default"
+                    className="flex-1 gap-2"
+                    onClick={fetchAlternatives}
+                    disabled={!swapRequest.trim()}
+                  >
+                    <Sparkles className="h-4 w-4" /> Find match
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 gap-2"
+                    onClick={() => {
+                      setSwapRequest("");
+                      fetchAlternatives();
+                    }}
+                  >
+                    <Shuffle className="h-4 w-4" /> Swap anyway
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Type what you'd like, or leave blank to get random alternatives.
+                </p>
+              </div>
             )}
             <Button
               variant={inTrip ? "secondary" : "outline"}

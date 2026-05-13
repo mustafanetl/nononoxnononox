@@ -63,10 +63,14 @@ serve(async (req) => {
     const body = await req.json().catch(() => null);
     if (!body) return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { activity, destination, excludeNames } = body;
+    const { activity, destination, excludeNames, userRequest } = body;
     if (!activity?.name || !destination) {
       return new Response(JSON.stringify({ error: "activity and destination are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    // Sanitize the optional user search term — keep it short, plain text.
+    const userQuery = typeof userRequest === "string"
+      ? userRequest.replace(/[\r\n`]/g, " ").trim().slice(0, 120)
+      : "";
 
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
@@ -82,13 +86,17 @@ serve(async (req) => {
 
     const exclusions = [activity.name, ...(Array.isArray(excludeNames) ? excludeNames : [])].filter(Boolean);
 
+    const userQueryLine = userQuery
+      ? `\nUSER WANTS SPECIFICALLY: "${userQuery}". The 3 alternatives MUST match this request — find real venues in ${destination} that fit "${userQuery}". If the user's request is a different category than the original, override the original category and match the user's request instead.\n`
+      : "";
+
     const prompt = `User is in ${destination} and wants alternatives to this place:
 - Name: ${activity.name}
 - Category: ${activity.category}
 - Vibe: ${activity.description || activity.why || ""}
 - Neighborhood: ${activity.neighborhood || "anywhere in the city"}
-
-Suggest exactly 3 REAL, well-known alternative venues in ${destination} that fit the same category and vibe but are DIFFERENT places.
+${userQueryLine}
+Suggest exactly 3 REAL, well-known alternative venues in ${destination} that fit the same category and vibe but are DIFFERENT places.${userQuery ? ` Prioritize matches for: "${userQuery}".` : ""}
 Do NOT suggest any of these (already used): ${exclusions.join(", ")}.
 
 Respond with ONLY a JSON array, no prose, no markdown fences:

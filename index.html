@@ -2,7 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+    <!-- iOS Safari PWA behavior: lets the chat use safe-area insets (notch/home-bar)
+         and keeps the status bar translucent so h-dvh fills correctly. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
     <!-- Primary SEO -->
     <title>Jolliday — AI Trip Planner | Plan Any Trip in One Chat</title>
