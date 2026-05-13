@@ -249,6 +249,27 @@ const extractStructuredDestination = (content: string) => {
   return plainMatch?.[1]?.trim() || "";
 };
 
+const getThinkingText = (messages: any[]) => {
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+  if (!lastUserMsg) return "Thinking…";
+  const text = (lastUserMsg.content || "").trim();
+  // Detect language from character ranges and common words
+  if (/[\u0600-\u06FF]/.test(text)) return "جاري التفكير…"; // Arabic
+  if (/[\u0590-\u05FF]/.test(text)) return "חושב…"; // Hebrew
+  if (/[åäöÅÄÖ]/.test(text) || /\b(jag|till|för|dagar|resa)\b/i.test(text)) return "Tänker…"; // Swedish
+  if (/\b(je|pour|jours|voyage|partir)\b/i.test(text)) return "Réflexion…"; // French
+  if (/\b(ich|nach|tage|reise|für)\b/i.test(text)) return "Denke nach…"; // German
+  if (/\b(yo|para|días|viaje|viajar)\b/i.test(text)) return "Pensando…"; // Spanish
+  if (/\b(io|per|giorni|viaggio|andare)\b/i.test(text)) return "Pensando…"; // Italian
+  if (/\b(eu|para|dias|viagem|viajar)\b/i.test(text)) return "Pensando…"; // Portuguese
+  if (/\b(ik|naar|dagen|reis|voor)\b/i.test(text)) return "Denken…"; // Dutch
+  if (/[\u3040-\u30FF\u4E00-\u9FFF]/.test(text)) return "考え中…"; // Japanese/Chinese
+  if (/[\uAC00-\uD7AF]/.test(text)) return "생각 중…"; // Korean
+  if (/\b(ben|için|gün|seyahat|gitmek)\b/i.test(text)) return "Düşünüyor…"; // Turkish
+  if (/[\u0E00-\u0E7F]/.test(text)) return "กำลังคิด…"; // Thai
+  return "Thinking…";
+};
+
 const isPlanConfirmationMessage = (text: string) => {
   const normalized = text.trim().toLowerCase();
   return (
@@ -1337,7 +1358,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const lastIsAssistant = lastMsg?.role === "assistant";
                   const hasContent = lastIsAssistant && lastMsg.content.length > 0;
                   const hasBlocks = hasContent && /```(flights|hotels|activities|itinerary|travelinfo)/i.test(lastMsg.content);
-                  // Show thinking when: no content yet, OR content is hidden (plan blocks during crafting)
                   return (!hasContent || (craftingActive && hasBlocks));
                 })() && (
                   <div className="flex gap-3">
@@ -1346,7 +1366,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     </div>
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground self-start">
                       <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      <span className="font-medium text-foreground/80">Thinking…</span>
+                      <span className="font-medium text-foreground/80">{getThinkingText(messages)}</span>
                     </div>
                   </div>
                 )}
