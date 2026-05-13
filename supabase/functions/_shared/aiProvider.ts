@@ -22,8 +22,8 @@ const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 function resolveConfig() {
   const baseUrl = Deno.env.get("AI_BASE_URL") || DEFAULT_BASE_URL;
-  // Always use gemini-2.5-pro — ignore AI_MODEL env to prevent auto-routing
-  const model = "google/gemini-2.5-pro";
+  // Use gemini-2.5-flash — good instruction following, affordable, fast
+  const model = "google/gemini-2.5-flash";
   return { baseUrl, model };
 }
 
