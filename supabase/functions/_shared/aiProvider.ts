@@ -22,7 +22,9 @@ const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 function resolveConfig() {
   const baseUrl = Deno.env.get("AI_BASE_URL") || DEFAULT_BASE_URL;
-  const model = "google/gemini-2.5-flash-lite";
+  const envModel = Deno.env.get("AI_MODEL") || "";
+  // Use env model if set, otherwise default to gemini-2.5-flash-lite
+  const model = envModel || (baseUrl === DEFAULT_BASE_URL ? "google/gemini-2.5-flash-lite" : "gemini-2.5-flash-lite");
   return { baseUrl, model };
 }
 
