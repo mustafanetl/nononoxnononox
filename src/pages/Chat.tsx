@@ -249,25 +249,25 @@ const extractStructuredDestination = (content: string) => {
   return plainMatch?.[1]?.trim() || "";
 };
 
-const getThinkingText = (messages: any[]) => {
+const getThinkingText = (messages: any[], isCrafting: boolean) => {
   const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
-  if (!lastUserMsg) return "Thinking…";
+  if (!lastUserMsg) return isCrafting ? "Planning your trip…" : "Thinking…";
   const text = (lastUserMsg.content || "").trim();
   // Detect language from character ranges and common words
-  if (/[\u0600-\u06FF]/.test(text)) return "جاري التفكير…"; // Arabic
-  if (/[\u0590-\u05FF]/.test(text)) return "חושב…"; // Hebrew
-  if (/[åäöÅÄÖ]/.test(text) || /\b(jag|till|för|dagar|resa)\b/i.test(text)) return "Tänker…"; // Swedish
-  if (/\b(je|pour|jours|voyage|partir)\b/i.test(text)) return "Réflexion…"; // French
-  if (/\b(ich|nach|tage|reise|für)\b/i.test(text)) return "Denke nach…"; // German
-  if (/\b(yo|para|días|viaje|viajar)\b/i.test(text)) return "Pensando…"; // Spanish
-  if (/\b(io|per|giorni|viaggio|andare)\b/i.test(text)) return "Pensando…"; // Italian
-  if (/\b(eu|para|dias|viagem|viajar)\b/i.test(text)) return "Pensando…"; // Portuguese
-  if (/\b(ik|naar|dagen|reis|voor)\b/i.test(text)) return "Denken…"; // Dutch
-  if (/[\u3040-\u30FF\u4E00-\u9FFF]/.test(text)) return "考え中…"; // Japanese/Chinese
-  if (/[\uAC00-\uD7AF]/.test(text)) return "생각 중…"; // Korean
-  if (/\b(ben|için|gün|seyahat|gitmek)\b/i.test(text)) return "Düşünüyor…"; // Turkish
-  if (/[\u0E00-\u0E7F]/.test(text)) return "กำลังคิด…"; // Thai
-  return "Thinking…";
+  if (/[\u0600-\u06FF]/.test(text)) return isCrafting ? "جاري تخطيط رحلتك…" : "جاري التفكير…";
+  if (/[\u0590-\u05FF]/.test(text)) return isCrafting ? "מתכנן את הטיול…" : "חושב…";
+  if (/[åäöÅÄÖ]/.test(text) || /\b(jag|till|för|dagar|resa)\b/i.test(text)) return isCrafting ? "Planerar din resa…" : "Tänker…";
+  if (/\b(je|pour|jours|voyage|partir)\b/i.test(text)) return isCrafting ? "Préparation du voyage…" : "Réflexion…";
+  if (/\b(ich|nach|tage|reise|für)\b/i.test(text)) return isCrafting ? "Reise wird geplant…" : "Denke nach…";
+  if (/\b(yo|para|días|viaje|viajar)\b/i.test(text)) return isCrafting ? "Planificando tu viaje…" : "Pensando…";
+  if (/\b(io|per|giorni|viaggio|andare)\b/i.test(text)) return isCrafting ? "Pianificando il viaggio…" : "Pensando…";
+  if (/\b(eu|para|dias|viagem|viajar)\b/i.test(text)) return isCrafting ? "Planejando sua viagem…" : "Pensando…";
+  if (/\b(ik|naar|dagen|reis|voor)\b/i.test(text)) return isCrafting ? "Reis wordt gepland…" : "Denken…";
+  if (/[\u3040-\u30FF\u4E00-\u9FFF]/.test(text)) return isCrafting ? "旅行を計画中…" : "考え中…";
+  if (/[\uAC00-\uD7AF]/.test(text)) return isCrafting ? "여행 계획 중…" : "생각 중…";
+  if (/\b(ben|için|gün|seyahat|gitmek)\b/i.test(text)) return isCrafting ? "Seyahat planlanıyor…" : "Düşünüyor…";
+  if (/[\u0E00-\u0E7F]/.test(text)) return isCrafting ? "กำลังวางแผนการเดินทาง…" : "กำลังคิด…";
+  return isCrafting ? "Planning your trip…" : "Thinking…";
 };
 
 const isPlanConfirmationMessage = (text: string) => {
@@ -1366,7 +1366,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     </div>
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground self-start">
                       <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      <span className="font-medium text-foreground/80">{getThinkingText(messages)}</span>
+                      <span className="font-medium text-foreground/80">{getThinkingText(messages, craftingActive)}</span>
                     </div>
                   </div>
                 )}
