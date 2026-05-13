@@ -506,11 +506,6 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       } catch { toast.error("Couldn't copy link"); }
       return;
     }
-    if (!user) {
-      toast.error("Sign in to create a shareable link");
-      navigate("/auth");
-      return;
-    }
     setSharing(true);
     try {
       // Generate a short, URL-safe slug.
@@ -525,7 +520,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       };
       const { error } = await supabase.from("shared_trips").insert({
         slug,
-        owner_user_id: user.id,
+        owner_user_id: user?.id || null,
         title: `Trip to ${destination}`,
         destination,
         data_json: snapshot as any,
