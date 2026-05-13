@@ -1,4 +1,6 @@
-// Cache for Google Places photos — the ONLY source of images
+// Runtime cache for dynamically-discovered city images (e.g. Google Places,
+// Wikipedia, enrich-destination). When present, these take priority over the
+// curated Unsplash map below.
 const placeImageCache: Record<string, string> = {};
 
 export const setPlaceImage = (city: string, url: string) => {
@@ -8,13 +10,27 @@ export const setPlaceImage = (city: string, url: string) => {
 // Keep backward-compatible alias
 export const setWikimediaImage = setPlaceImage;
 
+/**
+ * Resolve a hero image URL for a city.
+ *
+ * Priority:
+ *   1. Runtime override set via `setPlaceImage` / `setWikimediaImage`
+ *   2. Curated Unsplash URL from `STOCK_CITY_HEROES` (exact or token match)
+ *   3. Deterministic pick from `GENERIC_HERO_POOL` based on the city name
+ *
+ * Always returns a non-empty URL so callers can use it as an `<img>` src
+ * without extra null checks.
+ */
 export const getCityImage = (
   city: string,
   _width = 600,
   _height = 300
 ): string => {
-  const key = city.toLowerCase().replace(/[^a-z]/g, "");
-  return placeImageCache[key] || "";
+  const safeCity = (city || "").trim();
+  const flatKey = normalizeCityKey(safeCity);
+  if (flatKey && placeImageCache[flatKey]) return placeImageCache[flatKey];
+  // Fall through to the curated map + generic pool handled by getStockCityImage.
+  return getStockCityImage(safeCity);
 };
 
 export const getPlaceImages = (place: string): string[] => {
@@ -61,6 +77,7 @@ const STOCK_CITY_HEROES: Record<string, string> = {
   oslo: "https://images.unsplash.com/photo-1583425423320-eb8836b62e80?w=2000&q=85&auto=format&fit=crop",
   helsinki: "https://images.unsplash.com/photo-1559060017-445fb9722f2a?w=2000&q=85&auto=format&fit=crop",
   reykjavik: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=2000&q=85&auto=format&fit=crop",
+  iceland: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=2000&q=85&auto=format&fit=crop",
   dublin: "https://images.unsplash.com/photo-1549918864-48ac978761a4?w=2000&q=85&auto=format&fit=crop",
   edinburgh: "https://images.unsplash.com/photo-1568740450762-22ae6dd5cabb?w=2000&q=85&auto=format&fit=crop",
   zurich: "https://images.unsplash.com/photo-1515488764276-beab7607c1e6?w=2000&q=85&auto=format&fit=crop",

@@ -275,7 +275,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   }, [tripData?.destination]);
 
   // Hook must be called unconditionally — call before any early return.
-  const stockHeroImg = useCityHeroImage(tripData?.destination || "");
+  const { imageUrl: stockHeroImg } = useCityHeroImage(tripData?.destination || "");
   // Fallback-chain state for the hero image. If the preferred URL 404s, we
   // swap to stock; if stock 404s we show the gradient placeholder.
   const [heroSrcFinal, setHeroSrcFinal] = useState<string | undefined>(undefined);

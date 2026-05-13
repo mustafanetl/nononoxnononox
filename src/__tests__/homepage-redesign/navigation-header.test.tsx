@@ -37,7 +37,6 @@ import Index from "@/pages/Index";
 
 describe("Navigation Header", () => {
   beforeEach(() => {
-    // Reset scroll position
     Object.defineProperty(window, "scrollY", { value: 0, writable: true });
   });
 
@@ -52,46 +51,40 @@ describe("Navigation Header", () => {
     it("has transparent background when scroll position is 0", () => {
       renderIndex();
       const header = screen.getByRole("banner");
-      expect(header.className).toContain("bg-transparent");
-      expect(header.className).not.toContain("bg-white/80");
-      expect(header.className).not.toContain("border-b");
+      // At scroll 0, the header uses bg-white/70 with border-transparent
+      expect(header.className).toContain("border-transparent");
     });
 
-    it("has white/80 background with border after scrolling past 50px", () => {
+    it("has opaque background with border after scrolling past threshold", () => {
       renderIndex();
       const header = screen.getByRole("banner");
 
-      // Simulate scrolling past 50px
       act(() => {
         Object.defineProperty(window, "scrollY", { value: 51, writable: true });
         fireEvent.scroll(window);
       });
 
-      expect(header.className).toContain("bg-white/80");
-      expect(header.className).toContain("backdrop-blur-md");
-      expect(header.className).toContain("border-b");
+      // After scrolling, the header becomes more opaque with a visible border
+      expect(header.className).toContain("bg-white/90");
+      expect(header.className).toContain("backdrop-blur-xl");
       expect(header.className).toContain("border-border");
-      expect(header.className).not.toContain("bg-transparent");
     });
 
-    it("reverts to transparent background when scrolling back to top", () => {
+    it("reverts to transparent border when scrolling back to top", () => {
       renderIndex();
       const header = screen.getByRole("banner");
 
-      // Scroll down
       act(() => {
         Object.defineProperty(window, "scrollY", { value: 100, writable: true });
         fireEvent.scroll(window);
       });
-      expect(header.className).toContain("bg-white/80");
+      expect(header.className).toContain("border-border");
 
-      // Scroll back to top
       act(() => {
         Object.defineProperty(window, "scrollY", { value: 0, writable: true });
         fireEvent.scroll(window);
       });
-      expect(header.className).toContain("bg-transparent");
-      expect(header.className).not.toContain("bg-white/80");
+      expect(header.className).toContain("border-transparent");
     });
   });
 
@@ -99,8 +92,6 @@ describe("Navigation Header", () => {
     it("renders 'Start Planning' CTA with primary background and foreground text", () => {
       renderIndex();
       const ctaButton = screen.getByRole("link", { name: /start planning/i });
-      const button = ctaButton.querySelector("button") || ctaButton.firstElementChild;
-      // The Link wraps a Button - check the button inside
       const buttonEl = ctaButton.querySelector('[class*="bg-primary"]') || ctaButton;
       expect(buttonEl.className).toContain("bg-primary");
       expect(buttonEl.className).toContain("text-primary-foreground");
@@ -112,7 +103,6 @@ describe("Navigation Header", () => {
       const buttonEl =
         signInLink.querySelector('[class*="text-foreground"]') || signInLink;
       expect(buttonEl.className).toContain("text-foreground");
-      // Should not have a filled background (ghost variant)
       expect(buttonEl.className).not.toContain("bg-primary");
     });
   });

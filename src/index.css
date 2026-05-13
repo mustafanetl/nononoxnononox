@@ -275,6 +275,16 @@
   /* ── Reels-grade motion: built to stop the scroll ── */
 
   /* Per-word fade-up for streaming AI text */
+  @keyframes word-fade-up {
+    from { opacity: 0; transform: translateY(6px); filter: blur(3px); }
+    to   { opacity: 1; transform: translateY(0);   filter: blur(0);  }
+  }
+  .word-fade-up {
+    display: inline-block;
+    animation: word-fade-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: opacity, transform, filter;
+  }
+  /* Legacy alias retained until StreamingText is rebuilt in task 10.1 */
   @keyframes word-rise {
     from { opacity: 0; transform: translateY(6px); filter: blur(3px); }
     to   { opacity: 1; transform: translateY(0);   filter: blur(0);  }

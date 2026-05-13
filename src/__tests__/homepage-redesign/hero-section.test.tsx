@@ -29,27 +29,20 @@ describe("HeroSection", () => {
   it("does not render a dark overlay element (bg-black/50)", () => {
     const { container } = renderHero();
 
-    // No element should have the bg-black/50 class
     const overlayElements = container.querySelectorAll('[class*="bg-black"]');
     overlayElements.forEach((el) => {
       expect(el.className).not.toMatch(/bg-black\/50/);
-    });
-
-    // Also verify there's no element with inline opacity overlay styles
-    const allElements = container.querySelectorAll("*");
-    allElements.forEach((el) => {
-      expect(el.className).not.toContain("bg-black/50");
     });
   });
 
   it("navigates to /chat?q=<encoded> on form submission", () => {
     renderHero();
 
-    const input = screen.getByPlaceholderText("Where do you want to go?");
+    const input = screen.getByPlaceholderText(/describe your dream trip/i);
     fireEvent.change(input, { target: { value: "Paris France" } });
 
-    const submitButton = screen.getByRole("button", { name: /plan my trip/i });
-    fireEvent.click(submitButton);
+    const form = input.closest("form")!;
+    fireEvent.submit(form);
 
     expect(mockNavigate).toHaveBeenCalledWith(
       `/chat?q=${encodeURIComponent("Paris France")}`
@@ -59,8 +52,9 @@ describe("HeroSection", () => {
   it("does not navigate when input is empty or whitespace", () => {
     renderHero();
 
-    const submitButton = screen.getByRole("button", { name: /plan my trip/i });
-    fireEvent.click(submitButton);
+    const input = screen.getByPlaceholderText(/describe your dream trip/i);
+    const form = input.closest("form")!;
+    fireEvent.submit(form);
 
     expect(mockNavigate).not.toHaveBeenCalled();
   });
@@ -68,11 +62,11 @@ describe("HeroSection", () => {
   it("URL-encodes special characters in the query", () => {
     renderHero();
 
-    const input = screen.getByPlaceholderText("Where do you want to go?");
+    const input = screen.getByPlaceholderText(/describe your dream trip/i);
     fireEvent.change(input, { target: { value: "Tokyo & Osaka" } });
 
-    const submitButton = screen.getByRole("button", { name: /plan my trip/i });
-    fireEvent.click(submitButton);
+    const form = input.closest("form")!;
+    fireEvent.submit(form);
 
     expect(mockNavigate).toHaveBeenCalledWith(
       `/chat?q=${encodeURIComponent("Tokyo & Osaka")}`
@@ -87,10 +81,11 @@ describe("HeroSection", () => {
     expect(heading!.className).toContain("text-foreground");
   });
 
-  it("renders subheading with text-muted-foreground class for proper contrast", () => {
+  it("renders muted text for helper content", () => {
     renderHero();
 
-    const subheading = screen.getByText(/tell us where you want to go/i);
-    expect(subheading.className).toContain("text-muted-foreground");
+    // The "Press Enter to plan" helper text uses text-muted-foreground
+    const helperText = screen.getByText(/press enter to plan/i);
+    expect(helperText.className).toContain("text-muted-foreground");
   });
 });

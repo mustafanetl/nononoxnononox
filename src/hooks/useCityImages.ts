@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const CACHE_PREFIX = "city-images:v2:";
+// Requirement 30.3: cache key format `jolliday-city-images-{city}` with 7-day TTL
+const CACHE_PREFIX = "jolliday-city-images-";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
 type Cached = { images: string[]; ts: number };

@@ -387,7 +387,7 @@ export const useRzumaChat = () => {
       };
 
       // === First pass (AI1) ===
-      let planText = await runStream();
+      const planText = await runStream();
 
       // === QA review — verify and enrich with Google Places data ===
       // Single pass only: if approved, swap in enriched coords/names.

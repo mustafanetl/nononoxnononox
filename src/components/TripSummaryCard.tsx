@@ -108,7 +108,7 @@ const TripSummaryCard = ({
     ) || data.activities.length;
 
   const resolvedOrigin = (origin || data.flights[0]?.from || "").trim();
-  const stockHero = useCityHeroImage(destination);
+  const { imageUrl: stockHero } = useCityHeroImage(destination);
   const enrichedHero = enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl;
   // Prefer the verified Google Places photo when we have one, because it's
   // always actually the right city. Stock is an excellent fast-first-paint

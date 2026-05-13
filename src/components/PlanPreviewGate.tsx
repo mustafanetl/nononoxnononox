@@ -35,7 +35,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, origin, onUpgrade 
     (s: number, d: any) => s + (Array.isArray(d?.slots) ? d.slots.length : 0),
     0,
   ) || data.activities.length;
-  const stockHero = useCityHeroImage(destination);
+  const { imageUrl: stockHero } = useCityHeroImage(destination);
   const enrichedHero = enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl;
   const preferredHero = enrichedHero || stockHero || getCityImage(destination, 800, 500);
   const [heroSrc, setHeroSrc] = useState<string | undefined>(preferredHero);

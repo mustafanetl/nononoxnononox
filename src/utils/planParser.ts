@@ -1,21 +1,28 @@
 /**
  * Parser for Jolliday's AI-generated trip plans.
  *
- * Before this util existed, ~4 places hand-rolled a regex like
- * /```{type}\s*([\s\S]*?)```/g
+ * AI responses arrive as prose with structured data embedded in fenced code
+ * blocks like:
  *
- * Two problems with that approach:
- *   1. Lazy matching means a single ``` appearing inside a JSON string value
- *      (rare but it happens when the AI quotes backticks) terminates the
- *      block early and silently drops the rest of the plan.
- *   2. The unfenced fallback — "if we see `activities\n[...]` on its own
- *      line, treat it as a block" — could match anywhere in the AI's prose
- *      (e.g. "Day 2 activities include…" followed by an array later).
+ *   Here is your trip:
+ *   ```flights
+ *   [{"airline":"KLM", ...}]
+ *   ```
  *
- * This parser scans character-by-character and tracks JSON string context,
- * so backticks inside strings can never break a fence. The unfenced
- * fallback is removed entirely — if the AI drops the fences we'd rather
- * fall through than hallucinate a block from prose.
+ * A naive lazy regex (```\w+\s*([\s\S]*?)```) fails in two ways:
+ *
+ *   1. A JSON string value that contains backticks ("desc": "use the ``` fence")
+ *      closes the fence early, silently truncating the block.
+ *   2. Patterns inside prose like `Day 2 activities: ...` could spuriously
+ *      match a fence even when the AI didn't emit one.
+ *
+ * This parser scans character-by-character, tracks JSON string context
+ * (including escape sequences), and requires fence openings to sit at the
+ * start of a line. It also tolerates streaming input — incomplete JSON,
+ * trailing commas, and missing closing fences all yield either a valid
+ * partial parse or an empty result, never a throw.
+ *
+ * Design contract: see design.md → "Plan Parser Interface".
  */
 
 export type PlanBlockRange = { raw: string; range: [number, number] };
@@ -34,11 +41,14 @@ const BLOCK_TYPES = [
 ] as const;
 
 /**
- * Extract every ```{type}\n...\n``` block, honoring JSON string context so
- * backticks inside string values can't prematurely close the fence.
+ * Return every `\`\`\`{type} ... \`\`\`` block in `text`.
  *
- * Returns the raw inner text + the absolute range in `text` (so callers can
- * strip blocks from the prose shown in the UI).
+ * The `range` tuple is `[start, end)` — start is the index of the opening
+ * backtick, end is exclusive and points just past the closing backticks
+ * (or to `text.length` if the block is unterminated). `text.slice(start, end)`
+ * therefore yields the whole fence including both delimiters.
+ *
+ * `raw` is the trimmed body between the fences.
  */
 export function extractFencedBlocks(text: string, type: string): PlanBlockRange[] {
   const results: PlanBlockRange[] = [];
@@ -49,44 +59,69 @@ export function extractFencedBlocks(text: string, type: string): PlanBlockRange[
     const openAt = text.indexOf(openFence, cursor);
     if (openAt === -1) break;
 
-    // The fence must be at the start of the string or preceded by a newline.
-    // Prevents matching ```activitie in the middle of prose.
+    // The fence must be at the start of the text or preceded by a newline.
+    // Prevents matching `surprises``flights` inside prose.
     const prev = openAt > 0 ? text[openAt - 1] : "\n";
     if (prev !== "\n") {
       cursor = openAt + openFence.length;
       continue;
     }
 
-    // After the fence, only whitespace until newline is allowed.
     const afterOpenIdx = openAt + openFence.length;
     const afterOpenChar = text[afterOpenIdx];
-    if (afterOpenChar && afterOpenChar !== "\n" && afterOpenChar !== "\r" && !/\s/.test(afterOpenChar)) {
+
+    // Three things are allowed right after the fence name:
+    //   • whitespace / newline → standard multi-line block or same-line with leading space
+    //   • `[` or `{` directly → same-line JSON body with no separator (req 6.9)
+    //   • end of text → streaming fence with no body yet
+    // Anything else means the word after ``` isn't actually `type`
+    // (e.g. ```flights_summary should NOT match type="flights").
+    const isJsonDelim = afterOpenChar === "[" || afterOpenChar === "{";
+    const isWsOrEof =
+      afterOpenChar === undefined ||
+      afterOpenChar === "\n" ||
+      afterOpenChar === "\r" ||
+      afterOpenChar === " " ||
+      afterOpenChar === "\t";
+    if (!isJsonDelim && !isWsOrEof) {
       cursor = afterOpenIdx;
       continue;
     }
 
-    const contentStart = text.indexOf("\n", afterOpenIdx);
-    if (contentStart === -1) {
-      // No newline after the fence — either unterminated streaming block or
-      // the AI put the JSON on the same line as the fence (e.g. ```itinerary[...]).
-      // Treat everything after the fence as raw content.
-      const raw = text.slice(afterOpenIdx).replace(/```\s*$/, "").trim();
-      results.push({ raw, range: [openAt, text.length] });
+    // Figure out where the block body begins.
+    let rawStart: number;
+    if (isJsonDelim) {
+      // Body starts immediately (e.g. ```flights[{"id":"1"}]).
+      rawStart = afterOpenIdx;
+    } else if (afterOpenChar === undefined) {
+      // Streaming: fence name at EOF, no body yet.
+      results.push({ raw: "", range: [openAt, text.length] });
       break;
+    } else {
+      // Whitespace after fence name. Look for a same-line JSON body first.
+      const nlIdx = text.indexOf("\n", afterOpenIdx);
+      const lineEnd = nlIdx === -1 ? text.length : nlIdx;
+      const sameLineRaw = text.slice(afterOpenIdx, lineEnd);
+      const sameLineTrimmed = sameLineRaw.trim();
+      if (
+        sameLineTrimmed.length > 0 &&
+        (sameLineTrimmed[0] === "[" || sameLineTrimmed[0] === "{")
+      ) {
+        // Same-line JSON starting after some whitespace (e.g. ```flights [...]).
+        rawStart = afterOpenIdx + sameLineRaw.indexOf(sameLineTrimmed[0]);
+      } else if (nlIdx === -1) {
+        // Fence followed only by whitespace until EOF (streaming).
+        results.push({ raw: "", range: [openAt, text.length] });
+        break;
+      } else {
+        // Standard multi-line block: body starts on the next line.
+        rawStart = nlIdx + 1;
+      }
     }
 
-    // Support same-line format: ```itinerary[{...}]```
-    // If there's content between the fence name and the first newline that
-    // looks like JSON, use it directly instead of skipping to the next line.
-    const sameLine = text.slice(afterOpenIdx, contentStart).trim();
-    let actualContentStart = contentStart;
-    let useSameLine = false;
-    if (sameLine.length > 0 && (sameLine.startsWith("[") || sameLine.startsWith("{"))) {
-      useSameLine = true;
-    }
-
-    // Scan for closing ``` at the start of a line, respecting JSON string state.
-    let i = useSameLine ? afterOpenIdx : contentStart + 1;
+    // Scan forward for the closing ``` at the start of a line, tracking JSON
+    // string context so backticks inside string values don't close the fence.
+    let i = rawStart;
     let inString = false;
     let escape = false;
     let closeAt = -1;
@@ -98,7 +133,7 @@ export function extractFencedBlocks(text: string, type: string): PlanBlockRange[
         i++;
         continue;
       }
-      if (ch === "\\" && inString) {
+      if (inString && ch === "\\") {
         escape = true;
         i++;
         continue;
@@ -108,10 +143,10 @@ export function extractFencedBlocks(text: string, type: string): PlanBlockRange[
         i++;
         continue;
       }
-      if (!inString) {
-        // Close fence must be at the start of a line (preceded by \n OR at very start of scan).
-        const atLineStart = i === contentStart + 1 || text[i - 1] === "\n";
-        if (atLineStart && ch === "`" && text[i + 1] === "`" && text[i + 2] === "`") {
+      if (!inString && ch === "`" && text[i + 1] === "`" && text[i + 2] === "`") {
+        // Closing fence is only recognized at the start of a line.
+        const atLineStart = i === 0 || text[i - 1] === "\n";
+        if (atLineStart) {
           closeAt = i;
           break;
         }
@@ -119,61 +154,152 @@ export function extractFencedBlocks(text: string, type: string): PlanBlockRange[
       i++;
     }
 
-    const rawEndExclusive = closeAt === -1 ? text.length : closeAt;
-    const rawStart = useSameLine ? afterOpenIdx : contentStart + 1;
-    const raw = text.slice(rawStart, rawEndExclusive).replace(/\s+$/, "").trim();
-    const fullEndExclusive = closeAt === -1 ? text.length : closeAt + 3;
+    let rawEnd: number;
+    let fullEnd: number;
+    if (closeAt === -1) {
+      // Streaming: no closing fence found. Use end of text as the boundary.
+      // If the raw body ends with ``` on the same line (rare but possible),
+      // strip it before parsing. The range still covers through text.length.
+      rawEnd = text.length;
+      fullEnd = text.length;
+    } else {
+      rawEnd = closeAt;
+      fullEnd = closeAt + 3;
+    }
 
-    results.push({ raw, range: [openAt, fullEndExclusive] });
-    cursor = fullEndExclusive;
+    let raw = text.slice(rawStart, rawEnd).trim();
+    if (closeAt === -1) {
+      // Same-line close on streaming EOF: `...}]` or `...}]```. Strip the trailing fence.
+      raw = raw.replace(/```\s*$/, "").trim();
+    }
+
+    results.push({ raw, range: [openAt, fullEnd] });
+    cursor = fullEnd;
   }
 
   return results;
 }
 
-/** Attempt to parse streaming JSON by auto-closing unbalanced braces/brackets. */
-function parsePartialJson(raw: string): any | null {
-  const trimmed = raw.replace(/,\s*$/, "").trim();
-  if (!trimmed) return null;
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    // Auto-close unbalanced braces/brackets (streaming fallback).
-    let openBraces = 0;
-    let openBrackets = 0;
-    let inString = false;
-    let escape = false;
-    for (const ch of trimmed) {
-      if (escape) {
-        escape = false;
-        continue;
-      }
-      if (ch === "\\" && inString) {
+/**
+ * Strip JSON trailing commas that appear outside string literals — both the
+ * `[1,2,]` / `{"a":1,}` variety and any dangling `,` at end-of-string. We walk
+ * the input character-by-character so commas inside `"..."` values are left
+ * alone. The LLM emits trailing commas all the time while streaming, and
+ * JSON.parse is strict, so this is a prerequisite for the auto-close pass.
+ */
+function stripTrailingCommas(input: string): string {
+  let out = "";
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (escape) {
+      out += ch;
+      escape = false;
+      continue;
+    }
+    if (inString) {
+      if (ch === "\\") {
+        out += ch;
         escape = true;
         continue;
       }
-      if (ch === '"') inString = !inString;
-      if (inString) continue;
-      if (ch === "{") openBraces++;
-      else if (ch === "}") openBraces--;
-      else if (ch === "[") openBrackets++;
-      else if (ch === "]") openBrackets--;
+      if (ch === '"') inString = false;
+      out += ch;
+      continue;
     }
-    let fixed = trimmed;
-    while (openBraces-- > 0) fixed += "}";
-    while (openBrackets-- > 0) fixed += "]";
-    try {
-      return JSON.parse(fixed);
-    } catch {
-      return null;
+    if (ch === '"') {
+      inString = true;
+      out += ch;
+      continue;
     }
+    if (ch === ",") {
+      // Look past whitespace for the next non-whitespace char. If it's a
+      // closer or end-of-input, drop the comma.
+      let j = i + 1;
+      while (j < input.length && /\s/.test(input[j])) j++;
+      const next = input[j];
+      if (next === undefined || next === "]" || next === "}") {
+        continue; // swallow the trailing comma
+      }
+    }
+    out += ch;
+  }
+  return out;
+}
+
+/**
+ * Parse possibly-incomplete JSON. Returns the parsed value or `null` if the
+ * input is empty, whitespace, or unrecoverable. Strips trailing commas and
+ * auto-closes unbalanced braces/brackets to tolerate streaming input.
+ */
+function parsePartialJson(raw: string): any | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Fast path: valid JSON as-is.
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    /* fall through to repair pipeline */
+  }
+
+  // Repair pipeline: strip trailing commas, then auto-close any unbalanced
+  // braces/brackets we opened while streaming.
+  let fixed = stripTrailingCommas(trimmed);
+
+  try {
+    return JSON.parse(fixed);
+  } catch {
+    /* still broken — try to close dangling structures */
+  }
+
+  let openBraces = 0;
+  let openBrackets = 0;
+  let inString = false;
+  let escape = false;
+  for (let k = 0; k < fixed.length; k++) {
+    const ch = fixed[k];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (inString && ch === "\\") {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{") openBraces++;
+    else if (ch === "}") openBraces--;
+    else if (ch === "[") openBrackets++;
+    else if (ch === "]") openBrackets--;
+  }
+
+  // If we're mid-string, close it first so the next comma strip doesn't run
+  // through string content.
+  if (inString) fixed += '"';
+  // A dangling string close may have revealed a new trailing comma; strip it.
+  fixed = stripTrailingCommas(fixed);
+  while (openBraces-- > 0) fixed += "}";
+  while (openBrackets-- > 0) fixed += "]";
+
+  try {
+    return JSON.parse(fixed);
+  } catch {
+    return null;
   }
 }
 
 /**
- * Extract and parse JSON for every fenced block of `type`. Returns a flat
- * array (arrays are spread) plus the ranges of every fence so the caller
- * can remove them from the prose shown to users.
+ * Parse every fenced block of `type` and return a flat items array plus the
+ * character range of each block (so callers can strip them from the prose).
+ *
+ * JSON arrays are spread into the items array (one item per element) and
+ * objects are pushed as a single item. Malformed blocks are silently dropped.
  */
 export function extractBlock(
   text: string,
@@ -185,7 +311,7 @@ export function extractBlock(
   for (const b of blocks) {
     ranges.push(b.range);
     const parsed = parsePartialJson(b.raw);
-    if (parsed === null) continue;
+    if (parsed === null || parsed === undefined) continue;
     if (Array.isArray(parsed)) items.push(...parsed);
     else items.push(parsed);
   }
@@ -193,30 +319,38 @@ export function extractBlock(
 }
 
 /**
- * Remove all fenced code blocks of any known type from the text, returning
- * just the prose the user should see. Call with the result of multiple
- * extractBlock() calls combined.
+ * Remove fenced code blocks at the given ranges and return the remaining
+ * prose. `ranges` may come from multiple `extractBlock` calls combined.
+ *
+ * Also removes any dangling open-fence-without-close for known block types,
+ * which happens when a stream is cut mid-block.
  */
 export function stripFencedBlocks(text: string, ranges: [number, number][]): string {
-  if (!text || ranges.length === 0) return text || "";
-  // Sort descending so we can splice from the end without shifting indices.
-  const sorted = [...ranges]
-    .filter(([s, e]) => s >= 0 && e >= s && e <= text.length)
-    .sort((a, b) => b[0] - a[0]);
+  if (!text) return "";
   let out = text;
-  for (const [start, end] of sorted) {
-    out = out.slice(0, start) + out.slice(end);
+
+  if (ranges.length > 0) {
+    // Sort descending so splicing doesn't shift the remaining indices.
+    const sorted = [...ranges]
+      .filter(([s, e]) => s >= 0 && e >= s && e <= text.length)
+      .sort((a, b) => b[0] - a[0]);
+    for (const [start, end] of sorted) {
+      out = out.slice(0, start) + out.slice(end);
+    }
   }
-  // Also clean up any dangling open fence (streaming — block arrives before close).
+
+  // Scrub any open fence whose close never arrived (in-progress streaming).
   for (const type of BLOCK_TYPES) {
     const openPattern = new RegExp("```" + type + "[\\s\\S]*$");
     const openMatch = out.match(openPattern);
-    if (openMatch) {
-      const closePattern = new RegExp("```" + type + "[\\s\\S]*?```");
-      if (!closePattern.test(out)) {
-        out = out.replace(openPattern, "");
-      }
+    if (!openMatch) continue;
+    const closePattern = new RegExp("```" + type + "[\\s\\S]*?```");
+    if (!closePattern.test(out)) {
+      out = out.replace(openPattern, "");
     }
   }
+
   return out.replace(/\n{3,}/g, "\n\n").trim();
 }
+
+export { BLOCK_TYPES };
