@@ -22,8 +22,7 @@ const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 function resolveConfig() {
   const baseUrl = Deno.env.get("AI_BASE_URL") || DEFAULT_BASE_URL;
-  // Use gemini-2.5-flash — good instruction following, affordable, fast
-  const model = "google/gemini-2.5-flash";
+  const model = Deno.env.get("AI_MODEL") || "";
   return { baseUrl, model };
 }
 
@@ -52,7 +51,7 @@ export async function streamChat(
       ...DEFAULT_HEADERS,
     },
     body: JSON.stringify({
-      model: model || "google/gemini-2.5-pro",
+      ...(model ? { model } : {}),
       messages,
       stream: true,
       max_tokens: maxTokens,
