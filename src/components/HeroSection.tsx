@@ -76,7 +76,7 @@ const HeroSection = () => {
         {/* Route-style example chips */}
         <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center gap-2">
           {[
-            "Stockholm → Amsterdam for 4 days",
+            "Stockholm → Amsterdam for 2 days",
             "Tokyo → Kyoto for a week",
             "NYC → Lisbon, long weekend",
           ].map((ex) => (
