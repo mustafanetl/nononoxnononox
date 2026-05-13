@@ -77,7 +77,6 @@ const FlightCard = ({ flight, onClick }: FlightCardProps) => {
         <div className="flex items-center justify-between mb-2">
           <div className="text-center">
             <p className="text-sm font-semibold">{flight.departureTime}</p>
-            <p className="text-[10px] text-muted-foreground uppercase">{flight.from}</p>
           </div>
 
           <div className="flex-1 flex flex-col items-center px-2">
@@ -97,7 +96,6 @@ const FlightCard = ({ flight, onClick }: FlightCardProps) => {
 
           <div className="text-center">
             <p className="text-sm font-semibold">{flight.arrivalTime}</p>
-            <p className="text-[10px] text-muted-foreground uppercase">{flight.to}</p>
           </div>
         </div>
 

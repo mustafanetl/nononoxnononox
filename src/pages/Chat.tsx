@@ -1273,8 +1273,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                               </div>
                             )}
 
-                            {/* Full plan → show the plan card */}
-                            {isFullPlan && destination ? (
+                            {/* Full plan → show the plan card (only when fully done) */}
+                            {isFullPlan && destination && !isLoading ? (
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
                                   destination={destination}

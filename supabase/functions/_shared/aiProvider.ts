@@ -6,7 +6,7 @@ export type ChatMessage = { role: "system" | "user" | "assistant"; content: stri
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash-lite";
-const DEFAULT_MAX_TOKENS = 4096;
+const DEFAULT_MAX_TOKENS = 7260;
 
 const DEFAULT_HEADERS = {
   "HTTP-Referer": "https://jolliday.online",
@@ -34,6 +34,7 @@ export async function streamChat(
       model: MODEL,
       messages,
       stream: true,
+      max_tokens: maxTokens,
       temperature: 0.7,
     }),
   });
@@ -58,7 +59,7 @@ export async function streamChat(
 export async function callChat(
   messages: ChatMessage[],
   apiKey: string,
-  maxTokens = 4096,
+  maxTokens = DEFAULT_MAX_TOKENS,
 ): Promise<{ text: string; error?: string; status?: number }> {
   try {
     const res = await fetch(OPENROUTER_URL, {
