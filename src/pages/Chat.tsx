@@ -1501,11 +1501,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 {(shouldShowCraftingMap || (isLoading && !hasStreamedContent)) && (
                   <PlanCraftingMap
                     originCity={craftingOriginCity || originCity}
-                    destinationCity={(craftingPlan?.destination) || latestDestination || "your destination"}
+                    destinationCity={craftingPlan?.destination || latestDestination || "your destination"}
                     activities={craftingActivities}
                     destinationPhoto={craftingDestinationPhoto}
                     destinationGeo={craftingDestinationGeo}
-                    progress={craftingPlan?.progress || (isLoading ? 15 : 0)}
+                    progress={craftingPlan?.progress ?? 15}
                   />
                 )}
                 <div ref={messagesEndRef} />
