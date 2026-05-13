@@ -51,7 +51,7 @@ export async function streamChat(
       ...DEFAULT_HEADERS,
     },
     body: JSON.stringify({
-      model: model || "google/gemini-2.5-flash-lite",
+      model: model || "google/gemini-2.5-flash",
       messages,
       stream: true,
       max_tokens: maxTokens,
