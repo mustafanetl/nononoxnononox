@@ -1269,10 +1269,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             ) : (
               <div className="space-y-6">
                 {parsedMessages.map((msg, i) => {
-                  // While loading, hide the last assistant message — plane map shows instead
-                  const isLastMsg = i === parsedMessages.length - 1;
-                  if (isLoading && isLastMsg && msg.role === "assistant") return null;
-
+                  // Don't hide any messages — let content stream in naturally.
+                  // The plane map shows at the bottom as a loading indicator.
                   const parsed = { ...msg.parsed };
 
                   // Merge enriched live data if available
