@@ -67,14 +67,26 @@ export function extractFencedBlocks(text: string, type: string): PlanBlockRange[
 
     const contentStart = text.indexOf("\n", afterOpenIdx);
     if (contentStart === -1) {
-      // Unterminated streaming block — return what we have so far with no close.
-      const raw = text.slice(afterOpenIdx).trim();
+      // No newline after the fence — either unterminated streaming block or
+      // the AI put the JSON on the same line as the fence (e.g. ```itinerary[...]).
+      // Treat everything after the fence as raw content.
+      const raw = text.slice(afterOpenIdx).replace(/```\s*$/, "").trim();
       results.push({ raw, range: [openAt, text.length] });
       break;
     }
 
+    // Support same-line format: ```itinerary[{...}]```
+    // If there's content between the fence name and the first newline that
+    // looks like JSON, use it directly instead of skipping to the next line.
+    const sameLine = text.slice(afterOpenIdx, contentStart).trim();
+    let actualContentStart = contentStart;
+    let useSameLine = false;
+    if (sameLine.length > 0 && (sameLine.startsWith("[") || sameLine.startsWith("{"))) {
+      useSameLine = true;
+    }
+
     // Scan for closing ``` at the start of a line, respecting JSON string state.
-    let i = contentStart + 1;
+    let i = useSameLine ? afterOpenIdx : contentStart + 1;
     let inString = false;
     let escape = false;
     let closeAt = -1;
@@ -108,7 +120,8 @@ export function extractFencedBlocks(text: string, type: string): PlanBlockRange[
     }
 
     const rawEndExclusive = closeAt === -1 ? text.length : closeAt;
-    const raw = text.slice(contentStart + 1, rawEndExclusive).replace(/\s+$/, "").trim();
+    const rawStart = useSameLine ? afterOpenIdx : contentStart + 1;
+    const raw = text.slice(rawStart, rawEndExclusive).replace(/\s+$/, "").trim();
     const fullEndExclusive = closeAt === -1 ? text.length : closeAt + 3;
 
     results.push({ raw, range: [openAt, fullEndExclusive] });

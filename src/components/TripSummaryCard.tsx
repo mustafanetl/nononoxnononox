@@ -49,6 +49,8 @@ type Props = {
   enrichedImages?: any[];
   /** Optional origin (from user prompt or preferences) for the recap arc. */
   origin?: string;
+  /** Venue-level photo matches from enrich-destination, keyed by venue name. */
+  itineraryVenuePhotos?: Record<string, any>;
 };
 
 const TripSummaryCard = ({
@@ -56,6 +58,7 @@ const TripSummaryCard = ({
   destination,
   enrichedImages,
   origin,
+  itineraryVenuePhotos,
 }: Props) => {
   const navigate = useNavigate();
   const [sharing, setSharing] = useState(false);
@@ -64,7 +67,7 @@ const TripSummaryCard = ({
   const handleOpen = () => {
     sessionStorage.setItem(
       "jolliday-trip-detail",
-      JSON.stringify({ data, destination, enrichedImages }),
+      JSON.stringify({ data, destination, enrichedImages, itineraryVenuePhotos }),
     );
     navigate("/trip/view");
   };

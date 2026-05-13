@@ -52,12 +52,19 @@ export function extractFencedBlocks(text: string, type: string): PlanBlockRange[
 
     const contentStart = text.indexOf("\n", afterOpenIdx);
     if (contentStart === -1) {
-      const raw = text.slice(afterOpenIdx).trim();
+      const raw = text.slice(afterOpenIdx).replace(/```\s*$/, "").trim();
       results.push({ raw, range: [openAt, text.length] });
       break;
     }
 
-    let i = contentStart + 1;
+    // Support same-line format: ```itinerary[{...}]```
+    const sameLine = text.slice(afterOpenIdx, contentStart).trim();
+    let useSameLine = false;
+    if (sameLine.length > 0 && (sameLine.startsWith("[") || sameLine.startsWith("{"))) {
+      useSameLine = true;
+    }
+
+    let i = useSameLine ? afterOpenIdx : contentStart + 1;
     let inString = false;
     let escape = false;
     let closeAt = -1;
@@ -90,7 +97,8 @@ export function extractFencedBlocks(text: string, type: string): PlanBlockRange[
     }
 
     const rawEndExclusive = closeAt === -1 ? text.length : closeAt;
-    const raw = text.slice(contentStart + 1, rawEndExclusive).replace(/\s+$/, "").trim();
+    const rawStart = useSameLine ? afterOpenIdx : contentStart + 1;
+    const raw = text.slice(rawStart, rawEndExclusive).replace(/\s+$/, "").trim();
     const fullEndExclusive = closeAt === -1 ? text.length : closeAt + 3;
 
     results.push({ raw, range: [openAt, fullEndExclusive] });

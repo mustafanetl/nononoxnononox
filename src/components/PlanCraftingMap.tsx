@@ -15,47 +15,16 @@ type Props = {
 };
 
 /* ─────────────────────────────────────────────────────────────
-   PlanCraftingMap
-   A cinematic "your plan is being built" moment.
+   PlanCraftingMap — "Your plan is being built"
 
-   Every frame must feel like motion — the user isn't waiting, they're
-   watching the plan come to life.
+   A full-bleed animated world map with a plane flying from
+   origin → destination, drawing a smooth trail behind it.
+   The plane moves along a great-circle-style arc, and the
+   trail is revealed progressively tied to the crafting progress.
 
-   Layout:
-     • Hero strip: destination photo (curated stock / Wikipedia /
-       Google Places) behind a gradient wash.
-     • Route arc: dashed origin→destination curve revealed via
-       stroke-dashoffset tied to progress; a plane glyph slides
-       along the arc at the matching t.
-     • Destination pulse + dropping numbered activity pins as
-       venue names stream back.
-     • Live % + rotating stage label + progress bar.
-     • Activity stream list with shimmer placeholders before
-       names arrive, animating in as they do.
-
-   Falls back to destination-only layout when origin is empty
-   (e.g. LOCAL/DATE mode or user has no home city saved).
+   Below the map: activity stream list with shimmer placeholders
+   that animate in as venue names arrive from the AI.
    ───────────────────────────────────────────────────────────── */
-
-// SVG viewBox dimensions
-const VB_W = 420;
-const VB_H = 240;
-
-// Arc control points
-const ORIGIN = { x: 62, y: 152 };
-const DEST = { x: 358, y: 128 };
-const CONTROL = { x: 210, y: 28 };
-
-// Deterministic jitter for activity pins around destination
-const PIN_OFFSETS: { dx: number; dy: number }[] = [
-  { dx: -34, dy: -44 },
-  { dx: 22, dy: -36 },
-  { dx: -12, dy: 30 },
-  { dx: 38, dy: 14 },
-  { dx: -28, dy: -10 },
-  { dx: 10, dy: 42 },
-  { dx: -44, dy: 6 },
-];
 
 const STAGES = [
   "Locking in the vibe",
@@ -65,16 +34,6 @@ const STAGES = [
   "Booking the details",
   "Polishing the plan",
 ];
-
-const quadBezier = (t: number) => {
-  const inv = 1 - t;
-  const x = inv * inv * ORIGIN.x + 2 * inv * t * CONTROL.x + t * t * DEST.x;
-  const y = inv * inv * ORIGIN.y + 2 * inv * t * CONTROL.y + t * t * DEST.y;
-  const dx = 2 * inv * (CONTROL.x - ORIGIN.x) + 2 * t * (DEST.x - CONTROL.x);
-  const dy = 2 * inv * (CONTROL.y - ORIGIN.y) + 2 * t * (DEST.y - CONTROL.y);
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  return { x, y, angle };
-};
 
 const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 
@@ -92,13 +51,11 @@ const PlanCraftingMap = ({
     [activities],
   );
 
-  // Synchronous, always-available city hero photo. Used both as the tiny
-  // hero strip and as the map's parallax background — so even before the
-  // AI streams anything, the canvas feels like it's "about" a real place.
+  // City hero for ambient background
   const stockHero = useCityHeroImage(destinationCity);
   const heroImg = destinationPhoto || stockHero;
 
-  // Typewriter effect for destination
+  // Typewriter for destination name
   const targetDest = hasDestination ? destinationCity : "Your trip";
   const [typed, setTyped] = useState("");
   const lastTargetRef = useRef<string>("");
@@ -115,38 +72,29 @@ const PlanCraftingMap = ({
     return () => clearInterval(id);
   }, [targetDest]);
 
-  // Rotating stage label — advances at a calm cadence regardless of stream speed.
+  // Rotating stage label
   const [stageIdx, setStageIdx] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setStageIdx((i) => (i + 1) % STAGES.length), 2000);
     return () => clearInterval(id);
   }, []);
 
-  // Progress → plane position (cap so the icon stays visible over the dest pin).
-  const t = Math.min(0.96, Math.max(0.02, progress / 100));
-  const plane = quadBezier(t);
-
-  // How many pins are "dropped" — driven by both streamed names and progress.
-  const pinsByProgress = Math.min(
-    PIN_OFFSETS.length,
-    Math.max(0, Math.ceil((progress - 18) / 11)),
-  );
-  const pinsTarget = Math.max(filled.length, pinsByProgress);
+  // Normalized progress for the plane (0 → 1)
+  const t = Math.min(1, Math.max(0, progress / 100));
 
   return (
     <div className="w-full max-w-md mx-auto animate-fade-in">
       <div className="rounded-3xl border border-border bg-white shadow-xl overflow-hidden">
-        {/* ─── Header: destination + stage + progress ─── */}
+        {/* ─── Header ─── */}
         <div
           className="relative px-5 pt-5 pb-4 overflow-hidden text-white"
           style={{
             background:
-              "linear-gradient(135deg, hsl(234 62% 48%) 0%, hsl(234 62% 36%) 100%)",
+              "linear-gradient(135deg, hsl(234 62% 48%) 0%, hsl(234 62% 34%) 100%)",
           }}
         >
-          {/* Ambient glow orbs — sells that something is happening. */}
           <div
-            className="absolute -top-16 -right-10 w-48 h-48 rounded-full bg-white/12 blur-2xl"
+            className="absolute -top-16 -right-10 w-48 h-48 rounded-full bg-white/10 blur-2xl"
             style={{ animation: "craft-drift 7s ease-in-out infinite" }}
           />
           <div
@@ -165,12 +113,12 @@ const PlanCraftingMap = ({
                 </span>
               </div>
               <h2 className="text-2xl font-bold tracking-tight leading-tight truncate">
-                {hasOrigin ? (
+                {hasOrigin && (
                   <span className="text-white/70 font-medium">
                     {truncate(originCity, 14)}{" "}
                     <span className="mx-1 opacity-70">→</span>{" "}
                   </span>
-                ) : null}
+                )}
                 <span>{typed || "\u00A0"}</span>
                 <span className="inline-block w-0.5 h-5 bg-white/70 ml-0.5 animate-pulse align-middle" />
               </h2>
@@ -182,10 +130,7 @@ const PlanCraftingMap = ({
               </p>
             </div>
 
-            <div
-              className="shrink-0 text-right"
-              aria-label={`${Math.round(progress)}% complete`}
-            >
+            <div className="shrink-0 text-right" aria-label={`${Math.round(progress)}% complete`}>
               <div className="text-2xl font-bold tabular-nums leading-none">
                 {Math.round(progress)}
                 <span className="text-sm opacity-70">%</span>
@@ -196,231 +141,142 @@ const PlanCraftingMap = ({
             </div>
           </div>
 
-          {/* Thin progress bar right under the header content. */}
+          {/* Progress bar */}
           <div className="relative mt-3 h-1 rounded-full bg-white/15 overflow-hidden">
             <div
-              className="h-full rounded-full transition-[width] duration-500 ease-out"
+              className="h-full rounded-full transition-[width] duration-700 ease-out"
               style={{
                 width: `${Math.min(100, Math.max(4, progress))}%`,
-                background:
-                  "linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.75) 100%)",
+                background: "linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.75) 100%)",
                 boxShadow: "0 0 12px rgba(255,255,255,0.6)",
               }}
             />
           </div>
         </div>
 
-        {/* ─── Map canvas ─── */}
-        <div
-          className="relative"
-          style={{
-            background:
-              "linear-gradient(180deg, hsl(234 62% 97%) 0%, hsl(234 40% 92%) 70%, hsl(234 30% 94%) 100%)",
-          }}
-        >
-          {/* Ambient city photo behind the map — always paints something real. */}
+        {/* ─── Map with flying plane ─── */}
+        <div className="relative h-52 sm:h-60 overflow-hidden bg-[hsl(234,30%,96%)]">
+          {/* Ambient city photo */}
           {heroImg && (
             <div
               aria-hidden
-              className="absolute inset-0 pointer-events-none opacity-35 animate-ken-burns"
+              className="absolute inset-0 pointer-events-none opacity-25"
               style={{
                 backgroundImage: `url(${heroImg})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
-                filter: "blur(2px) saturate(1.1)",
+                filter: "blur(3px) saturate(1.2)",
+                animation: "craft-zoom 20s ease-in-out infinite alternate",
               }}
             />
           )}
-          {/* Soft white wash so map lines stay readable over the photo. */}
+          {/* White wash for readability */}
           <div
             aria-hidden
             className="absolute inset-0 pointer-events-none"
             style={{
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.6) 60%, rgba(255,255,255,0.9) 100%)",
+              background: "linear-gradient(180deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.88) 100%)",
             }}
           />
-          {/* Subtle dot grid */}
+          {/* Dot grid */}
           <div
-            className="absolute inset-0 pointer-events-none opacity-60"
+            className="absolute inset-0 pointer-events-none opacity-50"
             style={{
-              backgroundImage:
-                "radial-gradient(hsl(234 30% 70% / 0.35) 1px, transparent 1px)",
-              backgroundSize: "14px 14px",
+              backgroundImage: "radial-gradient(hsl(234 30% 70% / 0.4) 1px, transparent 1px)",
+              backgroundSize: "16px 16px",
             }}
           />
-          {/* Soft noise */}
-          <div className="absolute inset-0 pointer-events-none noise-overlay opacity-25" />
 
+          {/* SVG flight path */}
           <svg
-            viewBox={`0 0 ${VB_W} ${VB_H}`}
-            className="relative block w-full h-auto"
+            viewBox="0 0 480 220"
+            className="relative block w-full h-full"
+            preserveAspectRatio="xMidYMid meet"
             role="img"
-            aria-label="Trip route map"
+            aria-label={`Flight from ${originCity} to ${destinationCity}`}
             style={{ fontFamily: "var(--font-display), 'Plus Jakarta Sans', 'Inter', sans-serif" }}
           >
             <defs>
-              <linearGradient id="arcStroke" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="hsl(234, 62%, 47%)" stopOpacity="0.55" />
+              <linearGradient id="trailGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="hsl(234, 62%, 55%)" stopOpacity="0.3" />
+                <stop offset="80%" stopColor="hsl(234, 62%, 50%)" stopOpacity="0.9" />
                 <stop offset="100%" stopColor="hsl(234, 62%, 47%)" stopOpacity="1" />
               </linearGradient>
-              <filter id="pinShadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.2" />
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
               </filter>
             </defs>
 
-            {/* Flight arc (origin known) */}
+            {/* Ghost path (full arc, very faint) */}
             {hasOrigin && (
-              <>
-                {/* Underlying ghost track so the path is always visible. */}
-                <path
-                  d={`M ${ORIGIN.x} ${ORIGIN.y} Q ${CONTROL.x} ${CONTROL.y} ${DEST.x} ${DEST.y}`}
-                  fill="none"
-                  stroke="hsl(234 62% 47% / 0.15)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeDasharray="4 5"
-                />
-                {/* Revealed arc tied to progress. */}
-                <path
-                  d={`M ${ORIGIN.x} ${ORIGIN.y} Q ${CONTROL.x} ${CONTROL.y} ${DEST.x} ${DEST.y}`}
-                  fill="none"
-                  stroke="url(#arcStroke)"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeDasharray="5 6"
-                  pathLength={100}
-                  style={{
-                    strokeDashoffset: Math.max(0, 100 - Math.min(100, progress * 1.05)),
-                    transition: "stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1)",
-                  }}
-                />
-                {/* Origin pin */}
-                <g transform={`translate(${ORIGIN.x}, ${ORIGIN.y})`}>
-                  <circle r="14" fill="white" opacity="0.5" />
-                  <circle r="7" fill="white" stroke="hsl(234 62% 47%)" strokeWidth="2" />
-                  <circle r="2.5" fill="hsl(234 62% 47%)" />
-                </g>
-                <text
-                  x={ORIGIN.x}
-                  y={ORIGIN.y + 26}
-                  textAnchor="middle"
-                  className="fill-foreground"
-                  style={{ fontSize: 10.5, fontWeight: 600 }}
-                >
-                  {truncate(originCity, 14)}
-                </text>
-
-                {/* Plane sliding along the arc — starts moving on frame 1. */}
-                <g
-                  transform={`translate(${plane.x}, ${plane.y}) rotate(${plane.angle})`}
-                  style={{ transition: "transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)" }}
-                >
-                  <circle r="11" fill="white" opacity="0.95" filter="url(#pinShadow)" />
-                  <g transform="translate(-7, -7)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19.5 2.5 18 1 16 1 14.5 2.5L11 6 2.8 4.2c-.5-.1-.9.1-1.1.5-.2.4-.1.8.3 1.1L8 10l-2 3H3l-1 1 3 2 2 3 1-1v-3l3-2 4.2 6c.3.4.7.5 1.1.3.4-.2.6-.6.5-1.1Z"
-                        fill="hsl(234 62% 47%)"
-                      />
-                    </svg>
-                  </g>
-                </g>
-              </>
+              <path
+                d="M 60 155 Q 240 20 420 135"
+                fill="none"
+                stroke="hsl(234 62% 47% / 0.12)"
+                strokeWidth="2"
+                strokeDasharray="6 8"
+                strokeLinecap="round"
+              />
             )}
 
-            {/* Pulse ring around destination */}
-            <g transform={`translate(${DEST.x}, ${DEST.y})`}>
-              <circle r="10" fill="hsl(234 62% 47%)" opacity="0.15">
-                <animate
-                  attributeName="r"
-                  values="10;26;10"
-                  dur="2s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  values="0.35;0;0.35"
-                  dur="2s"
-                  repeatCount="indefinite"
-                />
+            {/* Revealed trail — drawn behind the plane as it flies */}
+            {hasOrigin && (
+              <path
+                d="M 60 155 Q 240 20 420 135"
+                fill="none"
+                stroke="url(#trailGrad)"
+                strokeWidth="3"
+                strokeLinecap="round"
+                pathLength={100}
+                filter="url(#glow)"
+                style={{
+                  strokeDasharray: 100,
+                  strokeDashoffset: Math.max(0, 100 - t * 100),
+                  transition: "stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1)",
+                }}
+              />
+            )}
+
+            {/* Origin pin */}
+            {hasOrigin && (
+              <g className="craft-pin-in" style={{ animationDelay: "0ms" }}>
+                <circle cx="60" cy="155" r="16" fill="white" opacity="0.6" />
+                <circle cx="60" cy="155" r="8" fill="white" stroke="hsl(234 62% 47%)" strokeWidth="2.5" />
+                <circle cx="60" cy="155" r="3" fill="hsl(234 62% 47%)" />
+                <text x="60" y="182" textAnchor="middle" style={{ fontSize: 11, fontWeight: 700, fill: "hsl(234 62% 30%)" }}>
+                  {truncate(originCity, 14)}
+                </text>
+              </g>
+            )}
+
+            {/* Destination pin with pulse */}
+            <g className="craft-pin-in" style={{ animationDelay: "200ms" }}>
+              {/* Pulse rings */}
+              <circle cx="420" cy="135" r="12" fill="hsl(234 62% 47%)" opacity="0.2">
+                <animate attributeName="r" values="12;28;12" dur="2.2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.3;0;0.3" dur="2.2s" repeatCount="indefinite" />
               </circle>
-              <circle r="9" fill="white" stroke="hsl(234 62% 47%)" strokeWidth="2.5" />
-              <circle r="3.5" fill="hsl(234 62% 47%)" />
+              <circle cx="420" cy="135" r="12" fill="hsl(234 62% 47%)" opacity="0.1">
+                <animate attributeName="r" values="12;22;12" dur="2.2s" begin="0.4s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.2;0;0.2" dur="2.2s" begin="0.4s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="420" cy="135" r="10" fill="white" stroke="hsl(234 62% 47%)" strokeWidth="3" />
+              <circle cx="420" cy="135" r="4" fill="hsl(234 62% 47%)" />
+              <text x="420" y="115" textAnchor="middle" style={{ fontSize: 12, fontWeight: 800, fill: "hsl(234 62% 30%)" }}>
+                {truncate(destinationCity, 16)}
+              </text>
             </g>
 
-            {/* Destination label */}
-            <text
-              x={DEST.x}
-              y={DEST.y - 18}
-              textAnchor="middle"
-              className="fill-foreground"
-              style={{ fontSize: 12, fontWeight: 700 }}
-            >
-              {truncate(destinationCity, 18)}
-            </text>
-
-            {/* Activity pins dropping around the destination */}
-            {PIN_OFFSETS.map((off, i) => {
-              const isActive = i < pinsTarget;
-              const label = filled[i]?.name;
-              const cx = DEST.x + off.dx;
-              const cy = DEST.y + off.dy;
-              return (
-                <g
-                  key={i}
-                  className={isActive ? "craft-pin-in" : undefined}
-                  style={{
-                    opacity: isActive ? 1 : 0,
-                    animationDelay: `${i * 110}ms`,
-                    transformOrigin: `${cx}px ${cy}px`,
-                  }}
-                >
-                  <line
-                    x1={DEST.x}
-                    y1={DEST.y}
-                    x2={cx}
-                    y2={cy}
-                    stroke="hsl(234 62% 47%)"
-                    strokeWidth="1"
-                    strokeDasharray="2 3"
-                    opacity="0.35"
-                  />
-                  <circle
-                    cx={cx}
-                    cy={cy}
-                    r="8"
-                    fill="white"
-                    stroke="hsl(234 62% 47%)"
-                    strokeWidth="1.5"
-                    filter="url(#pinShadow)"
-                  />
-                  <text
-                    x={cx}
-                    y={cy + 3.5}
-                    textAnchor="middle"
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 700,
-                      fill: "hsl(234 62% 47%)",
-                    }}
-                  >
-                    {i + 1}
-                  </text>
-                  {label && i < 3 && (
-                    <text
-                      x={cx}
-                      y={cy + 22}
-                      textAnchor="middle"
-                      className="fill-muted-foreground"
-                      style={{ fontSize: 9, fontWeight: 500 }}
-                    >
-                      {truncate(label, 16)}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
+            {/* ✈ Plane — flies along the arc */}
+            {hasOrigin && (
+              <g style={{ transition: "transform 0.8s cubic-bezier(0.22, 1, 0.36, 1)" }}>
+                <PlaneOnArc t={t} />
+              </g>
+            )}
           </svg>
         </div>
 
@@ -458,8 +314,7 @@ const PlanCraftingMap = ({
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
                     style={{
-                      background:
-                        "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
+                      background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))",
                     }}
                   >
                     {i + 1}
@@ -475,9 +330,7 @@ const PlanCraftingMap = ({
                   <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    Finding more…
-                  </span>
+                  <span className="text-xs text-muted-foreground">Finding more…</span>
                 </div>
               )}
             </div>
@@ -499,17 +352,58 @@ const PlanCraftingMap = ({
           0%, 100% { transform: translate(0, 0) scale(1); }
           50% { transform: translate(-14px, -12px) scale(1.12); }
         }
+        @keyframes craft-zoom {
+          0% { transform: scale(1); }
+          100% { transform: scale(1.08); }
+        }
         @keyframes craft-pin-drop {
-          0%   { opacity: 0; transform: translateY(-12px) scale(0.6); }
-          60%  { opacity: 1; transform: translateY(2px)   scale(1.06); }
+          0%   { opacity: 0; transform: translateY(-14px) scale(0.5); }
+          60%  { opacity: 1; transform: translateY(2px)   scale(1.05); }
           100% { opacity: 1; transform: translateY(0)     scale(1); }
         }
         .craft-pin-in {
-          animation: craft-pin-drop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+          animation: craft-pin-drop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
         }
       `}</style>
     </div>
   );
 };
+
+/* ─── Plane component that follows the quadratic bezier arc ─── */
+function PlaneOnArc({ t }: { t: number }) {
+  // Quadratic bezier: P0(60,155) C(240,20) P1(420,135)
+  const P0 = { x: 60, y: 155 };
+  const C = { x: 240, y: 20 };
+  const P1 = { x: 420, y: 135 };
+
+  const inv = 1 - t;
+  const x = inv * inv * P0.x + 2 * inv * t * C.x + t * t * P1.x;
+  const y = inv * inv * P0.y + 2 * inv * t * C.y + t * t * P1.y;
+
+  // Tangent for rotation
+  const dx = 2 * inv * (C.x - P0.x) + 2 * t * (P1.x - C.x);
+  const dy = 2 * inv * (C.y - P0.y) + 2 * t * (P1.y - C.y);
+  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+  return (
+    <g
+      transform={`translate(${x}, ${y}) rotate(${angle})`}
+      style={{ transition: "transform 0.8s cubic-bezier(0.22, 1, 0.36, 1)" }}
+    >
+      {/* Glow behind the plane */}
+      <circle r="14" fill="hsl(234 62% 47%)" opacity="0.15" />
+      <circle r="10" fill="white" filter="url(#glow)" />
+      {/* Plane icon */}
+      <g transform="translate(-8, -8)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19.5 2.5 18 1 16 1 14.5 2.5L11 6 2.8 4.2c-.5-.1-.9.1-1.1.5-.2.4-.1.8.3 1.1L8 10l-2 3H3l-1 1 3 2 2 3 1-1v-3l3-2 4.2 6c.3.4.7.5 1.1.3.4-.2.6-.6.5-1.1Z"
+            fill="hsl(234 62% 47%)"
+          />
+        </svg>
+      </g>
+    </g>
+  );
+}
 
 export default PlanCraftingMap;

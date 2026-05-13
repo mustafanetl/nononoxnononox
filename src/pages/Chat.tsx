@@ -849,14 +849,24 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     });
   }, [parsedMessages, isLoading, isPremium]);
 
-  // Auto-send query from URL params
+  // Auto-send query from URL params. If the user typed on the homepage
+  // search box and landed here with ?q=..., always start a fresh chat so
+  // they don't see a stale conversation from localStorage.
   useEffect(() => {
     const q = searchParams.get("q");
-    if (q && !initialQuerySent.current && messages.length === 0) {
+    if (q && !initialQuerySent.current) {
       initialQuerySent.current = true;
-      sendMessage(q);
+      // Force a new chat if there's already an active conversation.
+      if (messages.length > 0) {
+        clearChat();
+        // clearChat resets activeId; sendMessage will create a new convo.
+        // Use a microtask so the state flush from clearChat lands first.
+        queueMicrotask(() => sendMessage(q));
+      } else {
+        sendMessage(q);
+      }
     }
-  }, [searchParams, messages.length, sendMessage]);
+  }, [searchParams, messages.length, sendMessage, clearChat]);
 
   const handleFlightClick = (flight: FlightData) => {
     setSelectedFlight(flight);
@@ -1392,6 +1402,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                   data={parsed as TripPlanData}
                                   destination={destination}
                                   enrichedImages={enrichData?.images}
+                                  itineraryVenuePhotos={enrichData?.activityPhotos}
                                   origin={
                                     promptDest && lastUserMsg
                                       ? inferCitiesFromPrompt(lastUserMsg.content || "").origin || originCity || undefined
