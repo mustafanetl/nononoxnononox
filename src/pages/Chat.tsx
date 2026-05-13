@@ -1176,12 +1176,16 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             ) : (
               <div className="space-y-6">
                 {parsedMessages.map((msg, i) => {
-                  // While crafting is active, hide the last assistant message
-                  // (it's still streaming partial blocks). The "Thinking..." indicator
-                  // is shown separately below the message list.
+                  // While streaming, hide the last assistant message ONLY if it
+                  // actually contains plan blocks (fenced code). If the AI is just
+                  // asking a follow-up question, show it normally.
                   const isLastMsg = i === parsedMessages.length - 1;
-                  if (craftingActive && isLoading && isLastMsg && msg.role === "assistant") {
-                    return null;
+                  if (isLoading && isLastMsg && msg.role === "assistant" && craftingActive) {
+                    const content = msg.content || "";
+                    const hasBlocks = /```(flights|hotels|activities|itinerary|travelinfo)/i.test(content);
+                    if (hasBlocks) {
+                      return null;
+                    }
                   }
                   const parsed = { ...msg.parsed };
 
@@ -1398,8 +1402,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {/* Simple loading indicator — shows during crafting or before content streams */}
-                {isLoading && (!hasStreamedContent || craftingActive) && (
+                {/* Simple loading indicator — shows only when message is hidden (plan streaming) or before content arrives */}
+                {isLoading && (() => {
+                  const lastMsg = messages[messages.length - 1];
+                  const lastIsAssistant = lastMsg?.role === "assistant";
+                  const hasContent = lastIsAssistant && lastMsg.content.length > 0;
+                  const hasBlocks = hasContent && /```(flights|hotels|activities|itinerary|travelinfo)/i.test(lastMsg.content);
+                  // Show thinking when: no content yet, OR content is hidden (plan blocks during crafting)
+                  return (!hasContent || (craftingActive && hasBlocks));
+                })() && (
                   <div className="flex gap-3">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" }}>
                       <LogoMark size={16} color="white" />
