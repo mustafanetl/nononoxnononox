@@ -118,6 +118,9 @@ const fetchEnrichment = async (destination: string, travelMonth?: string, activi
 // Uses the shared planParser util so backticks inside JSON strings can't
 // prematurely close a fence. See src/utils/planParser.ts for details.
 const parseMessageContent = (content: string) => {
+  if (!content) {
+    return { text: "", flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null, placeImages: [] as { place: string; vibes?: string[] }[], places: [] as PlaceItem[] };
+  }
   const allRanges: [number, number][] = [];
 
   const pick = (type: string) => {
@@ -740,12 +743,22 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
   // Memoize parsed messages to avoid re-parsing on every render
   const parsedMessages = useMemo(() => {
-    return messages.map((msg) => ({
-      ...msg,
-      parsed: msg.role === "assistant"
-        ? parseMessageContent(msg.content)
-        : { text: msg.content, flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null, placeImages: [], places: [] },
-    }));
+    return messages.map((msg) => {
+      try {
+        return {
+          ...msg,
+          parsed: msg.role === "assistant"
+            ? parseMessageContent(msg.content || "")
+            : { text: msg.content || "", flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null, placeImages: [], places: [] },
+        };
+      } catch (e) {
+        console.error("parseMessageContent crashed:", e);
+        return {
+          ...msg,
+          parsed: { text: msg.content || "", flights: [], activities: [], hotels: [], itinerary: [], timeline: [], travelInfo: null, weather: null, quickReplies: [], destinationEnrich: null, placeImages: [], places: [] },
+        };
+      }
+    });
   }, [messages]);
 
   // Track the latest destination across the conversation so Swap works

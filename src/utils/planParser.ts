@@ -198,9 +198,11 @@ export function extractBlock(
  * extractBlock() calls combined.
  */
 export function stripFencedBlocks(text: string, ranges: [number, number][]): string {
-  if (ranges.length === 0) return text;
+  if (!text || ranges.length === 0) return text || "";
   // Sort descending so we can splice from the end without shifting indices.
-  const sorted = [...ranges].sort((a, b) => b[0] - a[0]);
+  const sorted = [...ranges]
+    .filter(([s, e]) => s >= 0 && e >= s && e <= text.length)
+    .sort((a, b) => b[0] - a[0]);
   let out = text;
   for (const [start, end] of sorted) {
     out = out.slice(0, start) + out.slice(end);

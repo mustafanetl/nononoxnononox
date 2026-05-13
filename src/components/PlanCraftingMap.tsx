@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
 
 export type CraftActivity = { name: string; photo?: string };
