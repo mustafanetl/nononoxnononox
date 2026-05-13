@@ -1,8 +1,21 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Clock, DollarSign, Lightbulb, PlusCircle, CheckCircle, Camera, MapPin, Star, CheckCircle2, ChevronLeft, ChevronRight, Shuffle, Loader2, ArrowLeft, Sparkles } from "lucide-react";
+import {
+  Clock,
+  DollarSign,
+  MapPin,
+  Star,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Shuffle,
+  Loader2,
+  ArrowLeft,
+  Sparkles,
+  X,
+  Camera,
+} from "lucide-react";
 import { ActivityData } from "./ActivityCard";
-import { useTripContext } from "@/contexts/TripContext";
 import { useEffect, useState } from "react";
 import { createDistinctPhotoGallery } from "@/utils/photoGallery";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,8 +36,6 @@ const ActivityDetailModal = ({
   onReplace?: (newActivity: ActivityData) => void;
   excludeNames?: string[];
 }) => {
-  const { addItem, removeItem, isInTrip } = useTripContext();
-
   const [photoIdx, setPhotoIdx] = useState(0);
   const [showAlternatives, setShowAlternatives] = useState(false);
   const [alternatives, setAlternatives] = useState<ActivityData[]>([]);
@@ -45,15 +56,9 @@ const ActivityDetailModal = ({
   const photos = createDistinctPhotoGallery({
     primary: activity.realPhoto,
     sources: [activity.realPhotos],
-    limit: 4,
+    limit: 6,
   });
   const hasImage = photos.length > 0;
-  const inTrip = isInTrip("activity", activity.id);
-
-  const toggleTrip = () => {
-    if (inTrip) removeItem("activity", activity.id);
-    else addItem({ type: "activity", data: activity });
-  };
 
   const fetchAlternatives = async () => {
     if (!destination) {
@@ -97,231 +102,293 @@ const ActivityDetailModal = ({
     onOpenChange(false);
   };
 
+  const handleClose = () => onOpenChange(false);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden">
+      <DialogContent className="max-w-lg p-0 overflow-hidden gap-0">
         <DialogTitle className="sr-only">{activity.name}</DialogTitle>
         <DialogDescription className="sr-only">Activity details and options.</DialogDescription>
+
         {showAlternatives ? (
-          <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setShowAlternatives(false)} className="gap-1 -ml-2">
-                <ArrowLeft className="h-4 w-4" /> Back
+          <div className="flex flex-col max-h-[85vh]">
+            {/* Header for alternatives view */}
+            <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border bg-background">
+              <div className="flex items-center gap-2 min-w-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAlternatives(false)}
+                  className="gap-1 -ml-2 shrink-0"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </Button>
+                <h3 className="font-semibold text-sm truncate">
+                  {lastSwapRequest
+                    ? `"${lastSwapRequest}" alternatives`
+                    : `Alternatives to ${activity.name}`}
+                </h3>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 shrink-0">
+                <X className="h-4 w-4" />
               </Button>
-              <h3 className="font-semibold text-sm">
-                {lastSwapRequest
-                  ? `"${lastSwapRequest}" instead of ${activity.name}`
-                  : `Alternatives to ${activity.name}`}
-              </h3>
             </div>
-            {loadingAlts ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <p className="text-xs text-muted-foreground">Finding similar spots…</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {alternatives.map((alt) => (
-                  <div key={alt.id} className="rounded-xl border border-border overflow-hidden hover:shadow-md transition-all">
-                    {alt.realPhoto ? (
-                      <img src={alt.realPhoto} alt={alt.name} className="w-full h-32 object-cover" />
-                    ) : (
-                      <div className="w-full h-32 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                        <Camera className="h-8 w-8 text-muted-foreground/50" />
-                      </div>
-                    )}
-                    <div className="p-3 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-semibold text-sm leading-tight">{alt.name}</h4>
-                        {alt.verifiedRating && (
-                          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            {alt.verifiedRating}
-                          </span>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingAlts ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                  <p className="text-xs text-muted-foreground">Finding similar spots…</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {alternatives.map((alt) => (
+                    <div
+                      key={alt.id}
+                      className="rounded-2xl border border-border overflow-hidden hover:shadow-md transition-all"
+                    >
+                      {alt.realPhoto ? (
+                        <img
+                          src={alt.realPhoto}
+                          alt={alt.name}
+                          className="w-full h-36 object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-36 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                          <Camera className="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                      )}
+                      <div className="p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-semibold text-sm leading-tight">{alt.name}</h4>
+                          {alt.verifiedRating && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
+                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              {alt.verifiedRating}
+                            </span>
+                          )}
+                        </div>
+                        {alt.why && (
+                          <p className="text-xs italic text-muted-foreground line-clamp-2">
+                            "{alt.why}"
+                          </p>
                         )}
+                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+                          {alt.neighborhood && (
+                            <span className="flex items-center gap-0.5">
+                              <MapPin className="h-3 w-3" />
+                              {alt.neighborhood}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-0.5">
+                            <Clock className="h-3 w-3" />
+                            {alt.duration}
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            ~{alt.currency}
+                            {alt.price}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full mt-1"
+                          onClick={() => pickAlternative(alt)}
+                          disabled={!onReplace}
+                        >
+                          Use this instead
+                        </Button>
                       </div>
-                      {alt.why && <p className="text-xs italic text-muted-foreground">"{alt.why}"</p>}
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                        {alt.neighborhood && <span className="flex items-center gap-0.5"><MapPin className="h-3 w-3" />{alt.neighborhood}</span>}
-                        <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" />{alt.duration}</span>
-                        <span className="font-semibold text-foreground">~{alt.currency}{alt.price}</span>
-                      </div>
-                      <Button size="sm" className="w-full mt-1" onClick={() => pickAlternative(alt)} disabled={!onReplace}>
-                        Use this instead
-                      </Button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-        <>
-        <div className="relative h-48">
-          {hasImage ? (
-            <img src={photos[photoIdx]} alt={activity.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
-              <Camera className="h-12 w-12 text-muted-foreground/40" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-          {photos.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={() => setPhotoIdx((i) => Math.max(0, i - 1))}
-                disabled={photoIdx === 0}
-                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/40 hover:bg-black/60 disabled:opacity-30 backdrop-blur flex items-center justify-center text-white transition"
-                aria-label="Previous photo"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setPhotoIdx((i) => Math.min(photos.length - 1, i + 1))}
-                disabled={photoIdx === photos.length - 1}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/40 hover:bg-black/60 disabled:opacity-30 backdrop-blur flex items-center justify-center text-white transition"
-                aria-label="Next photo"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-              <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur text-[10px] font-medium text-white tabular-nums">
-                {photoIdx + 1} / {photos.length}
-              </div>
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                {photos.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setPhotoIdx(i)}
-                    className={`h-1.5 rounded-full transition-all ${i === photoIdx ? "w-4 bg-white" : "w-1.5 bg-white/50"}`}
-                    aria-label={`Photo ${i + 1}`}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-          <div className="absolute bottom-4 left-4 right-4 text-white">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-xl font-bold">{activity.name}</h2>
-              {activity.verified && (
-                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/90 text-[10px] font-medium flex items-center gap-0.5">
-                  <CheckCircle2 className="h-2.5 w-2.5" /> Verified
-                </span>
+                  ))}
+                </div>
               )}
             </div>
-            <p className="text-sm opacity-80 capitalize">{activity.category}</p>
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col max-h-[85vh]">
+            {/* Photo gallery */}
+            <div className="relative shrink-0 bg-muted">
+              {/* Close button — always visible */}
+              <button
+                type="button"
+                onClick={handleClose}
+                aria-label="Close"
+                className="absolute top-3 right-3 z-20 h-9 w-9 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur flex items-center justify-center text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
 
-        <div className="p-5 space-y-4">
-          <p className="text-sm leading-relaxed text-muted-foreground">{activity.description}</p>
+              <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/15 via-muted to-accent/15">
+                {hasImage ? (
+                  <img
+                    src={photos[photoIdx]}
+                    alt={activity.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Camera className="h-16 w-16 text-muted-foreground/30" />
+                  </div>
+                )}
 
-          {activity.why && (
-            <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
-              <p className="text-xs text-foreground italic">"{activity.why}"</p>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-3 text-sm">
-            <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-primary" />
-              {activity.duration}
-            </span>
-            <span className="flex items-center gap-1.5 font-semibold">
-              <DollarSign className="h-4 w-4 text-primary" />
-              ~{activity.currency}{activity.price} per person
-            </span>
-            {activity.verifiedRating && (
-              <span className="flex items-center gap-1.5">
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                {activity.verifiedRating}
-              </span>
-            )}
-          </div>
-
-          {(activity.verifiedAddress || activity.neighborhood) && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5" />
-              {activity.verifiedAddress || activity.neighborhood}
-            </div>
-          )}
-
-          {activity.hours && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              {activity.hours}
-            </div>
-          )}
-
-          {!activity.verified && (
-            <div className="p-3 rounded-xl bg-muted/50 border border-border">
-              <div className="flex items-start gap-2">
-                <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                <p className="text-xs text-muted-foreground">
-                  This is an AI suggestion. Verify details and check availability before booking.
-                </p>
+                {photos.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoIdx((i) => Math.max(0, i - 1))}
+                      disabled={photoIdx === 0}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-black/40 hover:bg-black/60 disabled:opacity-30 backdrop-blur flex items-center justify-center text-white transition"
+                      aria-label="Previous photo"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoIdx((i) => Math.min(photos.length - 1, i + 1))}
+                      disabled={photoIdx === photos.length - 1}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-black/40 hover:bg-black/60 disabled:opacity-30 backdrop-blur flex items-center justify-center text-white transition"
+                      aria-label="Next photo"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <div className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-[10px] font-medium text-white tabular-nums">
+                      {photoIdx + 1} / {photos.length}
+                    </div>
+                  </>
+                )}
               </div>
-            </div>
-          )}
 
-          <div className="space-y-2">
-            {onReplace && (
-              <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
-                <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  Want something specific?
-                </label>
-                <input
-                  type="text"
-                  value={swapRequest}
-                  onChange={(e) => setSwapRequest(e.target.value)}
-                  placeholder="e.g. skydiving, vegan restaurant, art gallery"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && swapRequest.trim()) {
-                      e.preventDefault();
-                      fetchAlternatives();
-                    }
-                  }}
-                />
-                <div className="flex gap-2">
-                  <Button
-                    variant="default"
-                    className="flex-1 gap-2"
-                    onClick={fetchAlternatives}
-                    disabled={!swapRequest.trim()}
-                  >
-                    <Sparkles className="h-4 w-4" /> Find match
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 gap-2"
-                    onClick={() => {
-                      setSwapRequest("");
-                      fetchAlternatives();
-                    }}
-                  >
-                    <Shuffle className="h-4 w-4" /> Swap anyway
-                  </Button>
+              {/* Thumbnail strip */}
+              {photos.length > 1 && (
+                <div className="px-3 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide bg-background border-t border-border">
+                  {photos.map((src, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setPhotoIdx(i)}
+                      className={`shrink-0 h-12 w-16 rounded-md overflow-hidden border-2 transition-all ${
+                        i === photoIdx
+                          ? "border-primary ring-2 ring-primary/30"
+                          : "border-transparent opacity-70 hover:opacity-100"
+                      }`}
+                    >
+                      <img src={src} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground">
-                  Type what you'd like, or leave blank to get random alternatives.
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-5 pt-4 pb-5 space-y-4">
+              {/* Title + verified badge */}
+              <div>
+                <div className="flex items-start gap-2 flex-wrap">
+                  <h2 className="text-xl font-bold leading-tight flex-1 min-w-0">
+                    {activity.name}
+                  </h2>
+                  {activity.verified && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold flex items-center gap-1 shrink-0 mt-1">
+                      <CheckCircle2 className="h-3 w-3" /> Verified
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground capitalize mt-0.5">
+                  {activity.category}
                 </p>
               </div>
-            )}
-            <Button
-              variant={inTrip ? "secondary" : "outline"}
-              className="gap-2 w-full"
-              onClick={toggleTrip}
-            >
-              {inTrip ? <CheckCircle className="h-4 w-4" /> : <PlusCircle className="h-4 w-4" />}
-              {inTrip ? "Added" : "Add to Trip"}
-            </Button>
+
+              {/* Quick stats row */}
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Clock className="h-4 w-4 text-primary" />
+                  {activity.duration}
+                </span>
+                <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  ~{activity.currency}
+                  {activity.price}
+                </span>
+                {activity.verifiedRating && (
+                  <span className="flex items-center gap-1.5 text-muted-foreground">
+                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                    {activity.verifiedRating}
+                  </span>
+                )}
+              </div>
+
+              {/* Address / hours */}
+              {(activity.verifiedAddress || activity.neighborhood) && (
+                <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>{activity.verifiedAddress || activity.neighborhood}</span>
+                </div>
+              )}
+              {activity.hours && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  {activity.hours}
+                </div>
+              )}
+
+              {/* Description */}
+              {activity.description && (
+                <p className="text-sm leading-relaxed text-foreground/80">
+                  {activity.description}
+                </p>
+              )}
+
+              {/* Why pick */}
+              {activity.why && (
+                <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-xs text-foreground italic">"{activity.why}"</p>
+                </div>
+              )}
+
+              {/* Swap controls */}
+              {onReplace && (
+                <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3 mt-2">
+                  <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    Want something different?
+                  </label>
+                  <input
+                    type="text"
+                    value={swapRequest}
+                    onChange={(e) => setSwapRequest(e.target.value)}
+                    placeholder="e.g. skydiving, vegan restaurant, art gallery"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && swapRequest.trim()) {
+                        e.preventDefault();
+                        fetchAlternatives();
+                      }
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="default"
+                      className="flex-1 gap-2"
+                      onClick={fetchAlternatives}
+                      disabled={!swapRequest.trim()}
+                    >
+                      <Sparkles className="h-4 w-4" /> Find match
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 gap-2"
+                      onClick={() => {
+                        setSwapRequest("");
+                        fetchAlternatives();
+                      }}
+                    >
+                      <Shuffle className="h-4 w-4" /> Swap anyway
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        </>
         )}
       </DialogContent>
     </Dialog>
