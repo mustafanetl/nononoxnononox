@@ -1369,7 +1369,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const isFullPlan = cardTypeCount >= 2 || parsed.itinerary.length > 0;
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
-                  const hideLatestResponse = false;
                   // Resolve a CITY-level destination — prefer user prompt + destination_enrich
                   // over neighborhood-scoped fallbacks (activities[0].neighborhood was often
                   // a district like "Jordaan" instead of "Amsterdam", which broke city hero
@@ -1398,7 +1397,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             <LogoMark size={16} color="white" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            {parsed.text && !hideLatestResponse && (
+                            {/* Always show text if available */}
+                            {parsed.text && (
                               <div className={isLastAssistant && isLoading ? "streaming-spotlight" : ""}>
                                 <StreamingText
                                   text={parsed.text}
@@ -1409,8 +1409,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
 
                             {/* Full plan → show summary card; otherwise show inline cards */}
-                            {/* Hide plan cards while crafting animation is still running */}
-                            {isFullPlan && destination && !hideLatestResponse ? (
+                            {isFullPlan && destination ? (
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
                                   destination={destination}
@@ -1422,7 +1421,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                       : originCity || undefined
                                   }
                                 />
-                            ) : !hideLatestResponse && (
+                            ) : (
                               <>
                                 {/* Show all card blocks — paywall disabled */}
                                 {parsed.timeline.length > 0 && (
