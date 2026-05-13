@@ -18,7 +18,6 @@ import QuickReplies from "@/components/QuickReplies";
 import ComparisonModal from "@/components/ComparisonModal";
 import VoiceInput from "@/components/VoiceInput";
 import StreamingText from "@/components/StreamingText";
-import CraftStagesPill from "@/components/CraftStagesPill";
 import CurrencyConverter from "@/components/CurrencyConverter";
 import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
@@ -1257,9 +1256,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             ) : (
               <div className="space-y-6">
                 {parsedMessages.map((msg, i) => {
-                  // Hide the streaming assistant message while crafting plan
+                  // Hide the streaming assistant message while the plane map is
+                  // showing. This prevents flights/hotels/activities cards from
+                  // flashing through during the crafting animation.
                   const isLastMsg = i === parsedMessages.length - 1;
-                  if (isCraftingPlan && isLastMsg && msg.role === "assistant") return null;
+                  if (shouldShowCraftingMap && isLastMsg && msg.role === "assistant") return null;
 
                   const parsed = { ...msg.parsed };
 
@@ -1354,8 +1355,11 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   }
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
-                  // Hide response while crafting so the loader shows cleanly, then reveal
-                  const hideLatestResponse = isLastAssistant && shouldShowCraftingMap;
+                  // Hide all inline cards while the plane map is active OR while
+                  // the AI is still streaming and we haven't detected a full plan
+                  // yet (prevents partial cards from flashing before the summary
+                  // card takes over).
+                  const hideLatestResponse = isLastAssistant && (shouldShowCraftingMap || (isLoading && !isFullPlan && cardTypeCount >= 1));
 
                   // Determine if this is a "full trip plan" (has multiple card types)
                   const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
@@ -1480,7 +1484,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {/* Plan crafting animation — full width, prominent */}
+                {/* Plan crafting animation — shows the ENTIRE time AI is building a plan */}
                 {shouldShowCraftingMap && (
                   <PlanCraftingMap
                     originCity={craftingOriginCity || originCity}
@@ -1493,7 +1497,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 )}
 
                 {isLoading && !isCraftingPlan && !hasStreamedContent && (
-                  <CraftStagesPill active />
+                  <div className="flex gap-3 animate-fade-in">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" }}>
+                      <LogoMark size={16} color="white" className="animate-spin" />
+                    </div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      Thinking…
+                    </div>
+                  </div>
                 )}
                 {qaStatus && !isCraftingPlan && (
                   <div className="flex gap-3 animate-fade-in">
