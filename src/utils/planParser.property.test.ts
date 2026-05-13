@@ -135,7 +135,10 @@ describe("Property 1: Plan parser round-trip", () => {
   // excluded because `extractBlock` treats null payloads as "nothing to emit"
   // by design (see parsePartialJson), which would break the round-trip
   // invariant. Nested nulls inside arrays/objects are preserved and fine.
-  const jsonValueArb = fc.jsonValue({ maxDepth: 3 }).filter((v) => v !== null);
+  // We also exclude -0 because JSON.stringify(-0) === "0", so round-tripping
+  // through JSON serialization loses the sign — this is a JSON spec limitation,
+  // not a parser bug.
+  const jsonValueArb = fc.jsonValue({ maxDepth: 3 }).filter((v) => v !== null).map((v) => JSON.parse(JSON.stringify(v)));
 
   it("round-trip: wrap → extractBlock → reformat items → re-parse yields deeply-equal items, and range covers the opening fence", () => {
     fc.assert(
