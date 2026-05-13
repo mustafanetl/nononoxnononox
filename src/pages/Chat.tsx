@@ -1269,11 +1269,9 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             ) : (
               <div className="space-y-6">
                 {parsedMessages.map((msg, i) => {
-                  // Hide the streaming assistant message while the plane map is
-                  // showing. This prevents flights/hotels/activities cards from
-                  // flashing through during the crafting animation.
+                  // While loading, hide the last assistant message — plane map shows instead
                   const isLastMsg = i === parsedMessages.length - 1;
-                  if (shouldShowCraftingMap && isLastMsg && msg.role === "assistant") return null;
+                  if (isLoading && isLastMsg && msg.role === "assistant") return null;
 
                   const parsed = { ...msg.parsed };
 
@@ -1373,9 +1371,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const isFullPlan = cardTypeCount >= 2 || parsed.itinerary.length > 0;
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
-                  // Only hide the response while the plane map is actively showing.
-                  // Once crafting ends, everything renders immediately.
-                  const hideLatestResponse = isLastAssistant && shouldShowCraftingMap;
+                  const hideLatestResponse = false;
                   // Resolve a CITY-level destination — prefer user prompt + destination_enrich
                   // over neighborhood-scoped fallbacks (activities[0].neighborhood was often
                   // a district like "Jordaan" instead of "Amsterdam", which broke city hero
@@ -1384,7 +1380,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const promptDest = lastUserMsg ? inferCitiesFromPrompt(lastUserMsg.content || "").destination : "";
                   const destination = parsed.travelInfo?.destination
                     || (parsed as any).destinationEnrich?.destination
-                    || craftingPlan?.destination
                     || promptDest
                     || parsed.hotels[0]?.location?.split(",")[0]
                     || parsed.flights[0]?.cityImage
@@ -1495,25 +1490,14 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {/* Plane map — shows only when crafting is active */}
-                {shouldShowCraftingMap && craftingPlan && (
+                {/* Plane map — shows while AI is loading */}
+                {isLoading && (
                   <PlanCraftingMap
                     originCity={craftingOriginCity || originCity}
-                    destinationCity={craftingPlan.destination || "your destination"}
-                    activities={craftingActivities}
-                    destinationPhoto={craftingDestinationPhoto}
-                    destinationGeo={craftingDestinationGeo}
-                    progress={craftingPlan.progress}
+                    destinationCity={craftingPlan?.destination || latestDestination || "your destination"}
+                    activities={[]}
+                    progress={craftingPlan?.progress ?? 30}
                   />
-                )}
-
-                {/* Simple typing dots when loading but crafting hasn't started */}
-                {isLoading && !shouldShowCraftingMap && !hasStreamedContent && (
-                  <div className="flex items-center gap-1.5 px-2 py-3">
-                    <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
-                    <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
-                    <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
-                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
