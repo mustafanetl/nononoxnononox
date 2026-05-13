@@ -159,6 +159,10 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.data || !parsed.destination) {
+          navigate("/chat");
+          return;
+        }
         setTripData(parsed);
         if (parsed.enrichedImages?.length > 0 && parsed.destination) {
           setWikimediaImage(parsed.destination, parsed.enrichedImages[0].thumbUrl || parsed.enrichedImages[0].url);

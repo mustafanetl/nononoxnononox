@@ -65,10 +65,38 @@ const TripSummaryCard = ({
   const [shareDone, setShareDone] = useState(false);
 
   const handleOpen = () => {
-    sessionStorage.setItem(
-      "jolliday-trip-detail",
-      JSON.stringify({ data, destination, enrichedImages, itineraryVenuePhotos }),
-    );
+    // Slim down venue photos to avoid exceeding sessionStorage limits
+    // and prevent React crashes from massive data during render.
+    let slimVenuePhotos: Record<string, any> | undefined;
+    if (itineraryVenuePhotos) {
+      slimVenuePhotos = {};
+      for (const [key, val] of Object.entries(itineraryVenuePhotos)) {
+        if (val && typeof val === "object") {
+          slimVenuePhotos[key] = {
+            photo: (val as any).photo || (val as any).thumbPhoto || null,
+            thumbPhoto: (val as any).thumbPhoto || null,
+            photos: Array.isArray((val as any).photos) ? (val as any).photos.slice(0, 4) : [],
+            rating: (val as any).rating || null,
+            address: (val as any).address || null,
+            verified: (val as any).verified || false,
+            matchedName: (val as any).matchedName || null,
+            hasRealPhoto: (val as any).hasRealPhoto || false,
+          };
+        }
+      }
+    }
+    try {
+      sessionStorage.setItem(
+        "jolliday-trip-detail",
+        JSON.stringify({ data, destination, enrichedImages: enrichedImages?.slice(0, 5), itineraryVenuePhotos: slimVenuePhotos }),
+      );
+    } catch (e) {
+      // If sessionStorage is full, store without photos
+      sessionStorage.setItem(
+        "jolliday-trip-detail",
+        JSON.stringify({ data, destination }),
+      );
+    }
     navigate("/trip/view");
   };
 
