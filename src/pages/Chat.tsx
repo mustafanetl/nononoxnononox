@@ -391,61 +391,18 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
 
   const startCrafting = useCallback((destination: string, origin: string, content = "") => {
     const cleanedDestination = destination.trim();
-    if (!cleanedDestination || craftingIntervalRef.current) return;
+    if (!cleanedDestination) return;
 
-    craftingProgressRef.current = 0;
     streamingDoneRef.current = false;
-    if (craftingFinalizeTimeoutRef.current) {
-      clearTimeout(craftingFinalizeTimeoutRef.current);
-      craftingFinalizeTimeoutRef.current = null;
-    }
-    craftingStartTimeRef.current = Date.now();
     setCraftingPlanType(/```(flights|hotels)/s.test(content) ? "full" : "local");
     setCraftingOriginCity(origin.trim());
-    // Seed with a small non-zero progress so the bar looks alive from frame 1.
-    // The curve then eases up toward 90% until the AI actually streams back.
-    craftingProgressRef.current = 12;
-    setCraftingPlan({ destination: cleanedDestination, progress: 12 });
+    setCraftingPlan({ destination: cleanedDestination, progress: 0 });
     setCraftingActive(true);
-
-    craftingIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - craftingStartTimeRef.current;
-      // Adaptive min duration: quick but not jarring.
-      // 4s baseline, 2.5s if streaming is already done.
-      const minDuration = streamingDoneRef.current ? 2500 : 4000;
-
-      if (craftingProgressRef.current < 90) {
-        craftingProgressRef.current = Math.min(90, craftingProgressRef.current + (90 - craftingProgressRef.current) * 0.08);
-        setCraftingPlan(prev => prev ? { ...prev, progress: craftingProgressRef.current } : null);
-      }
-
-      if (streamingDoneRef.current && elapsed >= minDuration && craftingProgressRef.current >= 60) {
-        craftingProgressRef.current = 100;
-        setCraftingPlan(prev => prev ? { ...prev, progress: 100 } : null);
-
-        if (craftingIntervalRef.current) {
-          clearInterval(craftingIntervalRef.current);
-          craftingIntervalRef.current = null;
-        }
-
-        // Wait two animation frames so React can mount + paint the plan card
-        // BEFORE we tear the crafting map down. Eliminates the white flicker
-        // between the two states.
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            pendingCraftSeedRef.current = "";
-            setCraftingActive(false);
-            setCraftingPlan(null);
-            setCraftingOriginCity("");
-          });
-        });
-      }
-    }, 300);
   }, []);
 
   // Start crafting as soon as a full-plan request is in flight, even before blocks stream back.
   useEffect(() => {
-    if (!isLoading || craftingIntervalRef.current) return;
+    if (!isLoading || craftingActive) return;
 
     const userMessages = messages.filter((msg) => msg.role === "user");
     const latestUser = userMessages[userMessages.length - 1];
@@ -530,11 +487,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     if (!nextDestination) return;
 
     // Only START a new crafting session here if the early-start effect didn't
-    // already kick one off for the current user turn. Otherwise we'd show the
-    // animation twice (once on send, once when structured blocks stream in).
+    // already kick one off for the current user turn.
     if (
       isLoading &&
-      !craftingIntervalRef.current &&
+      !craftingActive &&
       !pendingCraftSeedRef.current &&
       lastIdx !== lastCraftedMsgIndex.current
     ) {
@@ -550,86 +506,33 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     setCraftingPlanType(/```(flights|hotels)/s.test(content) ? "full" : "local");
 
     // Detect when the plan is fully streamed (quickreplies is always last).
-    // Tear down crafting even if isLoading is still true (QA loop keeps it true).
+    // Tear down crafting immediately — no animations to wait for.
     if (craftingActive && hasRenderableFullPlan(content) && /```quickreplies\s*\[/.test(content)) {
-      craftingProgressRef.current = 100;
-      setCraftingPlan((prev) => prev ? { ...prev, progress: 100 } : prev);
       if (craftingIntervalRef.current) {
         clearInterval(craftingIntervalRef.current);
         craftingIntervalRef.current = null;
       }
       if (craftingFinalizeTimeoutRef.current) {
         clearTimeout(craftingFinalizeTimeoutRef.current);
+        craftingFinalizeTimeoutRef.current = null;
       }
-      craftingFinalizeTimeoutRef.current = setTimeout(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            pendingCraftSeedRef.current = "";
-            setCraftingActive(false);
-            setCraftingPlan(null);
-            setCraftingOriginCity("");
-            craftingFinalizeTimeoutRef.current = null;
-          });
-        });
-      }, 300);
+      pendingCraftSeedRef.current = "";
+      setCraftingActive(false);
+      setCraftingPlan(null);
+      setCraftingOriginCity("");
     }
   }, [messages, isLoading, craftingActive, craftingPlan?.destination, craftingOriginCity, originCity, startCrafting]);
 
-  // When streaming ends, mark it and update plan type from final content
+  // When streaming ends, tear down crafting state immediately.
   useEffect(() => {
-    if (!isLoading && craftingIntervalRef.current && !streamingDoneRef.current) {
+    if (!isLoading && craftingActive) {
       streamingDoneRef.current = true;
-      const lastMsg = messages[messages.length - 1];
-      if (lastMsg?.role === "assistant") {
-        const hasFlightsOrHotels = /```(flights|hotels)/s.test(lastMsg.content);
-        setCraftingPlanType(hasFlightsOrHotels ? "full" : "local");
-        if (hasRenderableFullPlan(lastMsg.content)) {
-          craftingProgressRef.current = Math.max(craftingProgressRef.current, 58);
-          setCraftingPlan((prev) => prev ? { ...prev, progress: Math.max(prev.progress, 58) } : prev);
-          if (craftingIntervalRef.current) {
-            clearInterval(craftingIntervalRef.current);
-            craftingIntervalRef.current = null;
-          }
-          if (craftingFinalizeTimeoutRef.current) {
-            clearTimeout(craftingFinalizeTimeoutRef.current);
-          }
-          // Quick handoff: rAF-chain so the plan paints before crafting tears down.
-          craftingFinalizeTimeoutRef.current = setTimeout(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                pendingCraftSeedRef.current = "";
-                setCraftingActive(false);
-                setCraftingPlan(null);
-                setCraftingOriginCity("");
-                craftingFinalizeTimeoutRef.current = null;
-              });
-            });
-          }, 200);
-        } else {
-          // AI didn't produce a plan (e.g., asked a follow-up question).
-          // Tear down the crafting animation immediately.
-          if (craftingIntervalRef.current) {
-            clearInterval(craftingIntervalRef.current);
-            craftingIntervalRef.current = null;
-          }
-          pendingCraftSeedRef.current = "";
-          setCraftingActive(false);
-          setCraftingPlan(null);
-          setCraftingOriginCity("");
-        }
-      } else {
-        // No assistant message at all — tear down crafting.
-        if (craftingIntervalRef.current) {
-          clearInterval(craftingIntervalRef.current);
-          craftingIntervalRef.current = null;
-        }
-        pendingCraftSeedRef.current = "";
-        setCraftingActive(false);
-        setCraftingPlan(null);
-        setCraftingOriginCity("");
-      }
+      pendingCraftSeedRef.current = "";
+      setCraftingActive(false);
+      setCraftingPlan(null);
+      setCraftingOriginCity("");
     }
-  }, [isLoading, messages]);
+  }, [isLoading, craftingActive]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1406,7 +1309,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             <LogoMark size={16} color="white" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            {/* Full plan → show ONLY the plan card, no text */}
+                            {/* Show text for all messages */}
+                            {parsed.text && (
+                              <div>
+                                <StreamingText
+                                  text={parsed.text}
+                                  isStreaming={isLastAssistant && isLoading}
+                                />
+                              </div>
+                            )}
+
+                            {/* Full plan → show the plan card */}
                             {isFullPlan && destination ? (
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
@@ -1421,15 +1334,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                 />
                             ) : (
                               <>
-                                {/* Show text for non-plan messages */}
-                                {parsed.text && (
-                                  <div>
-                                    <StreamingText
-                                      text={parsed.text}
-                                      isStreaming={isLastAssistant && isLoading}
-                                    />
-                                  </div>
-                                )}
                                 {/* Show all card blocks — paywall disabled */}
                                 {parsed.timeline.length > 0 && (
                                       <TripTimeline legs={parsed.timeline} />
