@@ -1373,11 +1373,9 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   const isFullPlan = cardTypeCount >= 2 || parsed.itinerary.length > 0;
 
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
-                  // Hide all inline cards while the plane map is active OR while
-                  // the AI is still streaming and we haven't detected a full plan
-                  // yet (prevents partial cards from flashing before the summary
-                  // card takes over).
-                  const hideLatestResponse = isLastAssistant && (shouldShowCraftingMap || (isLoading && !isFullPlan && cardTypeCount >= 1));
+                  // Only hide the response while the plane map is actively showing.
+                  // Once crafting ends, everything renders immediately.
+                  const hideLatestResponse = isLastAssistant && shouldShowCraftingMap;
                   // Resolve a CITY-level destination — prefer user prompt + destination_enrich
                   // over neighborhood-scoped fallbacks (activities[0].neighborhood was often
                   // a district like "Jordaan" instead of "Amsterdam", which broke city hero
