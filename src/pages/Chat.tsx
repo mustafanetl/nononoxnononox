@@ -1367,17 +1367,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     });
                   }
 
+                  // Determine if this is a "full trip plan" (has multiple card types)
+                  const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
+                  // Treat as a "plan" when we have an itinerary OR multiple card types — local plans (activities + itinerary, no flights/hotels) count too.
+                  const isFullPlan = cardTypeCount >= 2 || parsed.itinerary.length > 0;
+
                   const isLastAssistant = msg.role === "assistant" && i === parsedMessages.length - 1;
                   // Hide all inline cards while the plane map is active OR while
                   // the AI is still streaming and we haven't detected a full plan
                   // yet (prevents partial cards from flashing before the summary
                   // card takes over).
                   const hideLatestResponse = isLastAssistant && (shouldShowCraftingMap || (isLoading && !isFullPlan && cardTypeCount >= 1));
-
-                  // Determine if this is a "full trip plan" (has multiple card types)
-                  const cardTypeCount = [parsed.flights.length > 0, parsed.hotels.length > 0, parsed.activities.length > 0, parsed.itinerary.length > 0].filter(Boolean).length;
-                  // Treat as a "plan" when we have an itinerary OR multiple card types — local plans (activities + itinerary, no flights/hotels) count too.
-                  const isFullPlan = cardTypeCount >= 2 || parsed.itinerary.length > 0;
                   // Resolve a CITY-level destination — prefer user prompt + destination_enrich
                   // over neighborhood-scoped fallbacks (activities[0].neighborhood was often
                   // a district like "Jordaan" instead of "Amsterdam", which broke city hero
