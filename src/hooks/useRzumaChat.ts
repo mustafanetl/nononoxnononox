@@ -244,6 +244,9 @@ export const useRzumaChat = () => {
     setError(null);
 
     let assistantContent = "";
+    // When true, streaming updates are collected but NOT flushed to the UI.
+    // Used during QA revision loops to keep the original plan visible.
+    let silentMode = false;
 
     // rAF-batched conversation update so streaming tokens don't re-render
     // (and re-parse) the whole plan on every delta. The chat edge function
@@ -255,7 +258,7 @@ export const useRzumaChat = () => {
 
     const flushPending = () => {
       rafId = null;
-      if (pendingContent === null) return;
+      if (pendingContent === null || silentMode) return;
       const content = pendingContent;
       pendingContent = null;
       setConversations(prev => prev.map(c => {
@@ -466,15 +469,13 @@ export const useRzumaChat = () => {
           // Need a revision — run silently without updating the visible message.
           setQaStatus("fixing");
           try {
-            // Save current visible content before revision overwrites it
-            const savedContent = assistantContent;
+            // Enable silent mode so streaming doesn't update the visible message
+            silentMode = true;
+            assistantContent = "";
             planText = await runStream(review.issues);
-            // Restore the original visible content — don't show the revision mid-stream.
-            // The visible message stays as the original plan until revision is approved.
-            assistantContent = savedContent;
-            pendingContent = savedContent;
-            flushPending();
+            silentMode = false;
           } catch (err) {
+            silentMode = false;
             console.warn("Revision stream failed:", err);
             break;
           }
