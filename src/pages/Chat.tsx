@@ -22,7 +22,6 @@ import CurrencyConverter from "@/components/CurrencyConverter";
 import TripMap, { type MapPoint } from "@/components/TripMap";
 import TripSummaryCard, { TripPlanData } from "@/components/TripSummaryCard";
 import PlanPreviewGate from "@/components/PlanPreviewGate";
-import PlanCraftingMap, { type CraftActivity } from "@/components/PlanCraftingMap";
 import PlacesGallery, { PlaceItem } from "@/components/PlacesGallery";
 import PaywallModal from "@/components/PaywallModal";
 import { extractBlock as extractBlockShared, stripFencedBlocks } from "@/utils/planParser";
@@ -646,15 +645,13 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     };
   }, []);
 
-  const isCraftingPlan = craftingActive;
-  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [searchParams] = useSearchParams();
   const initialQuerySent = useRef(false);
 
-  // Activities being streamed for the current crafting message — fed to PlanCraftingMap.
-  const craftingActivities = useMemo<CraftActivity[]>(() => {
+  // Activities being streamed for the current crafting message — used for eager enrichment.
+  const craftingActivities = useMemo<{ name: string; photo?: string }[]>(() => {
     if (!craftingActive) return [];
     const last = messages[messages.length - 1];
     if (!last || last.role !== "assistant") return [];
@@ -724,48 +721,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     });
   }, [craftingActive, messages, enrichedData, craftingPlan?.destination, craftingPlan?.progress]);
 
-  // Destination photo for the crafting map (uses cached city image if present)
-  const craftingDestinationPhoto = useMemo<string | undefined>(() => {
-    const dest = craftingPlan?.destination || "";
-    if (!dest) return undefined;
-    const enrich = enrichedData[dest];
-    return (
-      enrich?.images?.[0]?.thumbUrl ||
-      enrich?.images?.[0]?.url ||
-      undefined
-    );
-  }, [craftingPlan?.destination, enrichedData]);
-
-  const craftingDestinationGeo = useMemo<{ lat: number; lng: number } | undefined>(() => {
-    const dest = craftingPlan?.destination || "";
-    if (!dest) return undefined;
-    const geo = enrichedData[dest]?.geo;
-    if (typeof geo?.lat === "number" && typeof geo?.lng === "number") {
-      return { lat: geo.lat, lng: geo.lng };
-    }
-    return undefined;
-  }, [craftingPlan?.destination, enrichedData]);
-
-  const shouldShowCraftingMap = isCraftingPlan && !!craftingPlan;
-
-  // When the crafting map first appears, gently scroll it into view so the
-  // user actually sees the animation instead of a static prompt above the fold.
-  const craftingScrollFiredRef = useRef(false);
-  useEffect(() => {
-    if (shouldShowCraftingMap && !craftingScrollFiredRef.current) {
-      craftingScrollFiredRef.current = true;
-      requestAnimationFrame(() => {
-        try {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-        } catch {}
-      });
-    }
-    if (!shouldShowCraftingMap) {
-      craftingScrollFiredRef.current = false;
-    }
-  }, [shouldShowCraftingMap]);
-
-  // Eager enrichment during crafting so the map shows real photos in real time.
+  // Eager enrichment during crafting so the card shows real photos.
   // Fires whenever we have a destination + at least one activity name and we haven't
   // already enriched this destination. Premium-only (matches main enrichment policy).
   const eagerEnrichRef = useRef<Set<string>>(new Set());
@@ -851,7 +807,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   // Will re-implement with a better UX later.
   const [planCount, setPlanCount] = useState(0);
   useEffect(() => {
-    if (isPremium || isLoading || shouldShowCraftingMap) return;
+    if (isPremium || isLoading || craftingActive) return;
     let count = 0;
     parsedMessages.forEach((msg) => {
       if (msg.role !== "assistant") return;
@@ -866,7 +822,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     setPlanCount(count);
     // Paywall disabled — never gate
     setPlanGenerated(false);
-  }, [parsedMessages, isLoading, isPremium, shouldShowCraftingMap]);
+  }, [parsedMessages, isLoading, isPremium, craftingActive]);
 
   // Auto-enrich destinations when streaming is done
   // Premium: full enrichment. Free: imageOnly (1 Google photo for the paywall card)
@@ -1317,8 +1273,13 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             ) : (
               <div className="space-y-6">
                 {parsedMessages.map((msg, i) => {
-                  // Don't hide any messages — let content stream in naturally.
-                  // The plane map shows at the bottom as a loading indicator.
+                  // While crafting is active, hide the last assistant message
+                  // (it's still streaming partial blocks). The "Thinking..." indicator
+                  // is shown separately below the message list.
+                  const isLastMsg = i === parsedMessages.length - 1;
+                  if (craftingActive && isLoading && isLastMsg && msg.role === "assistant") {
+                    return null;
+                  }
                   const parsed = { ...msg.parsed };
 
                   // Merge enriched live data if available
@@ -1432,7 +1393,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                     || "";
 
                   return (
-                    <div key={i} className="animate-fade-in">
+                    <div key={i}>
                       {msg.role === "user" ? (
                         <div className="flex justify-end">
                           <div className="bg-muted rounded-2xl px-4 py-2 max-w-[80%]">
@@ -1445,18 +1406,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             <LogoMark size={16} color="white" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            {/* Always show text if available */}
-                            {parsed.text && (
-                              <div className={isLastAssistant && isLoading ? "streaming-spotlight" : ""}>
-                                <StreamingText
-                                  text={parsed.text}
-                                  isStreaming={isLastAssistant && isLoading}
-                                />
-                              </div>
-                            )}
-
-
-                            {/* Full plan → show summary card; otherwise show inline cards */}
+                            {/* Full plan → show ONLY the plan card, no text */}
                             {isFullPlan && destination ? (
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
@@ -1471,6 +1421,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                 />
                             ) : (
                               <>
+                                {/* Show text for non-plan messages */}
+                                {parsed.text && (
+                                  <div>
+                                    <StreamingText
+                                      text={parsed.text}
+                                      isStreaming={isLastAssistant && isLoading}
+                                    />
+                                  </div>
+                                )}
                                 {/* Show all card blocks — paywall disabled */}
                                 {parsed.timeline.length > 0 && (
                                       <TripTimeline legs={parsed.timeline} />
@@ -1535,24 +1494,14 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {/* Plane map — only shows during active plan crafting */}
-                {craftingActive && craftingPlan && (
-                  <PlanCraftingMap
-                    originCity={craftingOriginCity || originCity}
-                    destinationCity={craftingPlan.destination || "your destination"}
-                    activities={[]}
-                    progress={craftingPlan.progress}
-                  />
-                )}
-
-                {/* Simple loading indicator for non-plan responses */}
-                {isLoading && !craftingActive && !hasStreamedContent && (
-                  <div className="flex gap-3 animate-fade-in">
+                {/* Simple loading indicator — shows during crafting or before content streams */}
+                {isLoading && (!hasStreamedContent || craftingActive) && (
+                  <div className="flex gap-3">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" }}>
                       <LogoMark size={16} color="white" />
                     </div>
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground self-start">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                       <span className="font-medium text-foreground/80">Thinking…</span>
                     </div>
                   </div>

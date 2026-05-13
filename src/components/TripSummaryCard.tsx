@@ -3,16 +3,11 @@ import { useNavigate } from "react-router-dom";
 import {
   Plane,
   Hotel,
-  Sparkles,
   MapPin,
   ArrowRight,
   CalendarDays,
-  Share2,
-  Download,
-  Check,
+  Activity,
 } from "lucide-react";
-import { toast } from "sonner";
-import { LogoMark } from "@/components/Logo";
 import { FlightData } from "@/components/FlightCard";
 import { HotelData } from "@/contexts/TripContext";
 import { ActivityData } from "@/components/ActivityCard";
@@ -20,7 +15,6 @@ import { ItineraryData } from "@/components/ItineraryCard";
 import { TravelInfoData } from "@/components/TravelInfoCard";
 import { TimelineLeg } from "@/components/TripTimeline";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
-import { shareTripCard } from "@/utils/shareCardImage";
 
 export type TripPlanData = {
   flights: FlightData[];
@@ -35,21 +29,16 @@ export type TripPlanData = {
 
 /* ─────────────────────────────────────────────────────────────
    TripSummaryCard
-   The "your plan is ready" moment that appears in chat.
-
-   Post-redesign: cinematic hero + stat tiles + route recap
-   (origin → destination arc when available) + Share card button
-   that exports a 9:16 IG-Story JPEG of the plan. Same click →
-   /trip/view handoff and same data contract.
+   Clean, static plan card — no animations.
+   Shows: city image (revealed on hover), stats (days, hotels,
+   flights, activities), and a button to open the full plan.
    ───────────────────────────────────────────────────────────── */
 
 type Props = {
   data: TripPlanData;
   destination: string;
   enrichedImages?: any[];
-  /** Optional origin (from user prompt or preferences) for the recap arc. */
   origin?: string;
-  /** Venue-level photo matches from enrich-destination, keyed by venue name. */
   itineraryVenuePhotos?: Record<string, any>;
 };
 
@@ -61,12 +50,8 @@ const TripSummaryCard = ({
   itineraryVenuePhotos,
 }: Props) => {
   const navigate = useNavigate();
-  const [sharing, setSharing] = useState(false);
-  const [shareDone, setShareDone] = useState(false);
 
   const handleOpen = () => {
-    // Slim down venue photos to avoid exceeding sessionStorage limits
-    // and prevent React crashes from massive data during render.
     let slimVenuePhotos: Record<string, any> | undefined;
     if (itineraryVenuePhotos) {
       slimVenuePhotos = {};
@@ -90,8 +75,7 @@ const TripSummaryCard = ({
         "jolliday-trip-detail",
         JSON.stringify({ data, destination, enrichedImages: enrichedImages?.slice(0, 5), itineraryVenuePhotos: slimVenuePhotos }),
       );
-    } catch (e) {
-      // If sessionStorage is full, store without photos
+    } catch {
       sessionStorage.setItem(
         "jolliday-trip-detail",
         JSON.stringify({ data, destination }),
@@ -101,26 +85,22 @@ const TripSummaryCard = ({
   };
 
   const days = data.itinerary.length;
-  const stops =
+  const activitiesCount =
     data.itinerary.reduce(
       (s: number, d: any) => s + (Array.isArray(d?.slots) ? d.slots.length : 0),
       0,
     ) || data.activities.length;
 
-  const resolvedOrigin = (origin || data.flights[0]?.from || "").trim();
   const { imageUrl: stockHero } = useCityHeroImage(destination);
   const enrichedHero = enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl;
-  // Prefer the verified Google Places photo when we have one, because it's
-  // always actually the right city. Stock is an excellent fast-first-paint
-  // fallback while enrichment is in flight.
   const preferredHero = enrichedHero || stockHero;
   const [heroSrc, setHeroSrc] = useState<string | undefined>(preferredHero);
-  // If the preferred hero URL changes (e.g. enrichment arrives late), swap it in.
+
   useEffect(() => {
     if (preferredHero && preferredHero !== heroSrc) setHeroSrc(preferredHero);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferredHero]);
-  // Fallback chain for onError: enrichedHero → stockHero → none.
+
   const handleHeroError = () => {
     if (heroSrc === enrichedHero && stockHero && stockHero !== enrichedHero) {
       setHeroSrc(stockHero);
@@ -129,172 +109,50 @@ const TripSummaryCard = ({
     setHeroSrc(undefined);
   };
 
-  const handleShare = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (sharing) return;
-    setSharing(true);
-    try {
-      const dayTitles = data.itinerary
-        .slice(0, 4)
-        .map((d: any) => d.title)
-        .filter(Boolean);
-      const result = await shareTripCard({
-        destination,
-        origin: resolvedOrigin || undefined,
-        days,
-        stops,
-        stays: data.hotels.length,
-        flights: data.flights.length,
-        dayTitles,
-      });
-      if (result === "shared") {
-        toast.success("Shared!");
-      } else if (result === "downloaded") {
-        toast.success("Share card saved", {
-          description: "Post it on your stories and tag @jolliday",
-        });
-      } else {
-        toast.error("Couldn't create the share card");
-      }
-      setShareDone(true);
-      setTimeout(() => setShareDone(false), 2200);
-    } finally {
-      setSharing(false);
-    }
-  };
-
   return (
     <div
       onClick={handleOpen}
-      className="mt-4 w-full max-w-md rounded-3xl border border-border bg-card overflow-hidden cursor-pointer shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300 animate-stagger-in animate-share-breathe"
+      className="group mt-4 w-full max-w-sm rounded-2xl border border-border bg-card overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-shadow duration-200"
     >
-      {/* ── Cinematic hero ── */}
-      <div className="relative h-64 overflow-hidden">
+      {/* City image — always visible, expands on hover */}
+      <div className="relative h-32 group-hover:h-44 overflow-hidden transition-all duration-300 ease-in-out">
         {heroSrc ? (
           <img
             src={heroSrc}
             alt={destination}
             onError={handleHeroError}
-            className="w-full h-full object-cover animate-ken-burns animate-punch-in"
+            className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30 flex items-center justify-center">
-            <MapPin className="h-12 w-12 text-muted-foreground/30" />
+          <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
+            <MapPin className="h-10 w-10 text-muted-foreground/30" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/80" />
-        <div className="absolute inset-0 noise-overlay opacity-40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50" />
+        <div className="absolute bottom-3 left-4">
+          <h3 className="text-xl font-bold text-white leading-tight drop-shadow">
+            {destination}
+          </h3>
+        </div>
+      </div>
 
-        {/* Share pill, top-right */}
+      {/* Content */}
+      <div className="p-4">
+        {/* Stats row */}
+        <div className="grid grid-cols-4 gap-2">
+          <StatTile label="Days" value={days} icon={<CalendarDays className="h-3.5 w-3.5" />} />
+          <StatTile label="Hotels" value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} />
+          <StatTile label="Flights" value={data.flights.length} icon={<Plane className="h-3.5 w-3.5" />} />
+          <StatTile label="Activities" value={activitiesCount} icon={<Activity className="h-3.5 w-3.5" />} />
+        </div>
+
+        {/* View plan button */}
         <button
           type="button"
-          onClick={handleShare}
-          disabled={sharing}
-          className="absolute top-3 right-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur text-foreground text-xs font-semibold shadow-md hover:bg-white transition-colors disabled:opacity-70 disabled:cursor-wait press-bounce animate-hero-rise"
-          style={{ animationDelay: "0.38s" }}
-          aria-label="Share trip card"
+          className="mt-4 w-full py-2.5 rounded-xl bg-foreground text-background font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
         >
-          {sharing ? (
-            <Download className="h-3.5 w-3.5 animate-pulse" />
-          ) : shareDone ? (
-            <Check className="h-3.5 w-3.5 text-primary" />
-          ) : (
-            <Share2 className="h-3.5 w-3.5" />
-          )}
-          <span>{shareDone ? "Saved" : sharing ? "Building…" : "Share"}</span>
+          View full plan <ArrowRight className="h-3.5 w-3.5" />
         </button>
-
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <p
-            className="text-[10px] uppercase tracking-[0.35em] text-white/85 mb-3 inline-flex items-center gap-2 animate-hero-rise"
-            style={{ animationDelay: "0.05s" }}
-          >
-            <LogoMark size={12} color="currentColor" /> Your Jolliday
-          </p>
-          <h3
-            className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-[0.95] drop-shadow-lg"
-            aria-label={destination}
-          >
-            {destination.split("").map((ch, i) => (
-              <span
-                key={i}
-                className="letter-rise"
-                style={{ animationDelay: `${0.18 + i * 0.04}s` }}
-              >
-                {ch === " " ? "\u00A0" : ch}
-              </span>
-            ))}
-          </h3>
-          {days > 0 && (
-            <p
-              className="mt-2 text-white/80 text-sm animate-hero-rise"
-              style={{ animationDelay: "0.32s" }}
-            >
-              {days} {days === 1 ? "day" : "days"} crafted just for you
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ── Stat tiles overlapping hero ── */}
-      <div className="px-4 -mt-6 relative z-10">
-        <div className="grid grid-cols-4 gap-2">
-          <StatTile
-            label="Days"
-            value={days}
-            icon={<CalendarDays className="h-3 w-3" />}
-            delay="0.4s"
-          />
-          <StatTile
-            label="Stops"
-            value={stops}
-            icon={<MapPin className="h-3 w-3" />}
-            delay="0.45s"
-          />
-          <StatTile
-            label="Stays"
-            value={data.hotels.length}
-            icon={<Hotel className="h-3 w-3" />}
-            delay="0.5s"
-          />
-          <StatTile
-            label="Flights"
-            value={data.flights.length}
-            icon={<Plane className="h-3 w-3" />}
-            delay="0.55s"
-          />
-        </div>
-      </div>
-
-      {/* ── Route recap (origin → destination arc) ── */}
-      {resolvedOrigin && (
-        <div
-          className="px-5 pt-5 animate-hero-rise"
-          style={{ animationDelay: "0.58s" }}
-        >
-          <RouteRecap origin={resolvedOrigin} destination={destination} />
-        </div>
-      )}
-
-      {/* ── Day rail teaser ── */}
-      {days > 0 && (
-        <div
-          className={`px-5 ${resolvedOrigin ? "pt-4" : "pt-5"} animate-hero-rise`}
-          style={{ animationDelay: "0.62s" }}
-        >
-          <DayRailMini itinerary={data.itinerary} />
-        </div>
-      )}
-
-      {/* ── CTA ── */}
-      <div className="p-4 pt-4">
-        <div
-          className="w-full py-3 rounded-2xl bg-foreground text-background font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity animate-hero-rise press-bounce"
-          style={{ animationDelay: "0.7s" }}
-        >
-          <Sparkles className="h-3.5 w-3.5" /> Open full plan{" "}
-          <ArrowRight className="h-3.5 w-3.5" />
-        </div>
       </div>
     </div>
   );
@@ -304,21 +162,17 @@ export const StatTile = ({
   label,
   value,
   icon,
-  delay,
 }: {
   label: string;
   value: number | string;
   icon: React.ReactNode;
   delay?: string;
 }) => (
-  <div
-    className="rounded-xl border border-border bg-card/95 backdrop-blur p-2 text-center shadow-sm animate-hero-rise"
-    style={{ animationDelay: delay }}
-  >
-    <div className="text-base sm:text-lg font-bold text-foreground leading-none">
+  <div className="rounded-lg border border-border bg-muted/50 p-2 text-center">
+    <div className="text-base font-bold text-foreground leading-none">
       {value}
     </div>
-    <div className="mt-1 text-[8.5px] uppercase tracking-[0.2em] text-muted-foreground inline-flex items-center gap-1 justify-center">
+    <div className="mt-1 text-[9px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1 justify-center">
       <span className="text-muted-foreground/70">{icon}</span>
       {label}
     </div>
@@ -357,7 +211,6 @@ export const RouteRecap = ({
             strokeLinecap="round"
             strokeDasharray="3 4"
           />
-          {/* plane glyph mid-arc */}
           <g transform="translate(90, 9)">
             <circle r="8" fill="white" stroke="hsl(234 62% 47%)" strokeWidth="1.2" />
             <g transform="translate(-5, -5)">

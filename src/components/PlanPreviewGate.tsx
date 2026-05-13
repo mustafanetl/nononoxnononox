@@ -53,7 +53,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, origin, onUpgrade 
   const prices = getCurrencyPrices();
 
   return (
-    <div className="mt-4 w-full max-w-md rounded-3xl border border-border bg-card overflow-hidden shadow-xl animate-stagger-in">
+    <div className="mt-4 w-full max-w-md rounded-3xl border border-border bg-card overflow-hidden shadow-xl">
       {/* ── Cinematic hero ── */}
       <div className="relative h-64 overflow-hidden">
         {heroSrc ? (
@@ -61,7 +61,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, origin, onUpgrade 
             src={heroSrc}
             alt={destination}
             onError={handleHeroError}
-            className="w-full h-full object-cover animate-ken-burns animate-punch-in"
+            className="w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/30 via-muted to-accent/30" />
@@ -70,8 +70,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, origin, onUpgrade 
         <div className="absolute inset-0 noise-overlay opacity-40" />
         <div className="absolute bottom-0 left-0 right-0 p-5">
           <p
-            className="text-[10px] uppercase tracking-[0.35em] text-white/85 mb-3 inline-flex items-center gap-2 animate-hero-rise"
-            style={{ animationDelay: "0.05s" }}
+            className="text-[10px] uppercase tracking-[0.35em] text-white/85 mb-3 inline-flex items-center gap-2"
           >
             <LogoMark size={12} color="currentColor" /> Your Jolliday
           </p>
@@ -79,21 +78,10 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, origin, onUpgrade 
             className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-[0.95] drop-shadow-lg"
             aria-label={destination}
           >
-            {destination.split("").map((ch, i) => (
-              <span
-                key={i}
-                className="letter-rise"
-                style={{ animationDelay: `${0.18 + i * 0.04}s` }}
-              >
-                {ch === " " ? "\u00A0" : ch}
-              </span>
-            ))}
+            {destination}
           </h3>
           {days > 0 && (
-            <p
-              className="mt-2 text-white/80 text-sm animate-hero-rise"
-              style={{ animationDelay: "0.32s" }}
-            >
+            <p className="mt-2 text-white/80 text-sm">
               {days} {days === 1 ? "day" : "days"} crafted just for you
             </p>
           )}
@@ -112,7 +100,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, origin, onUpgrade 
 
       {/* ── Route recap ── */}
       {resolvedOrigin && (
-        <div className="px-5 pt-5 animate-hero-rise" style={{ animationDelay: "0.58s" }}>
+        <div className="px-5 pt-5">
           <RouteRecap origin={resolvedOrigin} destination={destination} />
         </div>
       )}
@@ -120,8 +108,7 @@ const PlanPreviewGate = ({ data, destination, enrichedImages, origin, onUpgrade 
       {/* ── Day rail teaser ── */}
       {days > 0 && (
         <div
-          className={`px-5 ${resolvedOrigin ? "pt-4" : "pt-5"} animate-hero-rise`}
-          style={{ animationDelay: "0.62s" }}
+          className={`px-5 ${resolvedOrigin ? "pt-4" : "pt-5"}`}
         >
           <DayRailMini itinerary={data.itinerary} />
         </div>
