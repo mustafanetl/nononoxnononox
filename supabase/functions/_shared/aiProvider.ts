@@ -51,11 +51,12 @@ export async function streamChat(
       ...DEFAULT_HEADERS,
     },
     body: JSON.stringify({
-      ...(model ? { model } : {}),
+      model: model || "google/gemini-2.5-flash-lite",
       messages,
       stream: true,
       max_tokens: maxTokens,
       temperature: 0.7,
+      service_tier: "flex",
     }),
   });
 
