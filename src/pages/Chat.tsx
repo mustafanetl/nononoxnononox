@@ -400,78 +400,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     setCraftingActive(true);
   }, []);
 
-  // Start crafting as soon as a full-plan request is in flight, even before blocks stream back.
-  useEffect(() => {
-    if (!isLoading || craftingActive) return;
-
-    const userMessages = messages.filter((msg) => msg.role === "user");
-    const latestUser = userMessages[userMessages.length - 1];
-    const previousUser = userMessages[userMessages.length - 2];
-    if (!latestUser) return;
-
-    const latestCities = inferCitiesFromPrompt(latestUser.content);
-    const previousCities = inferCitiesFromPrompt(previousUser?.content || "");
-    const origin = latestCities.origin || previousCities.origin || originCity;
-
-    // Try to recover a destination from the most recent assistant message that
-    // already mentioned one (e.g., during a follow-up "yes, prepare the plan").
-    let recoveredDestination = "";
-    for (let i = messages.length - 1; i >= 0 && !recoveredDestination; i--) {
-      const m = messages[i];
-      if (m.role === "assistant") {
-        recoveredDestination = extractStructuredDestination(m.content) || "";
-      }
-    }
-
-    const destination =
-      latestCities.destination ||
-      previousCities.destination ||
-      recoveredDestination ||
-      "your trip";
-
-    // Start the crafting animation the instant we're confident the AI will
-    // build a plan this turn. We don't wait for the AI to start streaming
-    // fenced blocks (that's the "hang" the user hated). Triggers:
-    //  1) Explicit "prepare/create/make the plan" phrasing.
-    //  2) Prior assistant message asked to prepare; user replied yes.
-    //  3) The user message itself *is* a plan request — contains both a
-    //     destination AND some duration signal ("3 days", "a week",
-    //     "weekend", a date-range), OR contains explicit travel verbs
-    //     ("plan a trip to...", "trip to X for Y days", "from X to Y").
-    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
-    const lastAssistantAskedToPrepare = lastAssistant
-      ? /(shall i (prepare|build|create|make) (the )?(full )?plan|ready to (prepare|build|create|make) (your |the )?plan|prepare the (full )?plan\??)/i.test(lastAssistant.content)
-      : false;
-    const userSaidYes = /^\s*(yes|yep|yeah|sure|ok(ay)?|do it|go ahead|please do|sounds good|let's go|let's do it|prepare it|make it)\b[\s.!?]*$/i.test(latestUser.content);
-
-    const userMsgText = latestUser.content || "";
-    const hasDestinationInUserMsg = !!latestCities.destination;
-    const hasDurationHint =
-      /\b\d+\s*(?:day|days|night|nights|week|weeks)\b/i.test(userMsgText) ||
-      /\b(?:weekend|long\s*weekend|a\s+week|two\s+weeks|couple\s+of\s+days|few\s+days|quick\s+getaway)\b/i.test(userMsgText);
-    const hasTravelVerb =
-      /\b(?:trip|travel|vacation|holiday|plan\s+a|visit|explore|itinerary)\b/i.test(userMsgText) ||
-      /\bfrom\s+[^.\n]+?\s+to\s+[^.\n]+/i.test(userMsgText);
-    // Only trigger early crafting when we have STRONG signals — destination + duration.
-    // A travel verb alone is too weak (e.g. "visit museums in Paris" is a question, not a plan request).
-    const looksLikePlanRequest =
-      hasDestinationInUserMsg && hasDurationHint;
-
-    const shouldStart =
-      isPlanConfirmationMessage(latestUser.content) ||
-      (lastAssistantAskedToPrepare && userSaidYes) ||
-      looksLikePlanRequest;
-
-    if (!shouldStart) return;
-
-    const seed = `${latestUser.content}|${destination}|${origin}`;
-    if (pendingCraftSeedRef.current !== seed) {
-      pendingCraftSeedRef.current = seed;
-      startCrafting(destination, origin);
-    }
-  }, [isLoading, messages, originCity, startCrafting]);
-
-  // Upgrade the in-flight loader once the assistant starts streaming structured plan data.
+  // Only start crafting when the AI actually streams structured plan blocks.
   useEffect(() => {
     const lastIdx = messages.length - 1;
     if (lastIdx < 0) return;
