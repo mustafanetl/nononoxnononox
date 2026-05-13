@@ -401,8 +401,14 @@ export const useRzumaChat = () => {
       let planText = await runStream();
 
       // === QA loop (AI2) — only if AI1 produced a structured plan ===
+      // The revision runs silently: we keep the original plan visible and only
+      // swap the content if the revision produces an APPROVED plan. This prevents
+      // the flickering that happened when revisions replaced the visible message
+      // mid-stream.
       if (hasStructuredPlan(planText)) {
+        const originalPlanText = planText;
         let lastIssuesSig = "";
+        let revisionApproved = false;
         for (let attempt = 0; attempt < MAX_REVISIONS; attempt++) {
           setQaStatus("verifying");
           let review: { approved: boolean; issues?: string[]; enrichedPlan?: string } = { approved: true };
@@ -431,9 +437,9 @@ export const useRzumaChat = () => {
             // If reviewer returned a Google-Places-verified enriched plan,
             // swap it into the assistant message so cards render with real
             // coords + matched venue names.
-            if (review.enrichedPlan && review.enrichedPlan !== planText) {
-              assistantContent = review.enrichedPlan;
-              const finalContent = review.enrichedPlan;
+            const finalContent = review.enrichedPlan || planText;
+            if (finalContent !== originalPlanText) {
+              assistantContent = finalContent;
               setConversations(prev => prev.map(c => {
                 if (c.id !== currentId) return c;
                 const msgs = c.messages;
@@ -444,6 +450,7 @@ export const useRzumaChat = () => {
                 return c;
               }));
             }
+            revisionApproved = true;
             break;
           }
 
@@ -456,10 +463,17 @@ export const useRzumaChat = () => {
           }
           lastIssuesSig = issuesSig;
 
-          // Need a revision
+          // Need a revision — run silently without updating the visible message.
           setQaStatus("fixing");
           try {
+            // Save current visible content before revision overwrites it
+            const savedContent = assistantContent;
             planText = await runStream(review.issues);
+            // Restore the original visible content — don't show the revision mid-stream.
+            // The visible message stays as the original plan until revision is approved.
+            assistantContent = savedContent;
+            pendingContent = savedContent;
+            flushPending();
           } catch (err) {
             console.warn("Revision stream failed:", err);
             break;
