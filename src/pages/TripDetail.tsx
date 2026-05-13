@@ -788,11 +788,25 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         </Reveal>
       )}
 
-      {/* ── Logistics: Hotels ── */}
-      {data.hotels.length > 0 && (
+      {/* ── Logistics: Flights + Hotels side-by-side ── */}
+      {(data.flights.length > 0 || data.hotels.length > 0) && (
         <Reveal>
           <Section eyebrow={t.logistics} title={t.logisticsTitle} maxWidth="max-w-6xl">
             <div className="grid lg:grid-cols-2 gap-6">
+              {data.flights.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                    <Plane className="h-3.5 w-3.5" /> {t.flights}
+                  </div>
+                  <div className="space-y-3">
+                    {data.flights.map((f, i) => (
+                      <FlightRow key={f.id || i} flight={f}
+                        t={t}
+                        onClick={() => { setSelectedFlight(f); setFlightModalOpen(true); }} />
+                    ))}
+                  </div>
+                </div>
+              )}
               {data.hotels.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">

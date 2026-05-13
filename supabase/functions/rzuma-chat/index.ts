@@ -271,8 +271,10 @@ ITINERARY RULES:
 - transitNext must reference the next venue or transit, never the hotel (e.g. "10 min walk to dinner", not "walk to hotel").
 
 AIRPORT / ARRIVAL RULES (CRITICAL):
-- NEVER include the airport as an itinerary slot. No "arrival at airport", "flight to X", "airport transfer", "baggage claim", "land at X" — the airport is NEVER part of the plan.
-- Every day ALWAYS starts in the morning (breakfast 7-10am) as if the user is already fresh and in the destination.
+- The airport is NEVER part of the plan. Flights are shown SEPARATELY in the flights block (outbound + return), but NEVER appear in activities or itinerary.
+- activities block: NEVER include airports, flights, transfers, or anything travel-related. Only real city attractions, restaurants, museums, etc.
+- itinerary block: NEVER include the airport as a slot. No "arrival at airport", "flight to X", "airport transfer", "baggage claim", "land at X", "fly home", "head to airport". The airport does NOT exist in the itinerary.
+- Every day ALWAYS starts in the morning (breakfast 7-10am) as if the user is already fresh and in the destination city.
 - The ONLY exception: if the user explicitly says their arrival time (e.g. "arriving at 3pm", "landing in the evening", "flight gets in at 6pm"), then Day 1 starts at that time with a normal city activity (NOT the airport). If arrival is late, Day 1 may only have dinner.
 - If the user says nothing about arrival time, assume they're already in the city from morning. Day 1 = full day starting with breakfast.
 - Same for departure day: NEVER include "head to airport" or "flight home". Day N ends with a normal activity like dinner or sunset drinks, not transit.
