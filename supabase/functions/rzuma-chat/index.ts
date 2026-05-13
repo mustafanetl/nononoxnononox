@@ -295,7 +295,19 @@ activities
 \`\`\`activities
 [{...}]
 
-If you forget the fences, the user sees a wall of JSON instead of pretty cards. ALWAYS include both opening (\`\`\`blockname) and closing (\`\`\`) fences for every block.`;
+If you forget the fences, the user sees a wall of JSON instead of pretty cards. ALWAYS include both opening (\`\`\`blockname) and closing (\`\`\`) fences for every block.
+
+════════════════════════════════════════════════
+FINAL WARNING — DO NOT CUT SHORT
+════════════════════════════════════════════════
+Your output MUST be COMPLETE. Do NOT stop early. A full trip plan is typically 7,000-10,000 tokens.
+If your output is under 5,000 tokens for a multi-day trip, you almost certainly skipped something.
+CHECKLIST before stopping:
+- activities block has 5-8 items? If not, ADD MORE.
+- itinerary has EVERY day with 6-8 slots each? If not, ADD MORE.
+- Every day has breakfast + lunch + dinner? If not, ADD THEM.
+- travelinfo block present? destination_enrich block present? quickreplies present?
+DO NOT STOP until ALL blocks are complete with full content.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

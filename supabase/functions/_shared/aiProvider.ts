@@ -55,7 +55,7 @@ export async function streamChat(
       messages,
       stream: true,
       max_tokens: maxTokens,
-      temperature: 0.8,
+      temperature: 0.7,
     }),
   });
 
