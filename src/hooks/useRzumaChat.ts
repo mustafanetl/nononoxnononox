@@ -28,8 +28,7 @@ export type UserPreferences = {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rzuma-chat`;
 const REVIEW_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/review-trip-plan`;
 
-export type QaStatus = null | "verifying" | "fixing";
-const MAX_REVISIONS = 3;
+export type QaStatus = null | "verifying";
 
 const hasStructuredPlan = (text: string): boolean => {
   return /```(activities|itinerary|hotels|flights)\b/.test(text);
@@ -244,9 +243,6 @@ export const useRzumaChat = () => {
     setError(null);
 
     let assistantContent = "";
-    // When true, streaming updates are collected but NOT flushed to the UI.
-    // Used during QA revision loops to keep the original plan visible.
-    let silentMode = false;
 
     // rAF-batched conversation update so streaming tokens don't re-render
     // (and re-parse) the whole plan on every delta. The chat edge function
@@ -258,7 +254,7 @@ export const useRzumaChat = () => {
 
     const flushPending = () => {
       rafId = null;
-      if (pendingContent === null || silentMode) return;
+      if (pendingContent === null) return;
       const content = pendingContent;
       pendingContent = null;
       setConversations(prev => prev.map(c => {
@@ -315,8 +311,8 @@ export const useRzumaChat = () => {
       // hole. Client still reads sub state for UI (paywall gating) elsewhere.
       const fullPrefs = hasPrefs ? prefsContext : undefined;
 
-      // Stream one AI1 response. Returns the full text streamed.
-      const runStream = async (revisionRequest?: string[]): Promise<string> => {
+      // Stream the AI response. Returns the full text streamed.
+      const runStream = async (): Promise<string> => {
         const authHeader = await getAuthHeader();
         const resp = await fetch(CHAT_URL, {
           method: "POST",
@@ -324,23 +320,13 @@ export const useRzumaChat = () => {
             "Content-Type": "application/json",
             Authorization: authHeader,
           },
-          body: JSON.stringify({ messages: baseMessages, preferences: fullPrefs, revisionRequest }),
+          body: JSON.stringify({ messages: baseMessages, preferences: fullPrefs }),
         });
         if (!resp.ok) {
           const errData = await resp.json().catch(() => ({}));
           throw new Error(errData.error || "Failed to get response");
         }
         if (!resp.body) throw new Error("No response body");
-
-        // On a revision, we are REPLACING the previous assistant message content.
-        // Keep the old content visible until the new stream produces structured
-        // blocks — this prevents the plan card from flickering away and back.
-        if (revisionRequest && revisionRequest.length) {
-          assistantContent = "";
-          // Don't wipe the visible message yet — we'll replace it once the
-          // new stream has meaningful content. The updateAssistant function
-          // will overwrite it on the first flush.
-        }
 
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
@@ -403,46 +389,30 @@ export const useRzumaChat = () => {
       // === First pass (AI1) ===
       let planText = await runStream();
 
-      // === QA loop (AI2) — only if AI1 produced a structured plan ===
-      // The revision runs silently: we keep the original plan visible and only
-      // swap the content if the revision produces an APPROVED plan. This prevents
-      // the flickering that happened when revisions replaced the visible message
-      // mid-stream.
+      // === QA review — verify and enrich with Google Places data ===
+      // Single pass only: if approved, swap in enriched coords/names.
+      // No revision loops — they caused flickering and broken state.
       if (hasStructuredPlan(planText)) {
-        const originalPlanText = planText;
-        let lastIssuesSig = "";
-        let revisionApproved = false;
-        for (let attempt = 0; attempt < MAX_REVISIONS; attempt++) {
+        try {
           setQaStatus("verifying");
-          let review: { approved: boolean; issues?: string[]; enrichedPlan?: string } = { approved: true };
-          try {
-            const reviewAuth = await getAuthHeader();
-            const reviewResp = await fetch(REVIEW_URL, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: reviewAuth,
-              },
-              body: JSON.stringify({
-                planText,
-                destinationHint: extractDestinationHint(planText),
-              }),
-            });
-            if (reviewResp.ok) {
-              review = await reviewResp.json();
-            }
-          } catch (err) {
-            console.warn("Reviewer failed, fail-open:", err);
-            break;
-          }
-
-          if (review.approved || !review.issues || review.issues.length === 0) {
-            // If reviewer returned a Google-Places-verified enriched plan,
-            // swap it into the assistant message so cards render with real
-            // coords + matched venue names.
-            const finalContent = review.enrichedPlan || planText;
-            if (finalContent !== originalPlanText) {
-              assistantContent = finalContent;
+          const reviewAuth = await getAuthHeader();
+          const reviewResp = await fetch(REVIEW_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: reviewAuth,
+            },
+            body: JSON.stringify({
+              planText,
+              destinationHint: extractDestinationHint(planText),
+            }),
+          });
+          if (reviewResp.ok) {
+            const review = await reviewResp.json();
+            // Only swap in the enriched plan if it was approved (has verified coords)
+            if (review.approved && review.enrichedPlan && review.enrichedPlan !== planText) {
+              assistantContent = review.enrichedPlan;
+              const finalContent = review.enrichedPlan;
               setConversations(prev => prev.map(c => {
                 if (c.id !== currentId) return c;
                 const msgs = c.messages;
@@ -453,44 +423,11 @@ export const useRzumaChat = () => {
                 return c;
               }));
             }
-            revisionApproved = true;
-            break;
           }
-
-          // Short-circuit: if the reviewer returns the exact same issues as
-          // last revision, the AI is stuck. Stop burning tokens on a loop.
-          const issuesSig = review.issues.slice().sort().join("|");
-          if (issuesSig === lastIssuesSig) {
-            console.warn("Revision loop detected — same issues after retry, accepting current plan");
-            break;
-          }
-          lastIssuesSig = issuesSig;
-
-          // Need a revision — run silently without updating the visible message.
-          setQaStatus("fixing");
-          try {
-            // Enable silent mode so streaming doesn't update the visible message
-            silentMode = true;
-            assistantContent = "";
-            planText = await runStream(review.issues);
-            silentMode = false;
-          } catch (err) {
-            silentMode = false;
-            console.warn("Revision stream failed:", err);
-            break;
-          }
-          if (!hasStructuredPlan(planText)) break;
+        } catch (err) {
+          console.warn("Reviewer failed, fail-open:", err);
         }
         setQaStatus(null);
-
-        // Ensure no stale revision content leaks into the visible message.
-        // The finally block calls flushPending() which would flush revision
-        // content if pendingContent is still set from the silent stream.
-        // Restore assistantContent to the original plan so the finally flush is safe.
-        if (!revisionApproved) {
-          assistantContent = originalPlanText;
-          pendingContent = null;
-        }
       }
     } catch (e) {
       console.error("Chat error:", e);
