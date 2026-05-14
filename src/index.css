@@ -637,3 +637,133 @@
     animation-delay: 1s;
   }
 }
+
+
+@layer utilities {
+  /* ============================================================
+     GOTHENBURG TikTok Promo — Pure CSS auto-play animations
+     9:16 vertical, ~20s total runtime, no JS timers needed
+     ============================================================ */
+
+  /* Background gradient */
+  .promo-gbg-bg {
+    background: linear-gradient(160deg, #0f172a 0%, #1e1b4b 40%, #312e81 70%, #0f172a 100%);
+  }
+
+  /* --- Phase 1: Hook (0s–2s) --- */
+  @keyframes gbg-fade-in {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .promo-gbg-fade-in {
+    opacity: 0;
+    animation: gbg-fade-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes gbg-punch-in {
+    0%   { opacity: 0; transform: scale(1.4); filter: blur(20px); letter-spacing: 0.15em; }
+    60%  { opacity: 1; transform: scale(0.97); filter: blur(0); letter-spacing: -0.04em; }
+    100% { opacity: 1; transform: scale(1); filter: blur(0); letter-spacing: -0.04em; }
+  }
+  .promo-gbg-punch-in {
+    opacity: 0;
+    animation: gbg-punch-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;
+  }
+
+  /* Hook container: visible 0s–2s */
+  @keyframes gbg-hook-lifecycle {
+    0%   { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { opacity: 0; pointer-events: none; }
+  }
+  .promo-gbg-hook {
+    animation: gbg-hook-lifecycle 2s ease forwards;
+  }
+
+  /* --- Phase 2: Transition (2s–3s) --- */
+  @keyframes gbg-transition-lifecycle {
+    0%   { opacity: 0; }
+    5%   { opacity: 0; }
+    20%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { opacity: 0; pointer-events: none; }
+  }
+  .promo-gbg-transition {
+    opacity: 0;
+    animation: gbg-transition-lifecycle 1.2s ease 2s forwards;
+  }
+
+  /* --- Phase 3: Itinerary (3s–15s) --- */
+  @keyframes gbg-itinerary-lifecycle {
+    0%   { opacity: 0; }
+    3%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { opacity: 0; pointer-events: none; }
+  }
+  .promo-gbg-itinerary {
+    opacity: 0;
+    animation: gbg-itinerary-lifecycle 12s ease 3s forwards;
+  }
+
+  @keyframes gbg-itinerary-title-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .promo-gbg-itinerary-title {
+    opacity: 0;
+    animation: gbg-itinerary-title-in 0.5s ease 3.2s forwards;
+  }
+
+  /* Cards slide in from right, staggered */
+  @keyframes gbg-card-slide {
+    from { opacity: 0; transform: translateX(100px) scale(0.95); filter: blur(8px); }
+    to   { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+  }
+  .promo-gbg-card {
+    opacity: 0;
+    animation: gbg-card-slide 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    /* animation-delay set inline per card */
+  }
+
+  /* --- Phase 4: Stats (15s–17s) --- */
+  @keyframes gbg-stats-lifecycle {
+    0%   { opacity: 0; transform: scale(0.9); }
+    15%  { opacity: 1; transform: scale(1); }
+    85%  { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.95); pointer-events: none; }
+  }
+  .promo-gbg-stats {
+    opacity: 0;
+    animation: gbg-stats-lifecycle 2.5s cubic-bezier(0.22, 1, 0.36, 1) 15s forwards;
+  }
+
+  @keyframes gbg-stats-logo-in {
+    from { opacity: 0; transform: translateY(15px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .promo-gbg-stats-logo {
+    opacity: 0;
+    animation: gbg-stats-logo-in 0.6s ease 15.5s forwards;
+  }
+
+  /* --- Phase 5: CTA (17s–20s) --- */
+  @keyframes gbg-cta-lifecycle {
+    0%   { opacity: 0; transform: scale(0.9); }
+    20%  { opacity: 1; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .promo-gbg-cta {
+    opacity: 0;
+    animation: gbg-cta-lifecycle 3s cubic-bezier(0.22, 1, 0.36, 1) 17.5s forwards;
+  }
+
+  /* Breathing pulse on the URL */
+  @keyframes gbg-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.85; transform: scale(1.04); }
+  }
+  .promo-gbg-pulse {
+    animation: gbg-pulse 1.5s ease-in-out infinite;
+    animation-delay: 18s;
+  }
+}
