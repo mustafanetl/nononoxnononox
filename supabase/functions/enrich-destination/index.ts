@@ -28,19 +28,46 @@ function normalizeDestination(dest: string): string {
     "belgium", "czech republic", "czechia", "poland", "hungary", "ireland",
     "scotland", "england", "wales", "canada", "mexico", "brazil", "argentina",
     "egypt", "morocco", "south africa", "india", "china", "south korea",
-    "vietnam", "malaysia", "singapore", "philippines", "new zealand", "malta",
+    "vietnam", "malaysia", "singapore", "philippines", "new zealand",
   ];
   for (const country of countries) {
-    // Remove ", country" or " country" at the end
     normalized = normalized.replace(new RegExp(`,?\\s*${country}$`), "");
   }
+  
+  // Map known neighborhoods/districts to their parent city
+  const neighborhoodMap: Record<string, string> = {
+    "floriana": "malta", "valletta": "malta", "sliema": "malta", "mdina": "malta",
+    "st julians": "malta", "marsaxlokk": "malta", "mellieha": "malta",
+    "jordaan": "amsterdam", "centrum": "amsterdam", "dam square": "amsterdam",
+    "de pijp": "amsterdam", "herengracht": "amsterdam",
+    "sultanahmet": "istanbul", "beyoglu": "istanbul", "kadikoy": "istanbul",
+    "karakoy": "istanbul", "besiktas": "istanbul",
+    "shibuya": "tokyo", "shinjuku": "tokyo", "akihabara": "tokyo",
+    "harajuku": "tokyo", "ginza": "tokyo", "asakusa": "tokyo",
+    "sodermalm": "stockholm", "gamla stan": "stockholm", "ostermalm": "stockholm",
+    "norrmalm": "stockholm", "djurgarden": "stockholm",
+    "nyhavn": "copenhagen", "vesterbro": "copenhagen", "norrebro": "copenhagen",
+    "kreuzberg": "berlin", "mitte": "berlin", "prenzlauer berg": "berlin",
+    "montmartre": "paris", "le marais": "paris", "saint germain": "paris",
+    "trastevere": "rome", "monti": "rome", "testaccio": "rome",
+    "gion": "kyoto", "arashiyama": "kyoto", "higashiyama": "kyoto",
+    "deira": "dubai", "jumeirah": "dubai", "downtown dubai": "dubai",
+    "al sufouh": "dubai", "dubai marina": "dubai",
+    "kralingen": "rotterdam", "delfshaven": "rotterdam",
+    "haga": "gothenburg", "linne": "gothenburg",
+  };
   
   // Remove special chars and collapse whitespace
   normalized = normalized.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
   
-  // If it's a single short word that looks like a neighborhood or number, reject it
-  // (the caller should pass the actual city name)
-  if (/^\d+$/.test(normalized)) return ""; // pure numbers are garbage
+  // Check neighborhood map
+  if (neighborhoodMap[normalized]) {
+    return neighborhoodMap[normalized];
+  }
+  
+  // Reject garbage
+  if (/^\d+$/.test(normalized)) return ""; // pure numbers
+  if (normalized.length < 2) return ""; // too short
   
   return normalized;
 }
@@ -358,7 +385,7 @@ async function getExchangeRate(currencyCode: string): Promise<any> {
 }
 
 // Fetch iconic destination photos
-async function getGooglePlacePhotos(destination: string, limit = 6): Promise<any[]> {
+async function getGooglePlacePhotos(destination: string, limit = 3): Promise<any[]> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey) return [];
   // Two-stage strategy:
@@ -774,6 +801,15 @@ serve(async (req) => {
       });
     }
 
+    // Reject if normalization produces empty (garbage input)
+    const normalizedDest = normalizeDestination(destination);
+    if (!normalizedDest) {
+      console.warn(`Rejected empty normalized destination from input: "${destination}"`);
+      return new Response(JSON.stringify({ destination, images: [], partial: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // imageOnly mode: just fetch Google Places photos, skip everything else
     if (imageOnly) {
       console.log(`Image-only enrichment for: ${destination}`);
@@ -785,7 +821,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const images = await getGooglePlacePhotos(destination, 8);
+      const images = await getGooglePlacePhotos(destination, 3);
       // Store in cache for next time
       if (images.length > 0) await cacheImages(destination, images);
       return new Response(JSON.stringify({ destination, images }), {
@@ -809,7 +845,7 @@ serve(async (req) => {
     const geo = await geocode(destination);
     if (!geo) {
       console.warn(`Geocode failed for "${destination}" — returning photos-only enrichment`);
-      const images = cachedHeroImages || await getGooglePlacePhotos(destination, 6).catch(() => []);
+      const images = cachedHeroImages || await getGooglePlacePhotos(destination, 3).catch(() => []);
       if (!cachedHeroImages && images.length > 0) await cacheImages(destination, images);
       return new Response(JSON.stringify({ destination, images, partial: true }), {
         status: 200,

@@ -26,13 +26,39 @@ function normalizeDest(dest: string): string {
     "belgium", "czech republic", "czechia", "poland", "hungary", "ireland",
     "scotland", "england", "wales", "canada", "mexico", "brazil", "argentina",
     "egypt", "morocco", "south africa", "india", "china", "south korea",
-    "vietnam", "malaysia", "singapore", "philippines", "new zealand", "malta",
+    "vietnam", "malaysia", "singapore", "philippines", "new zealand",
   ];
   for (const country of countries) {
     normalized = normalized.replace(new RegExp(`,?\\s*${country}$`), "");
   }
   normalized = normalized.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+
+  // Map neighborhoods to parent city
+  const neighborhoodMap: Record<string, string> = {
+    "floriana": "malta", "valletta": "malta", "sliema": "malta", "mdina": "malta",
+    "st julians": "malta", "marsaxlokk": "malta", "mellieha": "malta",
+    "jordaan": "amsterdam", "centrum": "amsterdam", "dam square": "amsterdam",
+    "de pijp": "amsterdam", "herengracht": "amsterdam",
+    "sultanahmet": "istanbul", "beyoglu": "istanbul", "kadikoy": "istanbul",
+    "karakoy": "istanbul", "besiktas": "istanbul",
+    "shibuya": "tokyo", "shinjuku": "tokyo", "akihabara": "tokyo",
+    "harajuku": "tokyo", "ginza": "tokyo", "asakusa": "tokyo",
+    "sodermalm": "stockholm", "gamla stan": "stockholm", "ostermalm": "stockholm",
+    "norrmalm": "stockholm", "djurgarden": "stockholm",
+    "nyhavn": "copenhagen", "vesterbro": "copenhagen", "norrebro": "copenhagen",
+    "kreuzberg": "berlin", "mitte": "berlin", "prenzlauer berg": "berlin",
+    "montmartre": "paris", "le marais": "paris", "saint germain": "paris",
+    "trastevere": "rome", "monti": "rome", "testaccio": "rome",
+    "gion": "kyoto", "arashiyama": "kyoto", "higashiyama": "kyoto",
+    "deira": "dubai", "jumeirah": "dubai", "downtown dubai": "dubai",
+    "al sufouh": "dubai", "dubai marina": "dubai",
+    "kralingen": "rotterdam", "delfshaven": "rotterdam",
+    "haga": "gothenburg", "linne": "gothenburg",
+  };
+  if (neighborhoodMap[normalized]) return neighborhoodMap[normalized];
+
   if (/^\d+$/.test(normalized)) return "";
+  if (normalized.length < 2) return "";
   return normalized;
 }
 
