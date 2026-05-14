@@ -291,9 +291,9 @@ async function checkVenueCache(venueName: string, destination: string): Promise<
     const norm = destination.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
     const { data, error } = await sb
       .from("destination_media")
-      .select("venue_name, metadata")
+      .select("name, metadata")
       .eq("destination", norm)
-      .eq("venue_name", venueName.trim())
+      .eq("name", venueName.trim())
       .limit(1);
 
     if (error || !data || data.length === 0) return null;
@@ -304,7 +304,7 @@ async function checkVenueCache(venueName: string, destination: string): Promise<
       lat: meta.lat ?? undefined,
       lng: meta.lng ?? undefined,
       placeId: meta.placeId ?? undefined,
-      matchedName: meta.matchedName ?? data[0].venue_name ?? undefined,
+      matchedName: meta.matchedName ?? data[0].name ?? undefined,
     };
   } catch {
     return null;
@@ -319,12 +319,12 @@ async function saveVenueToCache(venueName: string, destination: string, lat?: nu
     const norm = destination.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
     await sb.from("destination_media").insert({
       destination: norm,
-      venue_name: venueName.trim(),
-      media_url: "", // No photo URL from verification — enrich-destination handles photos
-      media_type: "photo",
+      type: "activity",
+      name: venueName.trim(),
+      url: "", // No photo URL from verification — enrich-destination handles photos
       source: "google_places",
+      media_type: "photo",
       sort_order: 0,
-      is_hero: false,
       metadata: { lat, lng, placeId, matchedName, verified: true, verifiedAt: new Date().toISOString() },
     });
   } catch {
