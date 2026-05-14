@@ -58,24 +58,36 @@ serve(async (req) => {
 
     const admin = getAdminClient();
 
-    // Upsert — if the same key exists, update the content (fresher plan)
-    const { error: dbError } = await admin.from("cached_plans").upsert(
-      {
-        cache_key: cacheKey,
-        destination: normalizedDest,
-        duration: dur,
-        vibe: normalizedVibe,
-        traveler_type: normalizedType,
-        origin: origin ? String(origin).toLowerCase().trim() : null,
-        plan_content: content,
-        hit_count: 0,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "cache_key" },
-    );
+    // Insert only — never overwrite existing cached plans.
+    // If a plan already exists for this key, skip silently.
+    const { data: existing } = await admin
+      .from("cached_plans")
+      .select("id")
+      .eq("cache_key", cacheKey)
+      .maybeSingle();
+
+    if (existing) {
+      // Already cached — don't overwrite
+      console.log(`[cache-plan] already cached key=${cacheKey}, skipping`);
+      return new Response(
+        JSON.stringify({ ok: true, cacheKey, cached: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const { error: dbError } = await admin.from("cached_plans").insert({
+      cache_key: cacheKey,
+      destination: normalizedDest,
+      duration: dur,
+      vibe: normalizedVibe,
+      traveler_type: normalizedType,
+      origin: origin ? String(origin).toLowerCase().trim() : null,
+      plan_content: content,
+      hit_count: 0,
+    });
 
     if (dbError) {
-      console.error("cache-plan upsert error:", dbError);
+      console.error("cache-plan insert error:", dbError);
       return new Response(
         JSON.stringify({ error: "Failed to save plan to cache" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

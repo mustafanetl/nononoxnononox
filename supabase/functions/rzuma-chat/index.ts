@@ -12,8 +12,8 @@ import { streamChat, type ChatMessage } from "../_shared/aiProvider.ts";
 
 // ── PLAN CACHE HELPERS ────────────────────────────────────────────────────────
 
-/** Max age for cached plans (30 days). */
-const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+// Cached plans never expire — they persist until manually deleted by admin.
+// Admin-uploaded media (photos/videos) is permanent and never overwritten.
 
 /**
  * Try to extract plan-generation parameters from the conversation.
@@ -591,12 +591,10 @@ serve(async (req) => {
         const cacheKey = buildCacheKey(cacheParams);
         try {
           const admin = getAdminClient();
-          const cutoff = new Date(Date.now() - CACHE_MAX_AGE_MS).toISOString();
           const { data: cached } = await admin
             .from("cached_plans")
             .select("id, plan_content, hit_count")
             .eq("cache_key", cacheKey)
-            .gt("created_at", cutoff)
             .maybeSingle();
 
           if (cached?.plan_content) {
