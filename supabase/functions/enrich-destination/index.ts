@@ -57,7 +57,17 @@ function normalizeDestination(dest: string): string {
     "haga": "gothenburg", "linne": "gothenburg",
   };
   
-  // Remove special chars and collapse whitespace
+  // Transliterate Nordic/accented characters before stripping
+  const charMap: Record<string, string> = {
+    "ö": "o", "ä": "a", "å": "a", "ü": "u", "ø": "o", "æ": "ae",
+    "ñ": "n", "ç": "c", "é": "e", "è": "e", "ê": "e", "ë": "e",
+    "á": "a", "à": "a", "â": "a", "í": "i", "ì": "i", "î": "i",
+    "ó": "o", "ò": "o", "ô": "o", "ú": "u", "ù": "u", "û": "u",
+    "ý": "y", "ð": "d", "þ": "th", "ß": "ss",
+  };
+  normalized = normalized.split("").map(c => charMap[c] || c).join("");
+  
+  // Remove remaining special chars and collapse whitespace
   normalized = normalized.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
   
   // Check neighborhood map
