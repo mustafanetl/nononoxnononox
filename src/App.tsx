@@ -21,6 +21,7 @@ import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import Promo from "./pages/Promo";
+import PromoMalmo from "./pages/PromoMalmo";
 import Promox from "./pages/Promox";
 import Promoar from "./pages/Promoar";
 
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/promo" element={<Promo />} />
+              <Route path="/promomalmo" element={<PromoMalmo />} />
               <Route path="/promox" element={<Promox />} />
               <Route path="/promoar" element={<Promoar />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
