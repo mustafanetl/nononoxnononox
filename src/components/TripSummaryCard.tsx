@@ -4,9 +4,9 @@ import {
   Plane,
   Hotel,
   MapPin,
-  ArrowRight,
   CalendarDays,
-  Activity,
+  Sparkles,
+  Compass,
 } from "lucide-react";
 import { FlightData } from "@/components/FlightCard";
 import { HotelData } from "@/contexts/TripContext";
@@ -29,10 +29,13 @@ export type TripPlanData = {
 };
 
 /* ─────────────────────────────────────────────────────────────
-   TripSummaryCard
-   Clean, static plan card — no animations.
-   Shows: city image (revealed on hover), stats (days, hotels,
-   flights, activities), and a button to open the full plan.
+   TripSummaryCard — premium edition
+   A magazine-cover style card with:
+   • Cinematic full-bleed hero (video or image)
+   • Layered glass overlays for typography
+   • Dynamic gradient accents
+   • Polaroid-style activity peek strip
+   • Subtle parallax + reveal animations on hover
    ───────────────────────────────────────────────────────────── */
 
 type Props = {
@@ -111,63 +114,234 @@ const TripSummaryCard = ({
     setHeroSrc(undefined);
   };
 
+  // Pick top 3 activity photos for the polaroid strip
+  const photoStrip = (data.activities || [])
+    .slice(0, 6)
+    .map((a) => {
+      const venuePhoto = itineraryVenuePhotos?.[a.name]?.photo || itineraryVenuePhotos?.[a.name]?.thumbPhoto;
+      return {
+        name: a.name,
+        photo: venuePhoto || a.realPhoto || a.image || null,
+        category: a.category,
+      };
+    })
+    .filter((p) => p.photo)
+    .slice(0, 4);
+
+  // Build a tagline based on the trip vibe
+  const firstActivity = data.activities[0];
+  const tagline = data.travelInfo?.destination
+    ? `${days} day${days === 1 ? "" : "s"} in ${destination}`
+    : `${days} day${days === 1 ? "" : "s"} of magic`;
+
+  // Trip period from weather block or first slot date
+  const weather: any = (data as any).weather;
+  const period = weather?.period || data.travelInfo?.bestTimeToVisit || null;
+
   return (
     <div
       onClick={handleOpen}
-      className="group mt-4 w-full max-w-sm rounded-2xl border border-border bg-card overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-shadow duration-200"
+      className="group/card relative mt-4 w-full max-w-md cursor-pointer select-none"
     >
-      {/* City image — always visible, expands on hover */}
-      <div className="relative h-32 group-hover:h-44 overflow-hidden transition-all duration-300 ease-in-out">
-        {heroVideoUrl ? (
-          <video
-            src={heroVideoUrl}
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="w-full h-full object-cover"
-          />
-        ) : heroSrc ? (
-          <img
-            src={heroSrc}
-            alt={destination}
-            onError={handleHeroError}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20 flex items-center justify-center">
-            <MapPin className="h-10 w-10 text-muted-foreground/30" />
+      {/* Outer glow on hover */}
+      <div className="absolute -inset-1 rounded-[28px] bg-gradient-to-br from-primary/40 via-fuchsia-400/30 to-amber-300/40 opacity-0 group-hover/card:opacity-100 blur-xl transition-opacity duration-500" />
+
+      <div className="relative rounded-[24px] overflow-hidden bg-neutral-950 shadow-[0_8px_30px_rgba(0,0,0,0.12)] group-hover/card:shadow-[0_20px_60px_rgba(0,0,0,0.25)] transition-shadow duration-500">
+
+        {/* ── HERO LAYER ─────────────────────────────────────────── */}
+        <div className="relative h-[420px] overflow-hidden">
+          {heroVideoUrl ? (
+            <video
+              src={heroVideoUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover scale-110 group-hover/card:scale-105 transition-transform duration-[1500ms] ease-out"
+            />
+          ) : heroSrc ? (
+            <img
+              src={heroSrc}
+              alt={destination}
+              onError={handleHeroError}
+              className="absolute inset-0 w-full h-full object-cover scale-110 group-hover/card:scale-105 transition-transform duration-[1500ms] ease-out"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-fuchsia-800 flex items-center justify-center">
+              <Compass className="h-16 w-16 text-white/30" strokeWidth={1.5} />
+            </div>
+          )}
+
+          {/* Cinematic gradient overlays */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-fuchsia-500/10 mix-blend-overlay" />
+
+          {/* Top-left chip — "Your trip" */}
+          <div className="absolute top-5 left-5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 shadow-sm">
+            <Sparkles className="h-3 w-3 text-white" fill="white" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white">
+              Your trip
+            </span>
+          </div>
+
+          {/* Top-right chip — period if known */}
+          {period && (
+            <div className="absolute top-5 right-5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20">
+              <CalendarDays className="h-3 w-3 text-white" />
+              <span className="text-[11px] font-semibold text-white truncate max-w-[140px]">
+                {period}
+              </span>
+            </div>
+          )}
+
+          {/* ── BOTTOM CONTENT — DESTINATION TITLE ─────────────── */}
+          <div className="absolute inset-x-0 bottom-0 p-6 pb-7">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/70 mb-1.5">
+              {tagline}
+            </p>
+            <h2 className="text-[2.75rem] sm:text-5xl font-black tracking-tight text-white leading-[0.95] drop-shadow-lg">
+              {destination}
+            </h2>
+
+            {/* Origin → Destination */}
+            {origin && (
+              <div className="mt-3 inline-flex items-center gap-2 text-xs text-white/90">
+                <span className="font-medium">{origin}</span>
+                <Plane className="h-3 w-3 rotate-45" />
+                <span className="font-semibold">{destination}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── POLAROID PHOTO STRIP ─────────────────────────────── */}
+        {photoStrip.length > 0 && (
+          <div className="absolute -bottom-2 right-5 flex gap-2 z-10">
+            {photoStrip.slice(0, 3).map((p, i) => (
+              <div
+                key={p.name + i}
+                className="w-14 h-14 rounded-xl overflow-hidden border-[3px] border-white shadow-lg ring-1 ring-black/5 transform transition-transform duration-300"
+                style={{
+                  transform: `rotate(${(i - 1) * 4}deg) translateY(${i % 2 === 0 ? 0 : -4}px)`,
+                }}
+              >
+                <img
+                  src={p.photo!}
+                  alt={p.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => ((e.currentTarget.parentElement as HTMLElement).style.display = "none")}
+                />
+              </div>
+            ))}
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50" />
-        <div className="absolute bottom-3 left-4">
-          <h3 className="text-xl font-bold text-white leading-tight drop-shadow">
-            {destination}
-          </h3>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div className="p-4">
-        {/* Stats row */}
-        <div className="grid grid-cols-4 gap-2">
-          <StatTile label="Days" value={days} icon={<CalendarDays className="h-3.5 w-3.5" />} />
-          <StatTile label="Hotels" value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} />
-          <StatTile label="Flights" value={data.flights.length} icon={<Plane className="h-3.5 w-3.5" />} />
-          <StatTile label="Activities" value={activitiesCount} icon={<Activity className="h-3.5 w-3.5" />} />
-        </div>
+        {/* ── DETAILS LAYER ────────────────────────────────────── */}
+        <div className="relative bg-white p-5 pt-7">
+          {/* Stat row */}
+          <div className="grid grid-cols-4 gap-3 mb-5">
+            <PremiumStat label="Days" value={days} icon={<CalendarDays className="h-3.5 w-3.5" />} accent="primary" />
+            <PremiumStat label="Hotels" value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} accent="fuchsia" />
+            <PremiumStat label="Flights" value={data.flights.length} icon={<Plane className="h-3.5 w-3.5" />} accent="amber" />
+            <PremiumStat label="Stops" value={activitiesCount} icon={<MapPin className="h-3.5 w-3.5" />} accent="emerald" />
+          </div>
 
-        {/* View plan button */}
-        <button
-          type="button"
-          className="mt-4 w-full py-2.5 rounded-xl bg-foreground text-background font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-        >
-          View full plan <ArrowRight className="h-3.5 w-3.5" />
-        </button>
+          {/* Day teaser strip */}
+          {data.itinerary.length > 0 && (
+            <DayTeaserPreview itinerary={data.itinerary} />
+          )}
+
+          {/* CTA button */}
+          <button
+            type="button"
+            className="mt-5 w-full relative overflow-hidden rounded-2xl py-3.5 font-semibold text-sm text-white shadow-lg group/btn transition-transform active:scale-[0.98]"
+            style={{
+              background: "linear-gradient(135deg, hsl(234 62% 52%) 0%, hsl(280 70% 55%) 50%, hsl(330 80% 60%) 100%)",
+            }}
+          >
+            <span className="relative z-10 inline-flex items-center justify-center gap-2">
+              Open the full plan
+              <span className="inline-block transition-transform duration-300 group-hover/btn:translate-x-1">→</span>
+            </span>
+            {/* Shimmer */}
+            <span className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+          </button>
+        </div>
       </div>
     </div>
   );
 };
+
+/* ─── Premium stat tile with accent gradient ───────────────────── */
+const accentMap = {
+  primary: "from-primary/10 to-primary/5 text-primary",
+  fuchsia: "from-fuchsia-500/10 to-fuchsia-500/5 text-fuchsia-600",
+  amber: "from-amber-500/10 to-amber-500/5 text-amber-600",
+  emerald: "from-emerald-500/10 to-emerald-500/5 text-emerald-600",
+} as const;
+
+const PremiumStat = ({
+  label,
+  value,
+  icon,
+  accent,
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ReactNode;
+  accent: keyof typeof accentMap;
+}) => (
+  <div className={`relative rounded-2xl p-3 text-center bg-gradient-to-br ${accentMap[accent]} border border-black/[0.04] overflow-hidden`}>
+    <div className={`flex items-center justify-center mb-1 ${accentMap[accent].split(" ").pop()}`}>
+      {icon}
+    </div>
+    <div className="text-xl font-black text-foreground leading-none">{value}</div>
+    <div className="mt-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+      {label}
+    </div>
+  </div>
+);
+
+/* ─── Day teaser — shows day 1–3 highlight one-liners ──────────── */
+const DayTeaserPreview = ({ itinerary }: { itinerary: ItineraryData[] }) => {
+  const firstSlotTitle = (d: any): string => {
+    if (Array.isArray(d?.slots) && d.slots.length > 0) {
+      const slot = d.slots[0];
+      return slot.title || slot.name || slot.activity || slot.venue || "";
+    }
+    return d?.title || "";
+  };
+  const days = itinerary.slice(0, 3).map((d, i) => ({
+    num: i + 1,
+    teaser: firstSlotTitle(d),
+  }));
+
+  return (
+    <div className="space-y-1.5">
+      {days.map((d) => (
+        <div
+          key={d.num}
+          className="flex items-center gap-2.5 text-xs"
+        >
+          <span className="shrink-0 w-5 h-5 rounded-full bg-foreground text-background text-[10px] font-bold flex items-center justify-center">
+            {d.num}
+          </span>
+          <span className="text-muted-foreground truncate">{d.teaser || "—"}</span>
+        </div>
+      ))}
+      {itinerary.length > 3 && (
+        <div className="flex items-center gap-2.5 text-xs">
+          <span className="shrink-0 w-5 h-5 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground text-[10px] font-bold flex items-center justify-center">
+            +{itinerary.length - 3}
+          </span>
+          <span className="text-muted-foreground/70">more days inside</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Backwards-compat exports (used by PlanPreviewGate, etc.) ──── */
 
 export const StatTile = ({
   label,
@@ -190,7 +364,6 @@ export const StatTile = ({
   </div>
 );
 
-/* Static arc showing origin → destination as a recap. */
 export const RouteRecap = ({
   origin,
   destination,
