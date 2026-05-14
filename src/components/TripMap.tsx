@@ -89,7 +89,7 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
 
       L.control.zoom({ position: "bottomright" }).addTo(map);
       L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
         { attribution: "© OpenStreetMap © CARTO", subdomains: "abcd", maxZoom: 20 }
       ).addTo(map);
 
@@ -297,24 +297,17 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
   if (points.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border overflow-hidden shadow-sm bg-card">
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border">
-        <MapPin className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs font-semibold text-foreground">Interactive Map</span>
-        <span className="text-xs text-muted-foreground ml-auto">
-          {points.length} stops
-        </span>
-      </div>
-
+    <div className="relative bg-card overflow-hidden">
+      {/* Floating filter pills overlaid on the map (top-left) */}
       {days.length > 0 && (
-        <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+        <div className="absolute top-3 left-3 right-3 z-[400] flex items-center gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
           <button
             type="button"
             onClick={() => setActiveDay(null)}
-            className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+            className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all backdrop-blur-md shadow-sm ${
               activeDay == null
                 ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground hover:bg-muted/70"
+                : "bg-white/90 text-foreground hover:bg-white"
             }`}
           >
             All days
@@ -326,8 +319,8 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
                 key={d}
                 type="button"
                 onClick={() => setActiveDay(active ? null : d)}
-                className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                  active ? "text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"
+                className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all backdrop-blur-md shadow-sm ${
+                  active ? "text-white" : "bg-white/90 text-foreground hover:bg-white"
                 }`}
                 style={active ? { background: colorForDay(d) } : undefined}
               >
@@ -340,14 +333,22 @@ const TripMap = ({ points, onMarkerClick }: Props) => {
             );
           })}
           {points.some((p) => p.type === "hotel") && (
-            <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground">
+            <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-white/90 backdrop-blur-md text-foreground shadow-sm">
               <Bed className="h-3 w-3" /> Hotel
             </span>
           )}
         </div>
       )}
 
-      <div ref={mapRef} className="h-[280px] sm:h-[440px] w-full" />
+      {/* Stops counter (bottom-left) */}
+      <div className="absolute bottom-3 left-3 z-[400] inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-md shadow-sm">
+        <MapPin className="h-3 w-3 text-foreground" />
+        <span className="text-[10px] font-bold tracking-wide text-foreground tabular-nums">
+          {points.length} stops
+        </span>
+      </div>
+
+      <div ref={mapRef} className="h-[340px] sm:h-[520px] w-full" />
     </div>
   );
 };

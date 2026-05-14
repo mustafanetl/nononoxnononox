@@ -742,58 +742,65 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         </div>
       </div>
 
-      {/* ── At-a-glance stats ── */}
+      {/* ── At-a-glance stats — single elevated band ── */}
       <Reveal>
-        <div className="max-w-5xl mx-auto px-4 sm:px-8 -mt-12 sm:-mt-16 relative z-10 mb-14 sm:mb-20">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <StatTile label={t.days} value={data.itinerary.length || days} icon={<CalendarDays className="h-3.5 w-3.5" />} />
-            <StatTile label={t.stops} value={
-              data.itinerary.reduce((s: number, d: any) => s + (Array.isArray(d?.slots) ? d.slots.length : 0), 0)
-              || data.activities.length
-            } icon={<MapPin className="h-3.5 w-3.5" />} />
-            <StatTile label={t.stays} value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} />
-            <StatTile label={t.from} value={totalBudget > 0 ? `${currency}${totalBudget.toLocaleString()}` : "—"} icon={<Sparkles className="h-3.5 w-3.5" />} />
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 -mt-10 sm:-mt-14 relative z-10 mb-14 sm:mb-20">
+          <div className="rounded-3xl bg-card border border-black/[0.06] shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)] overflow-hidden">
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-black/[0.06]">
+              <BandStat label={t.days} value={data.itinerary.length || days} icon={<CalendarDays className="h-3.5 w-3.5" />} />
+              <BandStat label={t.stops} value={
+                data.itinerary.reduce((s: number, d: any) => s + (Array.isArray(d?.slots) ? d.slots.length : 0), 0)
+                || data.activities.length
+              } icon={<MapPin className="h-3.5 w-3.5" />} />
+              <BandStat label={t.stays} value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} />
+              <BandStat label={t.from} value={totalBudget > 0 ? `${currency}${totalBudget.toLocaleString()}` : "—"} icon={<Sparkles className="h-3.5 w-3.5" />} accent />
+            </div>
           </div>
         </div>
       </Reveal>
 
-      {/* ── Map + intro quote ── */}
+      {/* ── Map — full-bleed showcase with floating legend ── */}
       {mapPoints.length > 0 && (
         <Reveal>
-          <div className="max-w-5xl mx-auto px-4 sm:px-8 mb-16">
-            <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6 items-stretch">
-              <div className="relative rounded-3xl overflow-hidden border border-border">
-                <TripMap
-                  points={mapPoints}
-                  onMarkerClick={({ name, type, day, slotIdx }) => {
-                    if (type === "hotel") {
-                      const hotel = data.hotels.find((h: any) => h.name === name) || data.hotels[0];
-                      if (hotel) { setSelectedHotel(hotel); setHotelModalOpen(true); }
-                      return;
-                    }
-                    if (day != null && typeof slotIdx === "number") { openSlotModal(day, slotIdx); return; }
-                    const activity = data.activities.find((a: any) => a.name === name);
-                    if (activity) {
-                      setSelectedActivity(activity);
-                      setActivitySource({ kind: "activity", activityId: activity.id });
-                      setActivityModalOpen(true);
-                    }
-                  }}
-                />
+          <div className="max-w-6xl mx-auto px-4 sm:px-8 mb-16">
+            <div className="mb-5 sm:mb-7 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">{t.theStory}</p>
+                <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
+                  Where it all happens
+                </h2>
               </div>
-              <div className="rounded-3xl border border-border bg-card p-6 sm:p-7 flex flex-col justify-between">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-3">{t.theStory}</p>
-                  <p className="text-lg sm:text-xl font-semibold text-foreground leading-snug tracking-tight">
-                    {data.text?.split("\n").find(l => l.trim().length > 30)?.slice(0, 220)
-                      || t.storyFallback(days, destination)}
-                  </p>
-                </div>
-                <p className="mt-6 text-xs text-muted-foreground flex items-center gap-1.5">
-                  <MapPin className="h-3 w-3" /> {t.tapPin}
-                </p>
-              </div>
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 pb-1">
+                <MapPin className="h-3 w-3" />
+                {mapPoints.length} stops · {data.itinerary.length} day{data.itinerary.length === 1 ? "" : "s"}
+              </span>
             </div>
+            <div className="relative rounded-3xl overflow-hidden border border-black/[0.06] shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18)]">
+              <TripMap
+                points={mapPoints}
+                onMarkerClick={({ name, type, day, slotIdx }) => {
+                  if (type === "hotel") {
+                    const hotel = data.hotels.find((h: any) => h.name === name) || data.hotels[0];
+                    if (hotel) { setSelectedHotel(hotel); setHotelModalOpen(true); }
+                    return;
+                  }
+                  if (day != null && typeof slotIdx === "number") { openSlotModal(day, slotIdx); return; }
+                  const activity = data.activities.find((a: any) => a.name === name);
+                  if (activity) {
+                    setSelectedActivity(activity);
+                    setActivitySource({ kind: "activity", activityId: activity.id });
+                    setActivityModalOpen(true);
+                  }
+                }}
+              />
+            </div>
+            {data.text?.split("\n").find(l => l.trim().length > 30) && (
+              <p className="mt-5 text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl">
+                <span className="font-semibold text-foreground/80">"</span>
+                {data.text.split("\n").find(l => l.trim().length > 30)?.slice(0, 220)}
+                <span className="font-semibold text-foreground/80">"</span>
+              </p>
+            )}
           </div>
         </Reveal>
       )}
@@ -1272,6 +1279,34 @@ const StatTile: React.FC<{ label: string; value: number | string; icon?: React.R
       <p
         key={landed ? "landed" : "counting"}
         className={`text-3xl sm:text-4xl font-bold tracking-tight text-foreground tabular-nums ${landed ? "animate-tile-pop" : ""}`}
+      >
+        {isNumeric ? counted : value}
+      </p>
+    </div>
+  );
+};
+
+/** Stat cell inside the elevated band — borderless, inline, animated. */
+const BandStat: React.FC<{ label: string; value: number | string; icon?: React.ReactNode; accent?: boolean }> = ({ label, value, icon, accent }) => {
+  const isNumeric = typeof value === "number";
+  const counted = useCountUp(isNumeric ? value : 0);
+  const landed = isNumeric ? counted === value : false;
+  return (
+    <div className="relative px-4 sm:px-6 py-5 sm:py-6">
+      {accent && (
+        <span
+          className="absolute top-0 left-0 right-0 h-[2px] opacity-70"
+          style={{ background: "linear-gradient(90deg, transparent, hsl(234 62% 52%), transparent)" }}
+        />
+      )}
+      <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] uppercase tracking-[0.28em] text-muted-foreground mb-2">
+        <span className={accent ? "" : "text-muted-foreground/60"}>{icon}</span>
+        {label}
+      </div>
+      <p
+        key={landed ? "landed" : "counting"}
+        className={`text-[1.75rem] sm:text-4xl font-extrabold tracking-tight text-foreground tabular-nums leading-none ${landed ? "animate-tile-pop" : ""}`}
+        style={accent ? { color: "hsl(234 62% 47%)" } : undefined}
       >
         {isNumeric ? counted : value}
       </p>
