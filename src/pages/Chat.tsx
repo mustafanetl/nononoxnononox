@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Menu, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown, MoreHorizontal, Sparkles, Plane, Calendar, Users, Mountain, Utensils, PanelLeftClose } from "lucide-react";
+import { ArrowUp, Plus, Menu, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown, MoreHorizontal, Sparkles, Plane, Calendar, Users, Mountain, Utensils, PanelLeftClose, Loader2 } from "lucide-react";
 import Logo, { LogoMark } from "@/components/Logo";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { useAuth } from "@/hooks/useAuth";
@@ -1274,7 +1274,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             )}
 
                             {/* Full plan → show the plan card (only when fully done) */}
-                            {isFullPlan && destination && !isLoading ? (
+                            {isFullPlan && destination && !isLoading && qaStatus !== 'verifying' ? (
+                              <div className="animate-fade-in">
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
                                   destination={destination}
@@ -1286,6 +1287,26 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                       : originCity || undefined
                                   }
                                 />
+                              </div>
+                            ) : isFullPlan && destination && (isLoading || qaStatus === 'verifying') ? (
+                              <div className="animate-fade-in">
+                                {/* Show loading state while plan is being prepared */}
+                                <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium">
+                                        {qaStatus === 'verifying' ? 'Verifying venues…' : 'Preparing your trip…'}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {qaStatus === 'verifying' ? 'Checking real places and photos' : 'Almost ready'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             ) : (
                               <>
                                 {/* Discovery/list responses only — never inline plan cards.
@@ -1315,11 +1336,12 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 })}
 
                 {/* Simple loading indicator — shows only when message is hidden (plan streaming) or before content arrives */}
-                {isLoading && (() => {
+                {(isLoading || qaStatus === 'verifying') && (() => {
                   const lastMsg = messages[messages.length - 1];
                   const lastIsAssistant = lastMsg?.role === "assistant";
                   const hasContent = lastIsAssistant && lastMsg.content.length > 0;
                   const hasBlocks = hasContent && /```(flights|hotels|activities|itinerary|travelinfo)/i.test(lastMsg.content);
+                  if (qaStatus === 'verifying') return true;
                   return (!hasContent || (craftingActive && hasBlocks));
                 })() && (
                   <div className="flex gap-3">
@@ -1327,8 +1349,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                       <LogoMark size={16} color="white" />
                     </div>
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground self-start">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      <span className="font-medium text-foreground/80">{getThinkingText(messages, craftingActive)}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      <span className="font-medium text-foreground/80">
+                        {qaStatus === 'verifying' ? 'Verifying venues…' : getThinkingText(messages, craftingActive)}
+                      </span>
                     </div>
                   </div>
                 )}

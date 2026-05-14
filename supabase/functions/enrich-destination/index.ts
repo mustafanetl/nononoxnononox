@@ -385,7 +385,7 @@ async function getExchangeRate(currencyCode: string): Promise<any> {
 }
 
 // Fetch iconic destination photos
-async function getGooglePlacePhotos(destination: string, limit = 3): Promise<any[]> {
+async function getGooglePlacePhotos(destination: string, limit = 1): Promise<any[]> {
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey) return [];
   // Two-stage strategy:
@@ -821,7 +821,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const images = await getGooglePlacePhotos(destination, 3);
+      const images = await getGooglePlacePhotos(destination, 1);
       // Store in cache for next time
       if (images.length > 0) await cacheImages(destination, images);
       return new Response(JSON.stringify({ destination, images }), {
@@ -845,7 +845,7 @@ serve(async (req) => {
     const geo = await geocode(destination);
     if (!geo) {
       console.warn(`Geocode failed for "${destination}" — returning photos-only enrichment`);
-      const images = cachedHeroImages || await getGooglePlacePhotos(destination, 3).catch(() => []);
+      const images = cachedHeroImages || await getGooglePlacePhotos(destination, 1).catch(() => []);
       if (!cachedHeroImages && images.length > 0) await cacheImages(destination, images);
       return new Response(JSON.stringify({ destination, images, partial: true }), {
         status: 200,
@@ -863,7 +863,7 @@ serve(async (req) => {
     // All APIs in parallel — cache provides the base, fresh calls fill the gaps.
     const [countryData, googleImages, freshActivityResults, freshHotelResults] = await Promise.all([
       geo.countryCode ? getCountryInfo(geo.countryCode) : null,
-      hasHeroCache ? Promise.resolve(cachedHeroImages) : getGooglePlacePhotos(destination),
+      hasHeroCache ? Promise.resolve(cachedHeroImages) : getGooglePlacePhotos(destination, 1),
       activityMisses.length > 0 ? searchAndValidateActivities(activityMisses, destination) : Promise.resolve({}),
       hotelMisses.length > 0 ? searchAndValidateHotels(hotelMisses, destination) : Promise.resolve({}),
     ]);
