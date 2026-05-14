@@ -16,7 +16,33 @@ function getAdminClient() {
 }
 
 function normalizeDestination(dest: string): string {
-  return dest.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
+  // Strip country suffixes and common patterns to get just the city name
+  let normalized = dest.toLowerCase().trim();
+  
+  // Remove country names commonly appended (e.g. "amsterdam netherlands", "copenhagen denmark")
+  const countries = [
+    "netherlands", "denmark", "sweden", "germany", "france", "italy", "spain",
+    "portugal", "turkey", "japan", "thailand", "indonesia", "australia",
+    "united states", "united kingdom", "uk", "usa", "uae", "emirates",
+    "greece", "croatia", "norway", "finland", "austria", "switzerland",
+    "belgium", "czech republic", "czechia", "poland", "hungary", "ireland",
+    "scotland", "england", "wales", "canada", "mexico", "brazil", "argentina",
+    "egypt", "morocco", "south africa", "india", "china", "south korea",
+    "vietnam", "malaysia", "singapore", "philippines", "new zealand", "malta",
+  ];
+  for (const country of countries) {
+    // Remove ", country" or " country" at the end
+    normalized = normalized.replace(new RegExp(`,?\\s*${country}$`), "");
+  }
+  
+  // Remove special chars and collapse whitespace
+  normalized = normalized.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  
+  // If it's a single short word that looks like a neighborhood or number, reject it
+  // (the caller should pass the actual city name)
+  if (/^\d+$/.test(normalized)) return ""; // pure numbers are garbage
+  
+  return normalized;
 }
 
 /** Check if we have cached hero images for this destination.

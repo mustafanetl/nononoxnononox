@@ -15,6 +15,27 @@ function getServiceClient() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
+/** Normalize destination to just the city name — strip country suffixes, special chars. */
+function normalizeDest(dest: string): string {
+  let normalized = dest.toLowerCase().trim();
+  const countries = [
+    "netherlands", "denmark", "sweden", "germany", "france", "italy", "spain",
+    "portugal", "turkey", "japan", "thailand", "indonesia", "australia",
+    "united states", "united kingdom", "uk", "usa", "uae", "emirates",
+    "greece", "croatia", "norway", "finland", "austria", "switzerland",
+    "belgium", "czech republic", "czechia", "poland", "hungary", "ireland",
+    "scotland", "england", "wales", "canada", "mexico", "brazil", "argentina",
+    "egypt", "morocco", "south africa", "india", "china", "south korea",
+    "vietnam", "malaysia", "singapore", "philippines", "new zealand", "malta",
+  ];
+  for (const country of countries) {
+    normalized = normalized.replace(new RegExp(`,?\\s*${country}$`), "");
+  }
+  normalized = normalized.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  if (/^\d+$/.test(normalized)) return "";
+  return normalized;
+}
+
 /**
  * AI2 reviewer — replaced by a real Google Places fact-checker.
  * For every venue in the plan (activities, hotels, itinerary slots) we hit
@@ -288,7 +309,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 async function checkVenueCache(venueName: string, destination: string): Promise<{ cached: boolean; lat?: number; lng?: number; placeId?: string; matchedName?: string } | null> {
   try {
     const sb = getServiceClient();
-    const norm = destination.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
+    const norm = normalizeDest(destination);
     const { data, error } = await sb
       .from("destination_media")
       .select("name, metadata")
@@ -316,7 +337,7 @@ async function checkVenueCache(venueName: string, destination: string): Promise<
 async function saveVenueToCache(venueName: string, destination: string, lat?: number, lng?: number, placeId?: string, matchedName?: string): Promise<void> {
   try {
     const sb = getServiceClient();
-    const norm = destination.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
+    const norm = normalizeDest(destination);
     await sb.from("destination_media").insert({
       destination: norm,
       type: "activity",
