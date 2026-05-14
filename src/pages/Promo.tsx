@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { LogoMark } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Fish,
@@ -54,7 +53,6 @@ const Promo = () => {
   const [phase, setPhase] = useState<Phase>("loading");
   const [activeCard, setActiveCard] = useState(0);
   const [photos, setPhotos] = useState<Record<string, string>>({});
-  const [heroImage, setHeroImage] = useState<string | null>(null);
 
   // Fetch real Google Places photos from cache via the edge function
   useEffect(() => {
@@ -69,9 +67,6 @@ const Promo = () => {
             hotelNames: [],
           },
         });
-        if (data?.images?.[0]) {
-          setHeroImage(data.images[0].thumbUrl || data.images[0].url);
-        }
         const photoMap: Record<string, string> = {};
         const activityPhotos = data?.activityPhotos || {};
         for (const activity of allActivities) {
@@ -130,36 +125,26 @@ const Promo = () => {
 
         {/* ===== HOOK SCREEN ===== */}
         {phase === "hook" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10 px-6 overflow-hidden">
-            {heroImage && (
-              <img
-                src={heroImage}
-                alt="Gothenburg"
-                className="absolute inset-0 w-full h-full object-cover opacity-30"
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
-            <div className="relative z-10 flex flex-col items-center">
-              <p className="text-white/60 text-base sm:text-lg tracking-[0.3em] uppercase font-light opacity-0 animate-promo-fade-in">
-                48 hours in
-              </p>
-              <h1
-                className="text-white text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[0.95] mt-3 opacity-0 animate-promo-punch text-center break-words max-w-full"
-                style={{ animationDelay: "0.4s" }}
-              >
-                GOTHENBURG
-              </h1>
-              <div
-                className="h-[3px] w-40 bg-gradient-to-r from-transparent via-amber-400 to-transparent mt-4 origin-left scale-x-0 animate-promo-underline"
-                style={{ animationDelay: "0.8s" }}
-              />
-              <p
-                className="text-white/40 text-sm tracking-wide mt-6 opacity-0 animate-promo-fade-in"
-                style={{ animationDelay: "1.2s" }}
-              >
-                planned by AI ✦
-              </p>
-            </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10 px-6">
+            <p className="text-white/60 text-base sm:text-lg tracking-[0.3em] uppercase font-light opacity-0 animate-promo-fade-in">
+              48 hours in
+            </p>
+            <h1
+              className="text-white text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[0.95] mt-3 opacity-0 animate-promo-punch text-center break-words max-w-full"
+              style={{ animationDelay: "0.4s" }}
+            >
+              GOTHENBURG
+            </h1>
+            <div
+              className="h-[3px] w-40 bg-gradient-to-r from-transparent via-amber-400 to-transparent mt-4 origin-left scale-x-0 animate-promo-underline"
+              style={{ animationDelay: "0.8s" }}
+            />
+            <p
+              className="text-white/40 text-sm tracking-wide mt-6 opacity-0 animate-promo-fade-in"
+              style={{ animationDelay: "1.2s" }}
+            >
+              powered by Jolliday ✦
+            </p>
           </div>
         )}
 
@@ -229,10 +214,7 @@ const Promo = () => {
               className="mt-10 flex flex-col items-center opacity-0 animate-promo-fade-in"
               style={{ animationDelay: "1s" }}
             >
-              <div className="flex items-center gap-3 mb-4">
-                <LogoMark size={36} color="white" />
-                <span className="text-white text-3xl font-black tracking-tight">Jolliday</span>
-              </div>
+              <span className="text-white text-4xl sm:text-5xl font-black tracking-tight mb-4">Jolliday</span>
               <p className="text-amber-400 text-base sm:text-lg font-semibold animate-promo-text-glow">
                 Try free → jolliday.online
               </p>
