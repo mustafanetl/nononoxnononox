@@ -209,7 +209,8 @@ async function cacheImages(destination: string, images: any[]) {
   }
 }
 
-/** Store activity/hotel photos in cache. NEVER overwrite admin-uploaded media. */
+/** Store activity/hotel photos in cache. NEVER overwrite admin-uploaded media.
+ *  Saves ALL photos (up to 4) as separate rows so they're individually manageable. */
 async function cacheActivityPhotos(destination: string, photos: Record<string, any>, type: "activity" | "hotel") {
   try {
     const db = getAdminClient();
@@ -225,42 +226,54 @@ async function cacheActivityPhotos(destination: string, photos: Record<string, a
 
     const adminNames = new Set((adminEntries || []).map((r: any) => r.name?.toLowerCase()).filter(Boolean));
 
-    const rows = Object.entries(photos)
-      .filter(([name, v]) => {
-        if ((v as any)?._isAdmin) return false; // never overwrite admin
-        if (adminNames.has(name.toLowerCase())) return false; // admin exists for this name
-        return (v as any)?.hasRealPhoto;
-      })
-      .map(([name, v]: [string, any], idx: number) => ({
-        destination: norm,
-        type,
-        name,
-        url: v.photo || v.thumbPhoto,
-        thumb_url: v.thumbPhoto || v.photo,
-        source: "google_places",
-        media_type: "photo",
-        sort_order: idx,
-        metadata: {
-          photos: v.photos || [],
-          rating: v.rating,
-          address: v.address,
-          lat: v.lat,
-          lng: v.lng,
-          matchedName: v.matchedName,
-        },
-        updated_at: new Date().toISOString(),
-      }));
+    const allRows: any[] = [];
+    for (const [name, v] of Object.entries(photos)) {
+      if ((v as any)?._isAdmin) continue; // never overwrite admin
+      if (adminNames.has(name.toLowerCase())) continue; // admin exists for this name
+      if (!(v as any)?.hasRealPhoto) continue;
 
-    if (rows.length > 0) {
+      // Get all photo URLs (up to 4)
+      const photoUrls: string[] = (v as any).photos || [];
+      const primaryUrl = (v as any).photo || (v as any).thumbPhoto;
+      const primaryThumb = (v as any).thumbPhoto || (v as any).photo;
+
+      // If no photos array, just use the primary
+      const urls = photoUrls.length > 0 ? photoUrls : (primaryUrl ? [primaryUrl] : []);
+
+      // Create a row for EACH photo
+      urls.forEach((url: string, idx: number) => {
+        allRows.push({
+          destination: norm,
+          type,
+          name,
+          url,
+          thumb_url: idx === 0 ? (primaryThumb || url) : url,
+          source: "google_places",
+          media_type: "photo",
+          sort_order: idx,
+          metadata: {
+            rating: (v as any).rating,
+            address: (v as any).address,
+            lat: (v as any).lat,
+            lng: (v as any).lng,
+            matchedName: (v as any).matchedName,
+          },
+          updated_at: new Date().toISOString(),
+        });
+      });
+    }
+
+    if (allRows.length > 0) {
       // Delete old google_places entries for these specific names (never admin)
-      for (const row of rows) {
+      const uniqueNames = [...new Set(allRows.map(r => r.name))];
+      for (const name of uniqueNames) {
         await db.from("destination_media").delete()
           .eq("destination", norm)
           .eq("type", type)
-          .eq("name", row.name)
+          .eq("name", name)
           .eq("source", "google_places");
       }
-      await db.from("destination_media").insert(rows);
+      await db.from("destination_media").insert(allRows);
     }
   } catch (e) {
     console.warn("Activity cache write failed:", e);
