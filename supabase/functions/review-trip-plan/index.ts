@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import {
   corsHeaders,
   enforceRateLimit,
@@ -6,6 +7,13 @@ import {
   resolveAuth,
 } from "../_shared/auth.ts";
 import { extractBlocksWithRaw } from "../_shared/planParser.ts";
+
+/** Service-role Supabase client for reading/writing destination_media cache. */
+function getServiceClient() {
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
 
 /**
  * AI2 reviewer — replaced by a real Google Places fact-checker.
@@ -275,6 +283,55 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+/** Check if a venue already exists in our server-side cache (destination_media table).
+ *  If it does, we already verified it before — no need to call Google Places again. */
+async function checkVenueCache(venueName: string, destination: string): Promise<{ cached: boolean; lat?: number; lng?: number; placeId?: string; matchedName?: string } | null> {
+  try {
+    const sb = getServiceClient();
+    const norm = destination.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
+    const { data, error } = await sb
+      .from("destination_media")
+      .select("venue_name, metadata")
+      .eq("destination", norm)
+      .eq("venue_name", venueName.trim())
+      .limit(1);
+
+    if (error || !data || data.length === 0) return null;
+
+    const meta = data[0].metadata || {};
+    return {
+      cached: true,
+      lat: meta.lat ?? undefined,
+      lng: meta.lng ?? undefined,
+      placeId: meta.placeId ?? undefined,
+      matchedName: meta.matchedName ?? data[0].venue_name ?? undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** After verifying a venue via Google Places, save it to the cache so future
+ *  lookups skip the API call entirely. */
+async function saveVenueToCache(venueName: string, destination: string, lat?: number, lng?: number, placeId?: string, matchedName?: string): Promise<void> {
+  try {
+    const sb = getServiceClient();
+    const norm = destination.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
+    await sb.from("destination_media").insert({
+      destination: norm,
+      venue_name: venueName.trim(),
+      media_url: "", // No photo URL from verification — enrich-destination handles photos
+      media_type: "photo",
+      source: "google_places",
+      sort_order: 0,
+      is_hero: false,
+      metadata: { lat, lng, placeId, matchedName, verified: true, verifiedAt: new Date().toISOString() },
+    });
+  } catch {
+    // Non-critical — fail silently
+  }
+}
+
 async function verifyVenue(name: string, destination: string, apiKey: string): Promise<{ matched: boolean; lat?: number; lng?: number; placeId?: string; matchedName?: string; countryCode?: string } > {
   try {
     const ctrl = new AbortController();
@@ -410,12 +467,46 @@ serve(async (req) => {
     const destGeo = await geocodeCountry(destination);
     const destCountry = destGeo?.countryCode || "";
 
+    // Step 1: Check cache for all venues first — skip Google Places for cached ones
     const verifications: Record<string, Awaited<ReturnType<typeof verifyVenue>>> = {};
+    const uncachedNames: string[] = [];
+
+    for (const name of uniqueNames) {
+      const cached = await checkVenueCache(name, destination);
+      if (cached?.cached) {
+        // Already verified before — use cached data, skip Google Places entirely
+        verifications[name] = {
+          matched: true,
+          lat: cached.lat,
+          lng: cached.lng,
+          placeId: cached.placeId,
+          matchedName: cached.matchedName,
+        };
+      } else {
+        uncachedNames.push(name);
+      }
+    }
+
+    const cachedCount = uniqueNames.length - uncachedNames.length;
+    if (cachedCount > 0) {
+      console.log(`  → ${cachedCount} venues found in cache (skipped Google Places)`);
+    }
+    if (uncachedNames.length > 0) {
+      console.log(`  → ${uncachedNames.length} venues need Google Places verification`);
+    }
+
+    // Step 2: Only call Google Places for venues NOT in cache
     const CONCURRENCY = 6;
-    for (let i = 0; i < uniqueNames.length; i += CONCURRENCY) {
-      const slice = uniqueNames.slice(i, i + CONCURRENCY);
+    for (let i = 0; i < uncachedNames.length; i += CONCURRENCY) {
+      const slice = uncachedNames.slice(i, i + CONCURRENCY);
       const results = await Promise.all(slice.map(n => verifyVenue(n, destination, apiKey)));
-      slice.forEach((n, idx) => { verifications[n] = results[idx]; });
+      slice.forEach((n, idx) => {
+        verifications[n] = results[idx];
+        // Save newly verified venues to cache for future lookups
+        if (results[idx].matched) {
+          saveVenueToCache(n, destination, results[idx].lat, results[idx].lng, results[idx].placeId, results[idx].matchedName);
+        }
+      });
     }
 
     // Patch verified venues back into the block JSON
