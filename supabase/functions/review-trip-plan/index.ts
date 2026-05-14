@@ -305,8 +305,10 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 }
 
 /** Check if a venue already exists in our server-side cache (destination_media table).
- *  If it does, we already verified it before — no need to call Google Places again. */
-async function checkVenueCache(venueName: string, destination: string): Promise<{ cached: boolean; lat?: number; lng?: number; placeId?: string; matchedName?: string } | null> {
+ *  If it does, we already verified it before — no need to call Google Places again.
+ *  Returns { cached: true, verified: true/false } — if verified=false, the venue was
+ *  previously rejected (fake/wrong place) and should be rejected again without API call. */
+async function checkVenueCache(venueName: string, destination: string): Promise<{ cached: boolean; verified: boolean; lat?: number; lng?: number; placeId?: string; matchedName?: string } | null> {
   try {
     const sb = getServiceClient();
     const norm = normalizeDest(destination);
@@ -322,6 +324,7 @@ async function checkVenueCache(venueName: string, destination: string): Promise<
     const meta = data[0].metadata || {};
     return {
       cached: true,
+      verified: meta.verified !== false, // default true for old rows without this field
       lat: meta.lat ?? undefined,
       lng: meta.lng ?? undefined,
       placeId: meta.placeId ?? undefined,
@@ -347,6 +350,27 @@ async function saveVenueToCache(venueName: string, destination: string, lat?: nu
       media_type: "photo",
       sort_order: 0,
       metadata: { lat, lng, placeId, matchedName, verified: true, verifiedAt: new Date().toISOString() },
+    });
+  } catch {
+    // Non-critical — fail silently
+  }
+}
+
+/** Save a REJECTED venue to cache so we never waste an API call on it again.
+ *  Next time the AI generates this fake venue, we instantly reject it. */
+async function saveRejectedVenueToCache(venueName: string, destination: string, reason: string): Promise<void> {
+  try {
+    const sb = getServiceClient();
+    const norm = normalizeDest(destination);
+    await sb.from("destination_media").insert({
+      destination: norm,
+      type: "activity",
+      name: venueName.trim(),
+      url: "",
+      source: "google_places",
+      media_type: "photo",
+      sort_order: -1, // negative sort_order = rejected
+      metadata: { verified: false, rejectedAt: new Date().toISOString(), reason },
     });
   } catch {
     // Non-critical — fail silently
@@ -491,26 +515,36 @@ serve(async (req) => {
     // Step 1: Check cache for all venues first — skip Google Places for cached ones
     const verifications: Record<string, Awaited<ReturnType<typeof verifyVenue>>> = {};
     const uncachedNames: string[] = [];
+    const cachedRejections: string[] = [];
 
     for (const name of uniqueNames) {
       const cached = await checkVenueCache(name, destination);
       if (cached?.cached) {
-        // Already verified before — use cached data, skip Google Places entirely
-        verifications[name] = {
-          matched: true,
-          lat: cached.lat,
-          lng: cached.lng,
-          placeId: cached.placeId,
-          matchedName: cached.matchedName,
-        };
+        if (cached.verified === false) {
+          // Previously rejected — instantly reject again, zero API calls
+          verifications[name] = { matched: false };
+          cachedRejections.push(name);
+        } else {
+          // Already verified — use cached data, skip Google Places entirely
+          verifications[name] = {
+            matched: true,
+            lat: cached.lat,
+            lng: cached.lng,
+            placeId: cached.placeId,
+            matchedName: cached.matchedName,
+          };
+        }
       } else {
         uncachedNames.push(name);
       }
     }
 
-    const cachedCount = uniqueNames.length - uncachedNames.length;
+    const cachedCount = uniqueNames.length - uncachedNames.length - cachedRejections.length;
     if (cachedCount > 0) {
-      console.log(`  → ${cachedCount} venues found in cache (skipped Google Places)`);
+      console.log(`  → ${cachedCount} venues verified from cache (skipped Google Places)`);
+    }
+    if (cachedRejections.length > 0) {
+      console.log(`  → ${cachedRejections.length} venues rejected from cache (known fakes)`);
     }
     if (uncachedNames.length > 0) {
       console.log(`  → ${uncachedNames.length} venues need Google Places verification`);
@@ -523,9 +557,11 @@ serve(async (req) => {
       const results = await Promise.all(slice.map(n => verifyVenue(n, destination, apiKey)));
       slice.forEach((n, idx) => {
         verifications[n] = results[idx];
-        // Save newly verified venues to cache for future lookups
+        // Save to cache for future lookups — both verified AND rejected
         if (results[idx].matched) {
           saveVenueToCache(n, destination, results[idx].lat, results[idx].lng, results[idx].placeId, results[idx].matchedName);
+        } else {
+          saveRejectedVenueToCache(n, destination, "not found on Google Places");
         }
       });
     }
@@ -558,6 +594,8 @@ serve(async (req) => {
           issues.push(
             `${v.kind === "hotel" ? "Hotel" : v.kind === "activity" ? "Activity" : "Itinerary venue"} "${v.name}" is OUTSIDE ${destination}${destCountry ? ` (${destCountry})` : ""} — Google placed it in ${r.countryCode || "another region"}. Replace with a real venue physically located IN ${destination}.`
           );
+          // Cache as rejected so we don't re-verify this wrong-country venue
+          saveRejectedVenueToCache(v.name, destination, `outside country: resolved to ${r.countryCode || "unknown"}`);
           continue;
         }
 
