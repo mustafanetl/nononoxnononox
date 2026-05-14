@@ -20,6 +20,7 @@ import { TripPlanData } from "@/components/TripSummaryCard";
 import { shareTripSummary } from "@/utils/tripSummary";
 import { setWikimediaImage } from "@/utils/cityImages";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
+import { useDestinationVideo } from "@/hooks/useCityImages";
 import { exportTripPlanPDF } from "@/utils/pdfExport";
 import { createDistinctPhotoGallery } from "@/utils/photoGallery";
 import { getSkyscannerUrl, getBookingDotComUrl } from "@/utils/bookingLinks";
@@ -241,6 +242,10 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
           if (!next.realPhoto && next.realPhotos.length > 0) {
             next.realPhoto = next.realPhotos[0];
           }
+          // Attach video URL if the cache has one for this activity
+          if ((m as any)?.videoUrl) {
+            next.videoUrl = (m as any).videoUrl;
+          }
           return next;
         });
         const newHotels = data.hotels.map((h: any) => {
@@ -276,6 +281,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
 
   // Hook must be called unconditionally — call before any early return.
   const { imageUrl: stockHeroImg } = useCityHeroImage(tripData?.destination || "");
+  const heroVideoUrl = useDestinationVideo(tripData?.destination || "");
   // Fallback-chain state for the hero image. If the preferred URL 404s, we
   // swap to stock; if stock 404s we show the gradient placeholder.
   const [heroSrcFinal, setHeroSrcFinal] = useState<string | undefined>(undefined);
@@ -644,7 +650,16 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
       </div>
       {/* ── Cinematic Hero ── */}
       <div className="relative h-[62vh] min-h-[460px] max-h-[680px] overflow-hidden">
-        {heroSrcFinal ? (
+        {heroVideoUrl ? (
+          <video
+            src={heroVideoUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        ) : heroSrcFinal ? (
           <img src={heroSrcFinal} alt={destination}
             onError={handleHeroImgError}
             className="w-full h-full object-cover animate-ken-burns animate-punch-in" />

@@ -15,6 +15,7 @@ import { ItineraryData } from "@/components/ItineraryCard";
 import { TravelInfoData } from "@/components/TravelInfoCard";
 import { TimelineLeg } from "@/components/TripTimeline";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
+import { useDestinationVideo } from "@/hooks/useCityImages";
 
 export type TripPlanData = {
   flights: FlightData[];
@@ -92,6 +93,7 @@ const TripSummaryCard = ({
     ) || data.activities.length;
 
   const { imageUrl: stockHero } = useCityHeroImage(destination);
+  const heroVideoUrl = useDestinationVideo(destination);
   const enrichedHero = enrichedImages?.[0]?.url || enrichedImages?.[0]?.thumbUrl;
   const preferredHero = enrichedHero || stockHero;
   const [heroSrc, setHeroSrc] = useState<string | undefined>(preferredHero);
@@ -116,7 +118,16 @@ const TripSummaryCard = ({
     >
       {/* City image — always visible, expands on hover */}
       <div className="relative h-32 group-hover:h-44 overflow-hidden transition-all duration-300 ease-in-out">
-        {heroSrc ? (
+        {heroVideoUrl ? (
+          <video
+            src={heroVideoUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        ) : heroSrc ? (
           <img
             src={heroSrc}
             alt={destination}

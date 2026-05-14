@@ -22,6 +22,7 @@ export type ActivityData = {
   verified?: boolean;
   verifiedAddress?: string | null;
   verifiedRating?: number | null;
+  videoUrl?: string | null;
 };
 
 const categoryIcons: Record<string, React.ElementType> = {

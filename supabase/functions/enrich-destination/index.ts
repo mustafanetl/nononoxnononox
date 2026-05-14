@@ -19,7 +19,9 @@ function normalizeDestination(dest: string): string {
   return dest.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
 }
 
-/** Check if we have cached hero images for this destination (less than CACHE_TTL old) */
+/** Check if we have cached hero images for this destination.
+ *  Admin-uploaded media always takes priority. If ANY admin hero images exist,
+ *  we return ONLY those (never mix with google_places). */
 async function getCachedImages(destination: string): Promise<any[] | null> {
   try {
     const db = getAdminClient();
@@ -30,16 +32,23 @@ async function getCachedImages(destination: string): Promise<any[] | null> {
       .select("*")
       .eq("destination", norm)
       .eq("type", "hero")
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
 
     if (data && data.length > 0) {
-      return data.map((row: any) => ({
+      // If admin images exist, return ONLY admin images (they take priority)
+      const adminImages = data.filter((row: any) => row.source === "admin");
+      const imagesToReturn = adminImages.length > 0 ? adminImages : data;
+
+      return imagesToReturn.map((row: any) => ({
         url: row.url,
         thumbUrl: row.thumb_url,
         width: row.metadata?.width || 1200,
         height: row.metadata?.height || 800,
         attributions: row.metadata?.attributions || [],
         cached: true,
+        source: row.source,
+        mediaType: row.media_type || "photo",
       }));
     }
     return null;
@@ -53,6 +62,10 @@ async function getCachedImages(destination: string): Promise<any[] | null> {
  * Check if we have cached activity/hotel photos for any of the requested
  * names. Returns whatever we have cached (even partial hits) so callers
  * can fetch only the misses from Google Places.
+ *
+ * IMPORTANT: If a venue has source='admin' media, it is NEVER overwritten.
+ * The returned entries include an `_isAdmin` flag so callers know to skip
+ * Google Places entirely for that venue.
  */
 async function getCachedActivityPhotos(destination: string, names: string[]): Promise<Record<string, any>> {
   if (names.length === 0) return {};
@@ -64,28 +77,48 @@ async function getCachedActivityPhotos(destination: string, names: string[]): Pr
       .from("destination_media")
       .select("*")
       .eq("destination", norm)
-      .in("type", ["activity", "hotel"]);
+      .in("type", ["activity", "hotel"])
+      .order("sort_order", { ascending: true });
 
     if (!data || data.length === 0) return {};
 
-    // Build lookup by name (case-insensitive key included so loose matching works).
-    const result: Record<string, any> = {};
+    // Group by name, preferring admin-uploaded media
+    const byName: Record<string, any[]> = {};
     for (const row of data) {
       if (!row.name) continue;
+      const key = row.name;
+      if (!byName[key]) byName[key] = [];
+      byName[key].push(row);
+    }
+
+    const result: Record<string, any> = {};
+    for (const [name, rows] of Object.entries(byName)) {
+      // Admin rows take absolute priority
+      const adminRows = rows.filter((r: any) => r.source === "admin");
+      const effectiveRows = adminRows.length > 0 ? adminRows : rows;
+      const primaryRow = effectiveRows[0];
+
+      const allPhotos = effectiveRows
+        .filter((r: any) => (r.media_type || "photo") === "photo")
+        .map((r: any) => r.url);
+      const videoRow = effectiveRows.find((r: any) => r.media_type === "video");
+
       const entry = {
-        photo: row.url,
-        thumbPhoto: row.thumb_url,
-        photos: row.metadata?.photos || [row.url],
-        rating: row.metadata?.rating || null,
-        address: row.metadata?.address || null,
+        photo: primaryRow.url,
+        thumbPhoto: primaryRow.thumb_url,
+        photos: allPhotos.length > 0 ? allPhotos : (primaryRow.metadata?.photos || [primaryRow.url]),
+        rating: primaryRow.metadata?.rating || null,
+        address: primaryRow.metadata?.address || null,
         verified: true,
         hasRealPhoto: true,
-        matchedName: row.name,
-        lat: row.metadata?.lat || null,
-        lng: row.metadata?.lng || null,
+        matchedName: primaryRow.name,
+        lat: primaryRow.metadata?.lat || null,
+        lng: primaryRow.metadata?.lng || null,
+        _isAdmin: adminRows.length > 0,
+        videoUrl: videoRow?.url || null,
       };
-      result[row.name] = entry;
-      result[row.name.toLowerCase()] = entry;
+      result[name] = entry;
+      result[name.toLowerCase()] = entry;
     }
     return result;
   } catch (e) {
@@ -94,24 +127,46 @@ async function getCachedActivityPhotos(destination: string, names: string[]): Pr
   }
 }
 
-/** Which of the requested names did NOT hit the cache? */
+/** Which of the requested names did NOT hit the cache?
+ *  NEVER return names that have admin-uploaded media — those are permanent. */
 function cacheMisses(names: string[], cached: Record<string, any>): string[] {
-  return names.filter((n) => !cached[n] && !cached[n.toLowerCase()]);
+  return names.filter((n) => {
+    const hit = cached[n] || cached[n.toLowerCase()];
+    if (!hit) return true; // no cache → need to fetch
+    if (hit._isAdmin) return false; // admin media → NEVER re-fetch
+    return false; // has google_places cache → skip
+  });
 }
 
-/** Store images in cache */
+/** Store images in cache. NEVER touch admin-uploaded media. */
 async function cacheImages(destination: string, images: any[]) {
   try {
     const db = getAdminClient();
     const norm = normalizeDestination(destination);
 
-    const rows = images.map((img: any) => ({
+    // Check if admin hero images exist — if so, do NOT overwrite
+    const { data: adminHeroes } = await db
+      .from("destination_media")
+      .select("id")
+      .eq("destination", norm)
+      .eq("type", "hero")
+      .eq("source", "admin")
+      .limit(1);
+
+    if (adminHeroes && adminHeroes.length > 0) {
+      console.log(`Skipping hero cache write for ${norm} — admin media exists`);
+      return;
+    }
+
+    const rows = images.map((img: any, idx: number) => ({
       destination: norm,
       type: "hero",
       name: null,
       url: img.url,
       thumb_url: img.thumbUrl || img.url,
       source: "google_places",
+      media_type: "photo",
+      sort_order: idx,
       metadata: {
         width: img.width,
         height: img.height,
@@ -120,7 +175,7 @@ async function cacheImages(destination: string, images: any[]) {
       updated_at: new Date().toISOString(),
     }));
 
-    // Upsert: delete old hero images for this destination, insert new ones
+    // Delete old google_places hero images only, insert new ones
     await db.from("destination_media").delete().eq("destination", norm).eq("type", "hero").eq("source", "google_places");
     if (rows.length > 0) await db.from("destination_media").insert(rows);
   } catch (e) {
@@ -128,21 +183,37 @@ async function cacheImages(destination: string, images: any[]) {
   }
 }
 
-/** Store activity/hotel photos in cache */
+/** Store activity/hotel photos in cache. NEVER overwrite admin-uploaded media. */
 async function cacheActivityPhotos(destination: string, photos: Record<string, any>, type: "activity" | "hotel") {
   try {
     const db = getAdminClient();
     const norm = normalizeDestination(destination);
 
+    // First, find which names have admin media — those are untouchable
+    const { data: adminEntries } = await db
+      .from("destination_media")
+      .select("name")
+      .eq("destination", norm)
+      .eq("type", type)
+      .eq("source", "admin");
+
+    const adminNames = new Set((adminEntries || []).map((r: any) => r.name?.toLowerCase()).filter(Boolean));
+
     const rows = Object.entries(photos)
-      .filter(([_, v]) => (v as any)?.hasRealPhoto)
-      .map(([name, v]: [string, any]) => ({
+      .filter(([name, v]) => {
+        if ((v as any)?._isAdmin) return false; // never overwrite admin
+        if (adminNames.has(name.toLowerCase())) return false; // admin exists for this name
+        return (v as any)?.hasRealPhoto;
+      })
+      .map(([name, v]: [string, any], idx: number) => ({
         destination: norm,
         type,
         name,
         url: v.photo || v.thumbPhoto,
         thumb_url: v.thumbPhoto || v.photo,
         source: "google_places",
+        media_type: "photo",
+        sort_order: idx,
         metadata: {
           photos: v.photos || [],
           rating: v.rating,
@@ -155,7 +226,7 @@ async function cacheActivityPhotos(destination: string, photos: Record<string, a
       }));
 
     if (rows.length > 0) {
-      // Delete old cached entries for these specific names
+      // Delete old google_places entries for these specific names (never admin)
       for (const row of rows) {
         await db.from("destination_media").delete()
           .eq("destination", norm)

@@ -14,6 +14,7 @@ import {
   Sparkles,
   X,
   Camera,
+  Film,
 } from "lucide-react";
 import { ActivityData } from "./ActivityCard";
 import { useEffect, useState } from "react";
@@ -206,7 +207,7 @@ const ActivityDetailModal = ({
           </div>
         ) : (
           <div className="flex flex-col max-h-[85vh]">
-            {/* Photo gallery */}
+            {/* Photo gallery / Video */}
             <div className="relative shrink-0 bg-muted">
               {/* Close button — always visible */}
               <button
@@ -217,6 +218,21 @@ const ActivityDetailModal = ({
               >
                 <X className="h-4 w-4" />
               </button>
+
+              {/* Video player (if activity has a video) */}
+              {activity.videoUrl && (
+                <div className="relative aspect-video bg-black">
+                  <video
+                    src={activity.videoUrl}
+                    controls
+                    playsInline
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-purple-600/90 backdrop-blur text-[10px] font-medium text-white flex items-center gap-1">
+                    <Film className="h-2.5 w-2.5" /> Video
+                  </div>
+                </div>
+              )}
 
               <div className="relative aspect-[16/10] bg-gradient-to-br from-primary/15 via-muted to-accent/15">
                 {hasImage ? (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Loader2 } from "lucide-react";
+
+const AdminMediaPanel = lazy(() => import("@/components/admin/AdminMediaPanel"));
 
 type UserRow = {
   user_id: string;
@@ -118,6 +120,7 @@ const Admin = () => {
               <TabsTrigger value="trips">Trips</TabsTrigger>
               <TabsTrigger value="subs">Subscriptions</TabsTrigger>
               <TabsTrigger value="emails">Emails</TabsTrigger>
+              <TabsTrigger value="media">Media</TabsTrigger>
             </TabsList>
 
             <TabsContent value="users">
@@ -230,6 +233,12 @@ const Admin = () => {
                   </TableBody>
                 </Table>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="media">
+              <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
+                <AdminMediaPanel />
+              </Suspense>
             </TabsContent>
           </Tabs>
         )}

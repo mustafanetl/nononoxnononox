@@ -15,7 +15,9 @@ vi.mock("@/hooks/useCityHeroImage", () => ({
 }));
 
 vi.mock("@/hooks/useCityImages", () => ({
-  useCityImages: vi.fn(() => ({ images: [], loading: false })),
+  useCityImages: vi.fn(() => ({ images: [], videoUrl: null })),
+  useCityImage: vi.fn(() => null),
+  useDestinationVideo: vi.fn(() => null),
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
