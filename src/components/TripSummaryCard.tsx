@@ -16,6 +16,7 @@ import { TravelInfoData } from "@/components/TravelInfoCard";
 import { TimelineLeg } from "@/components/TripTimeline";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
 import { useDestinationVideo } from "@/hooks/useCityImages";
+import { LogoMark } from "@/components/Logo";
 
 export type TripPlanData = {
   flights: FlightData[];
@@ -29,10 +30,12 @@ export type TripPlanData = {
 };
 
 /* ─────────────────────────────────────────────────────────────
-   TripSummaryCard — editorial edition
-   Restrained, considered, mobile-first.
-   Inspired by Airbnb listings, Apple TV cards, Cereal magazine.
-   One accent color, generous whitespace, real typographic hierarchy.
+   TripSummaryCard — Jolliday postcard
+   Compact, branded, characterful.
+   • Wider-than-tall hero (fits in chat scroll)
+   • North-star watermark + indigo brand accent
+   • Horizontal scroll of activity thumbnails (visually rich)
+   • Single quiet CTA
    ───────────────────────────────────────────────────────────── */
 
 type Props = {
@@ -111,21 +114,32 @@ const TripSummaryCard = ({
     setHeroSrc(undefined);
   };
 
-  // Trip period from weather block or first slot date
+  // Period — short
   const weather: any = (data as any).weather;
   const period = weather?.period || data.travelInfo?.bestTimeToVisit || null;
 
-  // Country pulled from travelInfo for the typographic kicker
-  const country = data.travelInfo?.country || data.hotels[0]?.location?.split(",").pop()?.trim() || null;
+  // Activity thumbnails for horizontal scroll
+  const thumbs = (data.activities || [])
+    .slice(0, 8)
+    .map((a) => {
+      const venuePhoto =
+        itineraryVenuePhotos?.[a.name]?.photo ||
+        itineraryVenuePhotos?.[a.name]?.thumbPhoto;
+      return {
+        name: a.name,
+        photo: venuePhoto || a.realPhoto || a.image || null,
+      };
+    })
+    .filter((t) => t.photo)
+    .slice(0, 6);
 
   return (
     <div
       onClick={handleOpen}
-      className="group/card relative mt-4 w-full max-w-md cursor-pointer select-none rounded-3xl overflow-hidden bg-card border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_32px_-12px_rgba(0,0,0,0.12)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_48px_-16px_rgba(0,0,0,0.18)] transition-shadow duration-300"
+      className="group/card relative mt-4 w-full max-w-md cursor-pointer select-none rounded-3xl overflow-hidden bg-card border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_28px_-12px_rgba(0,0,0,0.15)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04),0_20px_40px_-16px_rgba(0,0,0,0.22)] transition-shadow duration-300"
     >
-
-      {/* ── HERO ─────────────────────────────────────────────────── */}
-      <div className="relative aspect-[4/5] sm:aspect-[3/4] overflow-hidden bg-neutral-100">
+      {/* ── HERO — compact landscape ─────────────────────────── */}
+      <div className="relative aspect-[5/3] overflow-hidden bg-neutral-100">
         {heroVideoUrl ? (
           <video
             src={heroVideoUrl}
@@ -143,70 +157,110 @@ const TripSummaryCard = ({
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover/card:scale-[1.04]"
           />
         ) : (
-          <div className="absolute inset-0 bg-neutral-900 flex items-center justify-center">
-            <Compass className="h-12 w-12 text-white/20" strokeWidth={1.25} />
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{
+              background:
+                "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 32%))",
+            }}
+          >
+            <Compass className="h-10 w-10 text-white/30" strokeWidth={1.25} />
           </div>
         )}
 
-        {/* Single soft gradient — bottom only, deep but warm */}
-        <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+        {/* Bottom shadow only — keeps the photo readable */}
+        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
-        {/* Optional period chip — quiet, top-right */}
+        {/* Brand stamp — north star top-left */}
+        <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/25">
+          <LogoMark size={11} color="white" />
+          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white">
+            Jolliday
+          </span>
+        </div>
+
+        {/* Period top-right */}
         {period && (
-          <div className="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm">
-            <span className="text-[10px] font-medium tracking-tight text-neutral-900">
+          <div className="absolute top-3 right-3 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm">
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-tight text-neutral-900">
+              <CalendarDays className="h-2.5 w-2.5" />
               {period}
             </span>
           </div>
         )}
 
-        {/* Title block — bottom-left, editorial style */}
-        <div className="absolute inset-x-0 bottom-0 px-5 pb-5 sm:px-6 sm:pb-6">
-          {country && (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70 mb-2">
-              {country}
-            </p>
-          )}
-          <h2 className="font-serif text-[2.5rem] sm:text-[3rem] leading-[0.95] tracking-tight text-white">
+        {/* Title bottom-left */}
+        <div className="absolute inset-x-0 bottom-0 px-4 pb-3.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/75 mb-0.5">
+            {days} day{days === 1 ? "" : "s"}{origin ? ` from ${origin}` : ""}
+          </p>
+          <h2 className="text-2xl sm:text-[1.75rem] font-extrabold tracking-tight text-white leading-[1.05] drop-shadow-sm">
             {destination}
           </h2>
+        </div>
 
-          {origin && (
-            <div className="mt-3 inline-flex items-center gap-2 text-[11px] text-white/85">
-              <span className="font-medium">{origin}</span>
-              <span className="w-3 h-px bg-white/40" />
-              <span className="font-medium">{destination}</span>
-            </div>
-          )}
+        {/* Decorative star — bottom right, very subtle */}
+        <div className="absolute -right-3 -bottom-3 opacity-[0.08] pointer-events-none">
+          <LogoMark size={80} color="white" />
         </div>
       </div>
 
-      {/* ── DETAILS ──────────────────────────────────────────────── */}
-      <div className="p-5 sm:p-6 space-y-5">
-        {/* Quiet meta row */}
-        <div className="flex items-center justify-between gap-3 pb-4 border-b border-black/5">
-          <MetaPill icon={<CalendarDays className="h-3.5 w-3.5" />} value={days} label={days === 1 ? "day" : "days"} />
-          <span className="w-px h-4 bg-black/10" />
-          <MetaPill icon={<Hotel className="h-3.5 w-3.5" />} value={data.hotels.length} label={data.hotels.length === 1 ? "stay" : "stays"} />
-          <span className="w-px h-4 bg-black/10" />
-          <MetaPill icon={<Plane className="h-3.5 w-3.5" />} value={data.flights.length} label="flights" />
-          <span className="w-px h-4 bg-black/10" />
-          <MetaPill icon={<MapPin className="h-3.5 w-3.5" />} value={activitiesCount} label="stops" />
+      {/* ── BODY ─────────────────────────────────────────────── */}
+      <div className="p-4">
+        {/* Inline meta — single line */}
+        <div className="flex items-center justify-between text-[11px] mb-3">
+          <Meta icon={<Hotel className="h-3 w-3" />} value={data.hotels.length} label={data.hotels.length === 1 ? "hotel" : "hotels"} />
+          <span className="w-px h-3 bg-black/10" />
+          <Meta icon={<Plane className="h-3 w-3" />} value={data.flights.length} label="flights" />
+          <span className="w-px h-3 bg-black/10" />
+          <Meta icon={<MapPin className="h-3 w-3" />} value={activitiesCount} label="stops" />
+          <span className="w-px h-3 bg-black/10" />
+          <Meta icon={<CalendarDays className="h-3 w-3" />} value={days} label={days === 1 ? "day" : "days"} />
         </div>
 
-        {/* Day previews — clean editorial list */}
-        {data.itinerary.length > 0 && (
-          <DayList itinerary={data.itinerary} />
+        {/* Activity thumbnails — horizontal scroll, no scrollbar */}
+        {thumbs.length > 0 && (
+          <div className="-mx-4 px-4 mb-4 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-1.5">
+              {thumbs.map((t, i) => (
+                <div
+                  key={t.name + i}
+                  className="relative shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-muted border border-black/[0.04]"
+                >
+                  <img
+                    src={t.photo!}
+                    alt={t.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => ((e.currentTarget.parentElement as HTMLElement).style.display = "none")}
+                  />
+                </div>
+              ))}
+              {data.activities.length > thumbs.length && (
+                <div className="shrink-0 w-16 h-16 rounded-xl border border-dashed border-border bg-muted/40 flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-muted-foreground">
+                    +{data.activities.length - thumbs.length}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* CTA */}
         <button
           type="button"
-          className="group/btn w-full flex items-center justify-between rounded-2xl bg-foreground text-background pl-5 pr-3 py-3 text-sm font-medium transition-all hover:opacity-95 active:scale-[0.99]"
+          className="group/btn w-full flex items-center justify-between rounded-xl pl-4 pr-2 py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.99] shadow-sm"
+          style={{
+            background:
+              "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 38%))",
+          }}
         >
-          <span>Open the full plan</span>
-          <span className="w-8 h-8 rounded-full bg-background/15 flex items-center justify-center transition-transform duration-200 group-hover/btn:translate-x-0.5">
-            <ArrowUpRight className="h-4 w-4" strokeWidth={2.25} />
+          <span className="inline-flex items-center gap-1.5">
+            <LogoMark size={14} color="white" />
+            Open the full plan
+          </span>
+          <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center transition-transform duration-200 group-hover/btn:translate-x-0.5">
+            <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2.5} />
           </span>
         </button>
       </div>
@@ -214,8 +268,8 @@ const TripSummaryCard = ({
   );
 };
 
-/* ─── Quiet meta pill — icon + number + label ──────────────────── */
-const MetaPill = ({
+/* ─── Inline meta for the single-line stat row ─────────────────── */
+const Meta = ({
   icon,
   value,
   label,
@@ -224,56 +278,12 @@ const MetaPill = ({
   value: number | string;
   label: string;
 }) => (
-  <div className="flex-1 flex flex-col items-center text-center min-w-0">
-    <div className="text-muted-foreground/70 mb-1.5">{icon}</div>
-    <div className="text-base font-semibold text-foreground leading-none tabular-nums">
-      {value}
-    </div>
-    <div className="mt-1 text-[10px] font-medium text-muted-foreground/80 lowercase truncate w-full">
-      {label}
-    </div>
+  <div className="flex items-center gap-1 text-foreground">
+    <span className="text-muted-foreground/70">{icon}</span>
+    <span className="font-bold tabular-nums">{value}</span>
+    <span className="text-muted-foreground/80 lowercase">{label}</span>
   </div>
 );
-
-/* ─── Editorial day list — Day 01 · Title ───────────────────────── */
-const DayList = ({ itinerary }: { itinerary: ItineraryData[] }) => {
-  const firstSlotTitle = (d: any): string => {
-    if (Array.isArray(d?.slots) && d.slots.length > 0) {
-      const slot = d.slots[0];
-      return slot.title || slot.name || slot.activity || slot.venue || "";
-    }
-    return d?.title || "";
-  };
-  const days = itinerary.slice(0, 3).map((d, i) => ({
-    num: String(i + 1).padStart(2, "0"),
-    teaser: firstSlotTitle(d),
-  }));
-
-  if (days.every((d) => !d.teaser)) return null;
-
-  return (
-    <div className="space-y-2.5">
-      {days.map((d) => (
-        d.teaser && (
-          <div key={d.num} className="flex items-baseline gap-3 text-sm">
-            <span className="shrink-0 text-[10px] font-semibold tracking-[0.15em] text-muted-foreground/70 tabular-nums">
-              DAY {d.num}
-            </span>
-            <span className="text-foreground/85 truncate">{d.teaser}</span>
-          </div>
-        )
-      ))}
-      {itinerary.length > 3 && (
-        <div className="flex items-baseline gap-3 text-sm">
-          <span className="shrink-0 text-[10px] font-semibold tracking-[0.15em] text-muted-foreground/50 tabular-nums">
-            +{itinerary.length - 3}
-          </span>
-          <span className="text-muted-foreground/70 italic">more days inside</span>
-        </div>
-      )}
-    </div>
-  );
-};
 
 /* ─── Backwards-compat exports (used by PlanPreviewGate, etc.) ──── */
 
