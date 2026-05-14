@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const TIMEOUT_MS = 8000;
-const CACHE_TTL_HOURS = 24 * 7; // 7 days cache for images
+// Photos never expire — once cached, they stay forever until admin deletes them.
 
 function getAdminClient() {
   const url = Deno.env.get("SUPABASE_URL")!;
@@ -24,14 +24,12 @@ async function getCachedImages(destination: string): Promise<any[] | null> {
   try {
     const db = getAdminClient();
     const norm = normalizeDestination(destination);
-    const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000).toISOString();
 
     const { data } = await db
       .from("destination_media")
       .select("*")
       .eq("destination", norm)
       .eq("type", "hero")
-      .gte("updated_at", cutoff)
       .order("created_at", { ascending: true });
 
     if (data && data.length > 0) {
@@ -61,14 +59,12 @@ async function getCachedActivityPhotos(destination: string, names: string[]): Pr
   try {
     const db = getAdminClient();
     const norm = normalizeDestination(destination);
-    const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000).toISOString();
 
     const { data } = await db
       .from("destination_media")
       .select("*")
       .eq("destination", norm)
-      .in("type", ["activity", "hotel"])
-      .gte("updated_at", cutoff);
+      .in("type", ["activity", "hotel"]);
 
     if (!data || data.length === 0) return {};
 
@@ -395,7 +391,7 @@ async function searchAndValidateActivities(
   if (!apiKey || activities.length === 0) return {};
 
   const results: Record<string, any> = {};
-  const batch = Array.from(new Set(activities.filter(Boolean))).slice(0, 40);
+  const batch = Array.from(new Set(activities.filter(Boolean))).slice(0, 15);
   const promises = batch.map(async (actName) => {
     try {
       // ALWAYS scope the lookup to the destination city so we don't pull
