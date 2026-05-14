@@ -2,12 +2,123 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import {
   corsHeaders,
   enforceRateLimit,
+  getAdminClient,
   rateLimitResponse,
   resolveAuth,
   sanitizePreferences,
   sanitizeRevisionIssues,
 } from "../_shared/auth.ts";
 import { streamChat, type ChatMessage } from "../_shared/aiProvider.ts";
+
+// ── PLAN CACHE HELPERS ────────────────────────────────────────────────────────
+
+/** Max age for cached plans (30 days). */
+const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Try to extract plan-generation parameters from the conversation.
+ * Returns null if we can't determine this is a plan-generation turn.
+ */
+function extractCacheParams(
+  messages: { role: string; content: string }[],
+): { destination: string; duration: number; vibe: string; travelerType: string } | null {
+  // We look at the full conversation to find destination, duration, vibe, traveler type.
+  // The AI generates a plan when it has all required info. We detect this by looking
+  // for key signals in the conversation history.
+
+  // Extract destination — look for common patterns
+  let destination = "";
+  let duration = 0;
+  let vibe = "mixed";
+  let travelerType = "couple";
+
+  // Pattern: "X → Y" or "X to Y" in user messages
+  for (const msg of messages) {
+    if (msg.role !== "user") continue;
+    const text = msg.content;
+
+    // Destination from arrow notation: "Stockholm → Amsterdam"
+    const arrowMatch = text.match(/(?:\w[\w\s]*?)\s*(?:→|->|to)\s+([\w\s]+?)(?:\s+for|\s+\d|\s*$)/i);
+    if (arrowMatch) {
+      destination = arrowMatch[1].trim();
+    }
+
+    // Direct destination mention (single city as the main subject)
+    if (!destination) {
+      // If the message is short and looks like a city name
+      const cityMatch = text.match(/^(?:i want to go to|trip to|visit|fly to|travel to)\s+([\w\s]+)/i);
+      if (cityMatch) destination = cityMatch[1].trim();
+    }
+
+    // Duration: "X days", "X nights"
+    const durMatch = text.match(/(\d+)\s*(?:days?|nights?|nätter|dagar)/i);
+    if (durMatch) duration = parseInt(durMatch[1], 10);
+
+    // "long weekend" = 3, "a week" = 7
+    if (/long\s*weekend|långhelg/i.test(text)) duration = duration || 3;
+    if (/\ba\s*week\b|en\s*vecka/i.test(text)) duration = duration || 7;
+
+    // Vibe detection
+    if (/romantic|romantisk/i.test(text)) vibe = "romantic";
+    else if (/adventure|äventyr/i.test(text)) vibe = "adventure";
+    else if (/cultur|kultur/i.test(text)) vibe = "cultural";
+    else if (/food|mat|foodie/i.test(text)) vibe = "foodie";
+    else if (/nightlife|nattliv/i.test(text)) vibe = "nightlife";
+    else if (/relax|avslappn/i.test(text)) vibe = "relaxed";
+    else if (/family|familj/i.test(text)) vibe = "family-friendly";
+
+    // Traveler type
+    if (/solo/i.test(text)) travelerType = "solo";
+    else if (/couple|partner|girlfriend|boyfriend|flickvän|pojkvän/i.test(text)) travelerType = "couple";
+    else if (/family|familj|kids|barn/i.test(text)) travelerType = "family";
+    else if (/friends|vänner|kompisar/i.test(text)) travelerType = "friends";
+  }
+
+  // We need at minimum destination + duration to form a useful cache key
+  if (!destination || !duration) return null;
+
+  return {
+    destination: destination.toLowerCase().trim(),
+    duration,
+    vibe,
+    travelerType,
+  };
+}
+
+/**
+ * Build a deterministic cache key.
+ */
+function buildCacheKey(params: { destination: string; duration: number; vibe: string; travelerType: string }): string {
+  return `${params.destination}|${params.duration}|${params.vibe}|${params.travelerType}`;
+}
+
+/**
+ * Stream cached content back as SSE, simulating the AI streaming format.
+ */
+function streamFromCache(content: string): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      // Split into ~80 char chunks to simulate streaming
+      const chunks = content.match(/.{1,80}/gs) || [content];
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i >= chunks.length) {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          clearInterval(interval);
+          return;
+        }
+        const data = JSON.stringify({ choices: [{ delta: { content: chunks[i] } }] });
+        controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+        i++;
+      }, 8); // 8ms between chunks — fast but still streaming
+    },
+  });
+  return new Response(stream, {
+    headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+  });
+}
 
 const SYSTEM_PROMPT = `You are Jolliday — a professional travel concierge. You communicate clearly, politely, and efficiently, like a knowledgeable advisor — not a casual friend.
 
@@ -471,6 +582,41 @@ serve(async (req) => {
     console.log(
       `rzuma-chat tier=${ctx.tier} userId=${ctx.userId ?? ctx.ip} msgs=${trimmedMessages.length} remaining=${limitCheck.remaining}`,
     );
+
+    // ── PLAN CACHE LOOKUP ─────────────────────────────────────────
+    // Only attempt cache for non-revision requests (revisions modify existing plans).
+    if (!revisionRequest.length) {
+      const cacheParams = extractCacheParams(trimmedMessages);
+      if (cacheParams) {
+        const cacheKey = buildCacheKey(cacheParams);
+        try {
+          const admin = getAdminClient();
+          const cutoff = new Date(Date.now() - CACHE_MAX_AGE_MS).toISOString();
+          const { data: cached } = await admin
+            .from("cached_plans")
+            .select("id, plan_content, hit_count")
+            .eq("cache_key", cacheKey)
+            .gt("created_at", cutoff)
+            .maybeSingle();
+
+          if (cached?.plan_content) {
+            console.log(`[cache-hit] key=${cacheKey} id=${cached.id}`);
+            // Increment hit count (fire-and-forget)
+            admin
+              .from("cached_plans")
+              .update({ hit_count: (cached.hit_count || 0) + 1, updated_at: new Date().toISOString() })
+              .eq("id", cached.id)
+              .then(() => {})
+              .catch(() => {});
+            // Don't burn rate limit quota for cache hits
+            return streamFromCache(cached.plan_content);
+          }
+        } catch (e) {
+          // Cache lookup failed — proceed with normal AI call (fail-open)
+          console.warn("[cache] lookup failed, proceeding to AI:", e);
+        }
+      }
+    }
 
     const systemMessages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }];
 

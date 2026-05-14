@@ -27,6 +27,7 @@ export type UserPreferences = {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rzuma-chat`;
 const REVIEW_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/review-trip-plan`;
+const CACHE_PLAN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cache-plan`;
 
 export type QaStatus = null | "verifying";
 
@@ -41,6 +42,98 @@ const extractDestinationHint = (text: string): string => {
     const j = JSON.parse(m[1].trim());
     return j.destination || "";
   } catch { return ""; }
+};
+
+/**
+ * Extract plan metadata from conversation messages for caching.
+ * Returns null if we can't determine enough info to cache.
+ */
+const extractPlanMeta = (msgs: Message[]): {
+  destination: string;
+  duration: number;
+  vibe: string;
+  travelerType: string;
+  origin?: string;
+} | null => {
+  let destination = "";
+  let duration = 0;
+  let vibe = "mixed";
+  let travelerType = "couple";
+  let origin = "";
+
+  for (const msg of msgs) {
+    if (msg.role !== "user") continue;
+    const text = msg.content;
+
+    // Arrow notation: "Stockholm → Amsterdam" or "Stockholm to Amsterdam"
+    const arrowMatch = text.match(/([\w\s]+?)\s*(?:→|->|to)\s+([\w\s]+?)(?:\s+for|\s+\d|\s*$)/i);
+    if (arrowMatch) {
+      origin = arrowMatch[1].trim();
+      destination = arrowMatch[2].trim();
+    }
+
+    // Direct destination
+    if (!destination) {
+      const cityMatch = text.match(/^(?:i want to go to|trip to|visit|fly to|travel to)\s+([\w\s]+)/i);
+      if (cityMatch) destination = cityMatch[1].trim();
+    }
+
+    // Duration
+    const durMatch = text.match(/(\d+)\s*(?:days?|nights?|nätter|dagar)/i);
+    if (durMatch) duration = parseInt(durMatch[1], 10);
+    if (!duration && /long\s*weekend|långhelg/i.test(text)) duration = 3;
+    if (!duration && /\ba\s*week\b|en\s*vecka/i.test(text)) duration = 7;
+
+    // Vibe
+    if (/romantic|romantisk/i.test(text)) vibe = "romantic";
+    else if (/adventure|äventyr/i.test(text)) vibe = "adventure";
+    else if (/cultur|kultur/i.test(text)) vibe = "cultural";
+    else if (/food|mat|foodie/i.test(text)) vibe = "foodie";
+    else if (/nightlife|nattliv/i.test(text)) vibe = "nightlife";
+    else if (/relax|avslappn/i.test(text)) vibe = "relaxed";
+    else if (/family|familj/i.test(text)) vibe = "family-friendly";
+
+    // Traveler type
+    if (/solo/i.test(text)) travelerType = "solo";
+    else if (/couple|partner|girlfriend|boyfriend/i.test(text)) travelerType = "couple";
+    else if (/family|familj|kids|barn/i.test(text)) travelerType = "family";
+    else if (/friends|vänner|kompisar/i.test(text)) travelerType = "friends";
+  }
+
+  if (!destination || !duration) return null;
+
+  return {
+    destination: destination.toLowerCase().trim(),
+    duration,
+    vibe,
+    travelerType,
+    origin: origin ? origin.toLowerCase().trim() : undefined,
+  };
+};
+
+/**
+ * Fire-and-forget: save a completed plan to the cache endpoint.
+ */
+const savePlanToCache = async (
+  meta: { destination: string; duration: number; vibe: string; travelerType: string; origin?: string },
+  content: string,
+) => {
+  try {
+    await fetch(CACHE_PLAN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        destination: meta.destination,
+        duration: meta.duration,
+        vibe: meta.vibe,
+        travelerType: meta.travelerType,
+        origin: meta.origin,
+        content,
+      }),
+    });
+  } catch (e) {
+    console.warn("[cache-plan] save failed:", e);
+  }
 };
 const STORAGE_KEY = "jolliday-conversations";
 const PREFS_KEY = "jolliday-preferences";
@@ -428,6 +521,14 @@ export const useRzumaChat = () => {
           console.warn("Reviewer failed, fail-open:", err);
         }
         setQaStatus(null);
+
+        // ── CACHE SAVE (fire-and-forget) ──────────────────────────────
+        // Save the final plan (post-QA enrichment) to cache for future reuse.
+        const allMsgs = convosRef.current.find(c => c.id === currentId)?.messages || [];
+        const planMeta = extractPlanMeta(allMsgs);
+        if (planMeta && assistantContent) {
+          savePlanToCache(planMeta, assistantContent);
+        }
       }
     } catch (e) {
       console.error("Chat error:", e);
