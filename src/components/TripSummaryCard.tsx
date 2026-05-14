@@ -5,8 +5,8 @@ import {
   Hotel,
   MapPin,
   CalendarDays,
-  Sparkles,
   Compass,
+  ArrowUpRight,
 } from "lucide-react";
 import { FlightData } from "@/components/FlightCard";
 import { HotelData } from "@/contexts/TripContext";
@@ -29,13 +29,10 @@ export type TripPlanData = {
 };
 
 /* ─────────────────────────────────────────────────────────────
-   TripSummaryCard — premium edition
-   A magazine-cover style card with:
-   • Cinematic full-bleed hero (video or image)
-   • Layered glass overlays for typography
-   • Dynamic gradient accents
-   • Polaroid-style activity peek strip
-   • Subtle parallax + reveal animations on hover
+   TripSummaryCard — editorial edition
+   Restrained, considered, mobile-first.
+   Inspired by Airbnb listings, Apple TV cards, Cereal magazine.
+   One accent color, generous whitespace, real typographic hierarchy.
    ───────────────────────────────────────────────────────────── */
 
 type Props = {
@@ -114,196 +111,132 @@ const TripSummaryCard = ({
     setHeroSrc(undefined);
   };
 
-  // Pick top 3 activity photos for the polaroid strip
-  const photoStrip = (data.activities || [])
-    .slice(0, 6)
-    .map((a) => {
-      const venuePhoto = itineraryVenuePhotos?.[a.name]?.photo || itineraryVenuePhotos?.[a.name]?.thumbPhoto;
-      return {
-        name: a.name,
-        photo: venuePhoto || a.realPhoto || a.image || null,
-        category: a.category,
-      };
-    })
-    .filter((p) => p.photo)
-    .slice(0, 4);
-
-  // Build a tagline based on the trip vibe
-  const firstActivity = data.activities[0];
-  const tagline = data.travelInfo?.destination
-    ? `${days} day${days === 1 ? "" : "s"} in ${destination}`
-    : `${days} day${days === 1 ? "" : "s"} of magic`;
-
   // Trip period from weather block or first slot date
   const weather: any = (data as any).weather;
   const period = weather?.period || data.travelInfo?.bestTimeToVisit || null;
 
+  // Country pulled from travelInfo for the typographic kicker
+  const country = data.travelInfo?.country || data.hotels[0]?.location?.split(",").pop()?.trim() || null;
+
   return (
     <div
       onClick={handleOpen}
-      className="group/card relative mt-4 w-full max-w-md cursor-pointer select-none"
+      className="group/card relative mt-4 w-full max-w-md cursor-pointer select-none rounded-3xl overflow-hidden bg-card border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_32px_-12px_rgba(0,0,0,0.12)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_48px_-16px_rgba(0,0,0,0.18)] transition-shadow duration-300"
     >
-      {/* Outer glow on hover */}
-      <div className="absolute -inset-1 rounded-[28px] bg-gradient-to-br from-primary/40 via-fuchsia-400/30 to-amber-300/40 opacity-0 group-hover/card:opacity-100 blur-xl transition-opacity duration-500" />
 
-      <div className="relative rounded-[24px] overflow-hidden bg-neutral-950 shadow-[0_8px_30px_rgba(0,0,0,0.12)] group-hover/card:shadow-[0_20px_60px_rgba(0,0,0,0.25)] transition-shadow duration-500">
-
-        {/* ── HERO LAYER ─────────────────────────────────────────── */}
-        <div className="relative h-[420px] overflow-hidden">
-          {heroVideoUrl ? (
-            <video
-              src={heroVideoUrl}
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover scale-110 group-hover/card:scale-105 transition-transform duration-[1500ms] ease-out"
-            />
-          ) : heroSrc ? (
-            <img
-              src={heroSrc}
-              alt={destination}
-              onError={handleHeroError}
-              className="absolute inset-0 w-full h-full object-cover scale-110 group-hover/card:scale-105 transition-transform duration-[1500ms] ease-out"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-fuchsia-800 flex items-center justify-center">
-              <Compass className="h-16 w-16 text-white/30" strokeWidth={1.5} />
-            </div>
-          )}
-
-          {/* Cinematic gradient overlays */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-fuchsia-500/10 mix-blend-overlay" />
-
-          {/* Top-left chip — "Your trip" */}
-          <div className="absolute top-5 left-5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 shadow-sm">
-            <Sparkles className="h-3 w-3 text-white" fill="white" />
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white">
-              Your trip
-            </span>
-          </div>
-
-          {/* Top-right chip — period if known */}
-          {period && (
-            <div className="absolute top-5 right-5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20">
-              <CalendarDays className="h-3 w-3 text-white" />
-              <span className="text-[11px] font-semibold text-white truncate max-w-[140px]">
-                {period}
-              </span>
-            </div>
-          )}
-
-          {/* ── BOTTOM CONTENT — DESTINATION TITLE ─────────────── */}
-          <div className="absolute inset-x-0 bottom-0 p-6 pb-7">
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/70 mb-1.5">
-              {tagline}
-            </p>
-            <h2 className="text-[2.75rem] sm:text-5xl font-black tracking-tight text-white leading-[0.95] drop-shadow-lg">
-              {destination}
-            </h2>
-
-            {/* Origin → Destination */}
-            {origin && (
-              <div className="mt-3 inline-flex items-center gap-2 text-xs text-white/90">
-                <span className="font-medium">{origin}</span>
-                <Plane className="h-3 w-3 rotate-45" />
-                <span className="font-semibold">{destination}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── POLAROID PHOTO STRIP ─────────────────────────────── */}
-        {photoStrip.length > 0 && (
-          <div className="absolute -bottom-2 right-5 flex gap-2 z-10">
-            {photoStrip.slice(0, 3).map((p, i) => (
-              <div
-                key={p.name + i}
-                className="w-14 h-14 rounded-xl overflow-hidden border-[3px] border-white shadow-lg ring-1 ring-black/5 transform transition-transform duration-300"
-                style={{
-                  transform: `rotate(${(i - 1) * 4}deg) translateY(${i % 2 === 0 ? 0 : -4}px)`,
-                }}
-              >
-                <img
-                  src={p.photo!}
-                  alt={p.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => ((e.currentTarget.parentElement as HTMLElement).style.display = "none")}
-                />
-              </div>
-            ))}
+      {/* ── HERO ─────────────────────────────────────────────────── */}
+      <div className="relative aspect-[4/5] sm:aspect-[3/4] overflow-hidden bg-neutral-100">
+        {heroVideoUrl ? (
+          <video
+            src={heroVideoUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover/card:scale-[1.04]"
+          />
+        ) : heroSrc ? (
+          <img
+            src={heroSrc}
+            alt={destination}
+            onError={handleHeroError}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover/card:scale-[1.04]"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-neutral-900 flex items-center justify-center">
+            <Compass className="h-12 w-12 text-white/20" strokeWidth={1.25} />
           </div>
         )}
 
-        {/* ── DETAILS LAYER ────────────────────────────────────── */}
-        <div className="relative bg-white p-5 pt-7">
-          {/* Stat row */}
-          <div className="grid grid-cols-4 gap-3 mb-5">
-            <PremiumStat label="Days" value={days} icon={<CalendarDays className="h-3.5 w-3.5" />} accent="primary" />
-            <PremiumStat label="Hotels" value={data.hotels.length} icon={<Hotel className="h-3.5 w-3.5" />} accent="fuchsia" />
-            <PremiumStat label="Flights" value={data.flights.length} icon={<Plane className="h-3.5 w-3.5" />} accent="amber" />
-            <PremiumStat label="Stops" value={activitiesCount} icon={<MapPin className="h-3.5 w-3.5" />} accent="emerald" />
-          </div>
+        {/* Single soft gradient — bottom only, deep but warm */}
+        <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
 
-          {/* Day teaser strip */}
-          {data.itinerary.length > 0 && (
-            <DayTeaserPreview itinerary={data.itinerary} />
-          )}
-
-          {/* CTA button */}
-          <button
-            type="button"
-            className="mt-5 w-full relative overflow-hidden rounded-2xl py-3.5 font-semibold text-sm text-white shadow-lg group/btn transition-transform active:scale-[0.98]"
-            style={{
-              background: "linear-gradient(135deg, hsl(234 62% 52%) 0%, hsl(280 70% 55%) 50%, hsl(330 80% 60%) 100%)",
-            }}
-          >
-            <span className="relative z-10 inline-flex items-center justify-center gap-2">
-              Open the full plan
-              <span className="inline-block transition-transform duration-300 group-hover/btn:translate-x-1">→</span>
+        {/* Optional period chip — quiet, top-right */}
+        {period && (
+          <div className="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm">
+            <span className="text-[10px] font-medium tracking-tight text-neutral-900">
+              {period}
             </span>
-            {/* Shimmer */}
-            <span className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
-          </button>
+          </div>
+        )}
+
+        {/* Title block — bottom-left, editorial style */}
+        <div className="absolute inset-x-0 bottom-0 px-5 pb-5 sm:px-6 sm:pb-6">
+          {country && (
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70 mb-2">
+              {country}
+            </p>
+          )}
+          <h2 className="font-serif text-[2.5rem] sm:text-[3rem] leading-[0.95] tracking-tight text-white">
+            {destination}
+          </h2>
+
+          {origin && (
+            <div className="mt-3 inline-flex items-center gap-2 text-[11px] text-white/85">
+              <span className="font-medium">{origin}</span>
+              <span className="w-3 h-px bg-white/40" />
+              <span className="font-medium">{destination}</span>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* ── DETAILS ──────────────────────────────────────────────── */}
+      <div className="p-5 sm:p-6 space-y-5">
+        {/* Quiet meta row */}
+        <div className="flex items-center justify-between gap-3 pb-4 border-b border-black/5">
+          <MetaPill icon={<CalendarDays className="h-3.5 w-3.5" />} value={days} label={days === 1 ? "day" : "days"} />
+          <span className="w-px h-4 bg-black/10" />
+          <MetaPill icon={<Hotel className="h-3.5 w-3.5" />} value={data.hotels.length} label={data.hotels.length === 1 ? "stay" : "stays"} />
+          <span className="w-px h-4 bg-black/10" />
+          <MetaPill icon={<Plane className="h-3.5 w-3.5" />} value={data.flights.length} label="flights" />
+          <span className="w-px h-4 bg-black/10" />
+          <MetaPill icon={<MapPin className="h-3.5 w-3.5" />} value={activitiesCount} label="stops" />
+        </div>
+
+        {/* Day previews — clean editorial list */}
+        {data.itinerary.length > 0 && (
+          <DayList itinerary={data.itinerary} />
+        )}
+
+        {/* CTA */}
+        <button
+          type="button"
+          className="group/btn w-full flex items-center justify-between rounded-2xl bg-foreground text-background pl-5 pr-3 py-3 text-sm font-medium transition-all hover:opacity-95 active:scale-[0.99]"
+        >
+          <span>Open the full plan</span>
+          <span className="w-8 h-8 rounded-full bg-background/15 flex items-center justify-center transition-transform duration-200 group-hover/btn:translate-x-0.5">
+            <ArrowUpRight className="h-4 w-4" strokeWidth={2.25} />
+          </span>
+        </button>
       </div>
     </div>
   );
 };
 
-/* ─── Premium stat tile with accent gradient ───────────────────── */
-const accentMap = {
-  primary: "from-primary/10 to-primary/5 text-primary",
-  fuchsia: "from-fuchsia-500/10 to-fuchsia-500/5 text-fuchsia-600",
-  amber: "from-amber-500/10 to-amber-500/5 text-amber-600",
-  emerald: "from-emerald-500/10 to-emerald-500/5 text-emerald-600",
-} as const;
-
-const PremiumStat = ({
-  label,
-  value,
+/* ─── Quiet meta pill — icon + number + label ──────────────────── */
+const MetaPill = ({
   icon,
-  accent,
+  value,
+  label,
 }: {
-  label: string;
-  value: number | string;
   icon: React.ReactNode;
-  accent: keyof typeof accentMap;
+  value: number | string;
+  label: string;
 }) => (
-  <div className={`relative rounded-2xl p-3 text-center bg-gradient-to-br ${accentMap[accent]} border border-black/[0.04] overflow-hidden`}>
-    <div className={`flex items-center justify-center mb-1 ${accentMap[accent].split(" ").pop()}`}>
-      {icon}
+  <div className="flex-1 flex flex-col items-center text-center min-w-0">
+    <div className="text-muted-foreground/70 mb-1.5">{icon}</div>
+    <div className="text-base font-semibold text-foreground leading-none tabular-nums">
+      {value}
     </div>
-    <div className="text-xl font-black text-foreground leading-none">{value}</div>
-    <div className="mt-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+    <div className="mt-1 text-[10px] font-medium text-muted-foreground/80 lowercase truncate w-full">
       {label}
     </div>
   </div>
 );
 
-/* ─── Day teaser — shows day 1–3 highlight one-liners ──────────── */
-const DayTeaserPreview = ({ itinerary }: { itinerary: ItineraryData[] }) => {
+/* ─── Editorial day list — Day 01 · Title ───────────────────────── */
+const DayList = ({ itinerary }: { itinerary: ItineraryData[] }) => {
   const firstSlotTitle = (d: any): string => {
     if (Array.isArray(d?.slots) && d.slots.length > 0) {
       const slot = d.slots[0];
@@ -312,29 +245,30 @@ const DayTeaserPreview = ({ itinerary }: { itinerary: ItineraryData[] }) => {
     return d?.title || "";
   };
   const days = itinerary.slice(0, 3).map((d, i) => ({
-    num: i + 1,
+    num: String(i + 1).padStart(2, "0"),
     teaser: firstSlotTitle(d),
   }));
 
+  if (days.every((d) => !d.teaser)) return null;
+
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2.5">
       {days.map((d) => (
-        <div
-          key={d.num}
-          className="flex items-center gap-2.5 text-xs"
-        >
-          <span className="shrink-0 w-5 h-5 rounded-full bg-foreground text-background text-[10px] font-bold flex items-center justify-center">
-            {d.num}
-          </span>
-          <span className="text-muted-foreground truncate">{d.teaser || "—"}</span>
-        </div>
+        d.teaser && (
+          <div key={d.num} className="flex items-baseline gap-3 text-sm">
+            <span className="shrink-0 text-[10px] font-semibold tracking-[0.15em] text-muted-foreground/70 tabular-nums">
+              DAY {d.num}
+            </span>
+            <span className="text-foreground/85 truncate">{d.teaser}</span>
+          </div>
+        )
       ))}
       {itinerary.length > 3 && (
-        <div className="flex items-center gap-2.5 text-xs">
-          <span className="shrink-0 w-5 h-5 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground text-[10px] font-bold flex items-center justify-center">
+        <div className="flex items-baseline gap-3 text-sm">
+          <span className="shrink-0 text-[10px] font-semibold tracking-[0.15em] text-muted-foreground/50 tabular-nums">
             +{itinerary.length - 3}
           </span>
-          <span className="text-muted-foreground/70">more days inside</span>
+          <span className="text-muted-foreground/70 italic">more days inside</span>
         </div>
       )}
     </div>
