@@ -7,6 +7,8 @@ import {
   CalendarDays,
   Compass,
   ArrowUpRight,
+  Star,
+  Cloud,
 } from "lucide-react";
 import { FlightData } from "@/components/FlightCard";
 import { HotelData } from "@/contexts/TripContext";
@@ -27,14 +29,15 @@ export type TripPlanData = {
   travelInfo: TravelInfoData | null;
   quickReplies: string[];
   text: string;
+  weather?: any;
 };
 
 /* ─────────────────────────────────────────────────────────────
    TripSummaryCard — Jolliday postcard
-   • Cinematic 4:3 hero (fits in phone chat window)
-   • Brand: north-star + indigo accent
-   • Photo peek strip floating over the divide
-   • Compact day teaser + brand CTA
+   • 4:3 cinematic hero with brand stamp + watermark
+   • Highlight strip: hotel + signature activity
+   • Day-by-day teaser
+   • Brand CTA
    ───────────────────────────────────────────────────────────── */
 
 type Props = {
@@ -115,22 +118,9 @@ const TripSummaryCard = ({
 
   const weather: any = (data as any).weather;
   const period = weather?.period || data.travelInfo?.bestTimeToVisit || null;
+  const weatherTemp = weather?.temperature || null;
 
-  // Photo peek — 3 venue photos that float over the hero/body divide
-  const peekPhotos = (data.activities || [])
-    .map((a) => {
-      const venuePhoto =
-        itineraryVenuePhotos?.[a.name]?.photo ||
-        itineraryVenuePhotos?.[a.name]?.thumbPhoto;
-      return {
-        name: a.name,
-        photo: venuePhoto || a.realPhoto || a.image || null,
-      };
-    })
-    .filter((t) => t.photo)
-    .slice(0, 3);
-
-  // First two days teaser
+  // Day-by-day teaser (up to 3)
   const firstSlotTitle = (d: any): string => {
     if (Array.isArray(d?.slots) && d.slots.length > 0) {
       const slot = d.slots[0];
@@ -138,17 +128,21 @@ const TripSummaryCard = ({
     }
     return d?.title || "";
   };
-  const dayTeasers = data.itinerary.slice(0, 2).map((d, i) => ({
+  const dayTeasers = data.itinerary.slice(0, 3).map((d, i) => ({
     num: i + 1,
     teaser: firstSlotTitle(d),
   }));
+
+  // Top hotel + signature activity for the highlight row
+  const topHotel = data.hotels[0];
+  const signatureActivity = data.activities[0];
 
   return (
     <div
       onClick={handleOpen}
       className="group/card relative mt-4 w-full max-w-md cursor-pointer select-none rounded-3xl overflow-hidden bg-card border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.04),0_14px_36px_-14px_rgba(0,0,0,0.18)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_50px_-18px_rgba(0,0,0,0.25)] transition-shadow duration-300"
     >
-      {/* ── HERO — 4:3 cinematic ─────────────────────────────── */}
+      {/* ── HERO ─────────────────────────────────────────────── */}
       <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100">
         {heroVideoUrl ? (
           <video
@@ -199,7 +193,7 @@ const TripSummaryCard = ({
           </div>
         )}
 
-        {/* Decorative star — bottom right, very subtle */}
+        {/* Decorative star — bottom right, subtle */}
         <div className="absolute -right-4 -bottom-4 opacity-[0.12] pointer-events-none">
           <LogoMark size={120} color="white" />
         </div>
@@ -219,38 +213,10 @@ const TripSummaryCard = ({
         </div>
       </div>
 
-      {/* ── PHOTO PEEK STRIP — floats over the hero/body divide ── */}
-      {peekPhotos.length > 0 && (
-        <div className="relative h-0">
-          <div className="absolute -top-7 left-5 flex gap-1.5 z-10">
-            {peekPhotos.map((p, i) => (
-              <div
-                key={p.name + i}
-                className="w-12 h-12 rounded-xl overflow-hidden border-[2.5px] border-white shadow-md ring-1 ring-black/5"
-              >
-                <img
-                  src={p.photo!}
-                  alt={p.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => ((e.currentTarget.parentElement as HTMLElement).style.display = "none")}
-                />
-              </div>
-            ))}
-            {data.activities.length > peekPhotos.length && (
-              <div className="w-12 h-12 rounded-xl border-[2.5px] border-white bg-neutral-900 shadow-md ring-1 ring-black/5 flex items-center justify-center">
-                <span className="text-[11px] font-bold text-white">
-                  +{data.activities.length - peekPhotos.length}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* ── BODY ─────────────────────────────────────────────── */}
-      <div className={`p-4 ${peekPhotos.length > 0 ? "pt-7" : ""}`}>
+      <div className="p-5 space-y-4">
         {/* Inline meta row */}
-        <div className="flex items-center justify-between gap-1 text-[11px] mb-3">
+        <div className="flex items-center justify-between gap-1 text-[11px]">
           <Meta icon={<Hotel className="h-3 w-3" />} value={data.hotels.length} label={data.hotels.length === 1 ? "hotel" : "hotels"} />
           <span className="w-px h-3 bg-black/10" />
           <Meta icon={<Plane className="h-3 w-3" />} value={data.flights.length} label="flights" />
@@ -260,32 +226,67 @@ const TripSummaryCard = ({
           <Meta icon={<CalendarDays className="h-3 w-3" />} value={days} label={days === 1 ? "day" : "days"} />
         </div>
 
+        {/* Highlight row — hotel + signature activity (no photos) */}
+        {(topHotel || signatureActivity) && (
+          <div className="space-y-2 pt-1">
+            {topHotel && (
+              <HighlightRow
+                kicker="STAY"
+                title={topHotel.name}
+                subtitle={topHotel.location || topHotel.neighborhood}
+                rating={(topHotel as any).rating}
+              />
+            )}
+            {signatureActivity && (
+              <HighlightRow
+                kicker="DON'T MISS"
+                title={signatureActivity.name}
+                subtitle={signatureActivity.neighborhood || signatureActivity.category}
+              />
+            )}
+          </div>
+        )}
+
         {/* Day teasers */}
         {dayTeasers.some((d) => d.teaser) && (
-          <div className="space-y-1.5 mb-3.5 pb-3.5 border-b border-black/5">
+          <div className="space-y-1.5 pt-3 border-t border-black/[0.06]">
             {dayTeasers.map(
               (d) =>
                 d.teaser && (
                   <div key={d.num} className="flex items-baseline gap-3 text-[12px]">
-                    <span className="shrink-0 text-[9px] font-bold tracking-[0.18em] text-primary tabular-nums">
+                    <span
+                      className="shrink-0 text-[9px] font-bold tracking-[0.18em] tabular-nums"
+                      style={{ color: "hsl(234 62% 47%)" }}
+                    >
                       DAY 0{d.num}
                     </span>
                     <span className="text-foreground/85 truncate">{d.teaser}</span>
                   </div>
                 ),
             )}
-            {data.itinerary.length > 2 && (
+            {data.itinerary.length > 3 && (
               <p className="text-[10px] text-muted-foreground/70 italic pl-[3.25rem]">
-                +{data.itinerary.length - 2} more days inside
+                +{data.itinerary.length - 3} more day{data.itinerary.length - 3 === 1 ? "" : "s"} inside
               </p>
             )}
+          </div>
+        )}
+
+        {/* Weather strip — small, atmospheric */}
+        {weatherTemp && (
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-1">
+            <Cloud className="h-3 w-3" />
+            <span>
+              Expect <span className="font-semibold text-foreground">{weatherTemp}</span>
+              {weather?.conditions ? ` · ${weather.conditions}` : ""}
+            </span>
           </div>
         )}
 
         {/* CTA — brand indigo */}
         <button
           type="button"
-          className="group/btn w-full flex items-center justify-between rounded-xl pl-4 pr-2 py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.99] shadow-sm"
+          className="group/btn w-full flex items-center justify-between rounded-xl pl-4 pr-2 py-3 text-sm font-semibold text-white transition-all active:scale-[0.99] shadow-sm"
           style={{
             background:
               "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 38%))",
@@ -318,6 +319,42 @@ const Meta = ({
     <span className="text-muted-foreground/70 shrink-0">{icon}</span>
     <span className="font-bold tabular-nums">{value}</span>
     <span className="text-muted-foreground/80 lowercase truncate">{label}</span>
+  </div>
+);
+
+/* ─── Highlight row — kicker + title + subtitle ─────────────────── */
+const HighlightRow = ({
+  kicker,
+  title,
+  subtitle,
+  rating,
+}: {
+  kicker: string;
+  title: string;
+  subtitle?: string;
+  rating?: number;
+}) => (
+  <div className="flex items-baseline gap-3 text-[12px]">
+    <span
+      className="shrink-0 text-[9px] font-bold tracking-[0.18em] tabular-nums w-[3.25rem]"
+      style={{ color: "hsl(234 62% 47%)" }}
+    >
+      {kicker}
+    </span>
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-1.5">
+        <span className="font-semibold text-foreground truncate">{title}</span>
+        {rating && (
+          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-600 shrink-0">
+            <Star className="h-2.5 w-2.5 fill-current" />
+            {rating.toFixed(1)}
+          </span>
+        )}
+      </div>
+      {subtitle && (
+        <span className="block text-[10px] text-muted-foreground truncate">{subtitle}</span>
+      )}
+    </div>
   </div>
 );
 
