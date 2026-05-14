@@ -283,10 +283,16 @@ const VenuesGrid = ({
   const cityMedia = media.filter((m) => m.destination === city);
   const heroes = cityMedia.filter((m) => m.type === "hero");
 
-  // Collect unique venues (activities + hotels)
+  // Collect unique venues (activities + hotels) — exclude rejected (sort_order < 0 or verified=false)
   const venueMap = new Map<string, { type: "activity" | "hotel"; items: MediaRow[] }>();
   for (const row of cityMedia) {
     if (row.type === "activity" || row.type === "hotel") {
+      // Skip rejected venues (rows with sort_order = -1 or metadata.verified = false)
+      if (row.sort_order < 0) continue;
+      if (row.metadata?.verified === false) continue;
+      // Skip rows with no actual URL (verification-only rows)
+      if (!row.url) continue;
+
       const venueName = row.name || "Unknown";
       const key = `${row.type}::${venueName}`;
       if (!venueMap.has(key)) {

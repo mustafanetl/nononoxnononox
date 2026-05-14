@@ -104,6 +104,7 @@ async function getCachedActivityPhotos(destination: string, names: string[]): Pr
       .select("*")
       .eq("destination", norm)
       .in("type", ["activity", "hotel"])
+      .gte("sort_order", 0) // exclude rejected venues (sort_order = -1)
       .order("sort_order", { ascending: true });
 
     if (!data || data.length === 0) return {};
@@ -112,6 +113,10 @@ async function getCachedActivityPhotos(destination: string, names: string[]): Pr
     const byName: Record<string, any[]> = {};
     for (const row of data) {
       if (!row.name) continue;
+      // Skip rows marked as not verified (rejected venues)
+      if (row.metadata?.verified === false) continue;
+      // Skip rows with no actual photo URL
+      if (!row.url || row.url === "") continue;
       const key = row.name;
       if (!byName[key]) byName[key] = [];
       byName[key].push(row);
