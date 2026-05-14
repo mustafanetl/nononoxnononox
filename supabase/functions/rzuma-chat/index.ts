@@ -282,6 +282,16 @@ and only then output.
    - Every major venue appearing in the itinerary SHOULD also appear in
      activities (same name) when possible, so it gets enriched photos.
 
+DUPLICATE PREVENTION — ABSOLUTE RULE:
+- NEVER include the same activity/venue twice in the activities block. Each venue name must be unique.
+- If a venue appears in the itinerary multiple times (e.g. breakfast spot on day 1 and day 3), it still only appears ONCE in the activities block.
+- Before emitting the activities block, mentally check: are there any duplicate names? If yes, remove the duplicate and add a different venue.
+
+AIRPORT/TRAVEL LOGISTICS — NEVER INCLUDE:
+- NEVER include "Arrive at airport", "Depart from airport", "Flight to X", "Transfer to hotel", "Check-in", "Check-out", or any travel logistics as activities.
+- Activities are ONLY real venues, restaurants, attractions, and experiences at the destination.
+- The flights block handles travel. The itinerary handles timing. Activities are strictly things to DO at the destination.
+
 FINAL MENTAL CHECK (answer each silently):
   a. Does my itinerary array length equal the trip duration? YES/NO
   b. Does EVERY day have 6-8 slots? YES/NO

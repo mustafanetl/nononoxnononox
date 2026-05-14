@@ -1274,7 +1274,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             )}
 
                             {/* Full plan → show the plan card (only when fully done) */}
-                            {isFullPlan && destination && !isLoading && qaStatus !== 'verifying' ? (
+                            {isFullPlan && destination && (!isLastAssistant || (!isLoading && qaStatus !== 'verifying' && enrichData)) ? (
                               <div className="animate-fade-in">
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
@@ -1288,7 +1288,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                   }
                                 />
                               </div>
-                            ) : isFullPlan && destination && (isLoading || qaStatus === 'verifying') ? (
+                            ) : isFullPlan && destination && isLastAssistant && (isLoading || qaStatus === 'verifying' || !enrichData) ? (
                               <div className="animate-fade-in">
                                 {/* Show loading state while plan is being prepared */}
                                 <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-4">
