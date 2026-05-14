@@ -139,6 +139,33 @@ function collectVenues(blocks: Block[]): { name: string; kind: "activity" | "hot
 }
 
 /**
+ * Check for duplicate activities in the activities block.
+ * Returns issues if the same venue name appears more than once.
+ */
+function checkDuplicateActivities(blocks: Block[]): string[] {
+  const issues: string[] = [];
+  const activitiesBlock = blocks.find((b) => b.type === "activities");
+  if (!activitiesBlock || !Array.isArray(activitiesBlock.json)) return issues;
+
+  const seen = new Map<string, number>(); // normalized name → count
+  for (const activity of activitiesBlock.json) {
+    if (!activity || typeof activity.name !== "string") continue;
+    const normalized = activity.name.toLowerCase().trim().replace(/[''`]/g, "'");
+    seen.set(normalized, (seen.get(normalized) || 0) + 1);
+  }
+
+  const duplicates = [...seen.entries()].filter(([, count]) => count > 1);
+  if (duplicates.length > 0) {
+    const dupeNames = duplicates.map(([name]) => `"${name}"`).join(", ");
+    issues.push(
+      `Activities block contains duplicate venues: ${dupeNames}. Each activity must be unique — replace duplicates with different real venues in the destination.`,
+    );
+  }
+
+  return issues;
+}
+
+/**
  * Structural completeness checks — independent of Google verification.
  *
  * A plan can have every venue pass verification and still be garbage
@@ -524,11 +551,13 @@ serve(async (req) => {
     // skip the (more expensive) Places verification and ask the AI to fix
     // the structure before we re-verify on the next pass.
     const structuralIssues = checkItineraryCompleteness(blocks);
-    if (structuralIssues.length > 0) {
-      console.log(`Plan rejected (structural): ${structuralIssues.length} issue(s)`);
+    const duplicateIssues = checkDuplicateActivities(blocks);
+    const allStructuralIssues = [...structuralIssues, ...duplicateIssues];
+    if (allStructuralIssues.length > 0) {
+      console.log(`Plan rejected (structural): ${allStructuralIssues.length} issue(s)`);
       limitCheck.commit().catch(() => {});
       return new Response(
-        JSON.stringify({ approved: false, issues: structuralIssues.slice(0, 12) }),
+        JSON.stringify({ approved: false, issues: allStructuralIssues.slice(0, 12) }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

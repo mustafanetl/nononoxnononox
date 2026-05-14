@@ -129,10 +129,22 @@ const parseMessageContent = (content: string) => {
   };
 
   const flights: FlightData[] = pick("flights");
-  const activities: ActivityData[] = pick("activities");
+  const activitiesRaw: ActivityData[] = pick("activities");
   const hotels: HotelData[] = pick("hotels");
   const itinerary: ItineraryData[] = pick("itinerary");
   const timeline: TimelineLeg[] = pick("timeline");
+
+  // Client-side dedup: remove duplicate activities by name (case-insensitive).
+  // The AI prompt and server-side review both prevent this, but as a safety net
+  // we filter here so the user never sees duplicates in the UI.
+  const seenActivityNames = new Set<string>();
+  const activities: ActivityData[] = activitiesRaw.filter((a) => {
+    if (!a || typeof a.name !== "string") return true;
+    const key = a.name.toLowerCase().trim();
+    if (seenActivityNames.has(key)) return false;
+    seenActivityNames.add(key);
+    return true;
+  });
 
   const enrichArr = pick("destination_enrich");
   const destinationEnrich: { destination: string; travelMonth?: string } | null =
@@ -1274,7 +1286,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             )}
 
                             {/* Full plan → show the plan card (only when fully done) */}
-                            {isFullPlan && destination && (!isLastAssistant || (!isLoading && qaStatus !== 'verifying' && enrichData)) ? (
+                            {isFullPlan && destination && (!isLastAssistant || (!isLoading && qaStatus !== 'verifying')) ? (
                               <div className="animate-fade-in">
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
@@ -1288,7 +1300,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                   }
                                 />
                               </div>
-                            ) : isFullPlan && destination && isLastAssistant && (isLoading || qaStatus === 'verifying' || !enrichData) ? (
+                            ) : isFullPlan && destination && isLastAssistant && (isLoading || qaStatus === 'verifying') ? (
                               <div className="animate-fade-in">
                                 {/* Show loading state while plan is being prepared */}
                                 <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-4">

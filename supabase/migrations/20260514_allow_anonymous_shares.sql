@@ -3,6 +3,9 @@
 
 ALTER TABLE public.shared_trips ALTER COLUMN owner_user_id DROP NOT NULL;
 
+DROP POLICY IF EXISTS "Users can create their own shared trips" ON public.shared_trips;
+DROP POLICY IF EXISTS "Anonymous can create shared trips" ON public.shared_trips;
+
 CREATE POLICY "Anonymous can create shared trips"
   ON public.shared_trips FOR INSERT
   TO anon, authenticated
@@ -13,6 +16,3 @@ CREATE POLICY "Anonymous can create shared trips"
     -- Anonymous users can create shares with no owner
     (auth.uid() IS NULL AND owner_user_id IS NULL)
   );
-
--- Drop the old INSERT policy that only allowed authenticated users
-DROP POLICY IF EXISTS "Users can create their own shared trips" ON public.shared_trips;
