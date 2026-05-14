@@ -60,18 +60,18 @@ const Promo = () => {
       try {
         const allActivities = [...DAY1_ACTIVITIES, ...DAY2_ACTIVITIES];
         const searchNames = allActivities.map((a) => a.searchName);
-        const { data } = await supabase.functions.invoke("enrich-destination", {
+        // Use TripAdvisor for promo photos — much better quality
+        const { data } = await supabase.functions.invoke("tripadvisor-photos", {
           body: {
-            destination: "gothenburg",
-            activities: searchNames,
-            hotelNames: [],
+            destination: "Gothenburg",
+            venues: searchNames,
           },
         });
         const photoMap: Record<string, string> = {};
-        const activityPhotos = data?.activityPhotos || {};
+        const taPhotos = data?.photos || {};
         for (const activity of allActivities) {
-          const info = activityPhotos[activity.searchName] || activityPhotos[activity.searchName.toLowerCase()];
-          if (info?.hasRealPhoto && info.photo) {
+          const info = taPhotos[activity.searchName];
+          if (info?.photo) {
             photoMap[activity.name] = info.photo;
           }
         }
