@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Castle,
   Coffee,
-  TreePine,
+  Snowflake,
   UtensilsCrossed,
   Music,
   Building2,
   Waves,
   Store,
-  Palette,
+  Skull,
   Wine,
+  Sparkles,
   Loader2,
 } from "lucide-react";
 
@@ -30,19 +30,19 @@ interface Activity {
 }
 
 const DAY1_ACTIVITIES: Activity[] = [
-  { icon: <Castle className="w-4 h-4 text-amber-400" />, name: "MALMÖHUS CASTLE", searchName: "Malmöhus Castle", description: "Renaissance castle & city museum", duration: "2h", location: "Slottsstaden" },
-  { icon: <Coffee className="w-4 h-4 text-amber-400" />, name: "LILLA TORG", searchName: "Lilla Torg", description: "Charming square with cafés & bars", duration: "1.5h", location: "Gamla Staden" },
-  { icon: <Building2 className="w-4 h-4 text-amber-400" />, name: "TURNING TORSO", searchName: "Turning Torso", description: "Iconic twisted skyscraper", duration: "1h", location: "Västra Hamnen" },
-  { icon: <UtensilsCrossed className="w-4 h-4 text-amber-400" />, name: "BASTARD", searchName: "Bastard Restaurant Malmö", description: "Nose-to-tail dining experience", duration: "2h", location: "Södra Förstadsgatan" },
-  { icon: <Music className="w-4 h-4 text-amber-400" />, name: "MÖLLEVÅNGEN", searchName: "Möllevången", description: "Hippest neighborhood at night", duration: "3h", location: "Möllevången" },
+  { icon: <Coffee className="w-4 h-4 text-amber-400" />, name: "LILLA KAFFEROSTERIET", searchName: "Lilla Kafferosteriet", description: "Sweden's best cinnamon bun, no joke", duration: "1h", location: "Davidshallstorg" },
+  { icon: <Building2 className="w-4 h-4 text-amber-400" />, name: "TURNING TORSO", searchName: "Turning Torso", description: "Tallest twisted tower in Scandinavia", duration: "45m", location: "Västra Hamnen" },
+  { icon: <Snowflake className="w-4 h-4 text-amber-400" />, name: "RIBERSBORGS KALLBADHUS", searchName: "Ribersborgs Kallbadhus", description: "Sauna + ice plunge in the sea, since 1898", duration: "2h", location: "Ribersborg" },
+  { icon: <UtensilsCrossed className="w-4 h-4 text-amber-400" />, name: "BASTARD", searchName: "Bastard Restaurant", description: "Cult bistro Anthony Bourdain raved about", duration: "2h", location: "Mäster Johansgatan" },
+  { icon: <Music className="w-4 h-4 text-amber-400" />, name: "MÖLLEVÅNGEN", searchName: "Möllevångstorget", description: "Hipster nightlife — bars, dive spots, energy", duration: "3h", location: "Möllevången" },
 ];
 
 const DAY2_ACTIVITIES: Activity[] = [
-  { icon: <Waves className="w-4 h-4 text-amber-400" />, name: "RIBERSBORG BEACH", searchName: "Ribersborg Beach", description: "City beach with Kallbadhuset sauna", duration: "2h", location: "Ribersborg" },
-  { icon: <TreePine className="w-4 h-4 text-amber-400" />, name: "PILDAMMSPARKEN", searchName: "Pildammsparken", description: "Malmö's biggest park & lake", duration: "1.5h", location: "Pildamm" },
-  { icon: <Store className="w-4 h-4 text-amber-400" />, name: "MALMÖ SALUHALL", searchName: "Malmö Saluhall", description: "Modern food hall in old depot", duration: "1h", location: "Gibraltargatan" },
-  { icon: <Palette className="w-4 h-4 text-amber-400" />, name: "MODERNA MUSEET", searchName: "Moderna Museet Malmö", description: "Contemporary art in old power plant", duration: "1.5h", location: "Gasverksgatan" },
-  { icon: <Wine className="w-4 h-4 text-amber-400" />, name: "MALMÖ LIVE", searchName: "Malmö Live", description: "Concert hall with rooftop views", duration: "3h", location: "Universitetsbron" },
+  { icon: <Skull className="w-4 h-4 text-amber-400" />, name: "DISGUSTING FOOD MUSEUM", searchName: "Disgusting Food Museum", description: "80 of the world's grossest foods. Real.", duration: "1.5h", location: "Södra Förstadsgatan" },
+  { icon: <Store className="w-4 h-4 text-amber-400" />, name: "MALMÖ SALUHALL", searchName: "Malmö Saluhall", description: "Foodie heaven in a converted depot", duration: "1h", location: "Gibraltargatan" },
+  { icon: <Sparkles className="w-4 h-4 text-amber-400" />, name: "FOLKETS PARK", searchName: "Folkets Park Malmö", description: "Free concerts, mini golf, vintage rides", duration: "2h", location: "Möllevången" },
+  { icon: <Waves className="w-4 h-4 text-amber-400" />, name: "WESTERN HARBOUR", searchName: "Västra Hamnen", description: "Sunset boardwalk by the Öresund", duration: "1.5h", location: "Västra Hamnen" },
+  { icon: <Wine className="w-4 h-4 text-amber-400" />, name: "FAR I HATTEN", searchName: "Far i Hatten", description: "Iconic late-night bar in Folkets Park", duration: "3h", location: "Folkets Park" },
 ];
 
 type Phase = "loading" | "hook" | "day1-title" | "day1-activities" | "day2-title" | "day2-activities" | "cta";
