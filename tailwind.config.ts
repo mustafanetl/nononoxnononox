@@ -124,6 +124,10 @@ export default {
           from: { opacity: "1" },
           to: { opacity: "0" },
         },
+        "promo-ken-burns": {
+          from: { transform: "scale(1)" },
+          to: { transform: "scale(1.1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -140,6 +144,7 @@ export default {
         "promo-underline": "promo-underline 0.8s ease-out forwards",
         "promo-fade-in": "promo-fade-in 0.8s ease-out forwards",
         "promo-fade-out": "promo-fade-out 0.5s ease-out forwards",
+        "promo-ken-burns": "promo-ken-burns 2.5s ease-out forwards",
       },
     },
   },
