@@ -88,6 +88,42 @@ export default {
           from: { strokeDashoffset: "283" },
           to: { strokeDashoffset: "0" },
         },
+        "promo-slide-in-right": {
+          from: { transform: "translateX(100%)", opacity: "0" },
+          to: { transform: "translateX(0)", opacity: "1" },
+        },
+        "promo-slide-out-left": {
+          from: { transform: "translateX(0)", opacity: "1" },
+          to: { transform: "translateX(-100%)", opacity: "0" },
+        },
+        "promo-punch-in": {
+          from: { transform: "scale(0.5)", opacity: "0" },
+          to: { transform: "scale(1)", opacity: "1" },
+        },
+        "promo-fade-up": {
+          from: { transform: "translateY(20px)", opacity: "0" },
+          to: { transform: "translateY(0)", opacity: "1" },
+        },
+        "promo-glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 20px 2px rgba(212, 175, 55, 0.3)" },
+          "50%": { boxShadow: "0 0 40px 8px rgba(212, 175, 55, 0.6)" },
+        },
+        "promo-text-glow": {
+          "0%, 100%": { textShadow: "0 0 10px rgba(212, 175, 55, 0.4)" },
+          "50%": { textShadow: "0 0 30px rgba(212, 175, 55, 0.8)" },
+        },
+        "promo-underline": {
+          from: { transform: "scaleX(0)" },
+          to: { transform: "scaleX(1)" },
+        },
+        "promo-fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        "promo-fade-out": {
+          from: { opacity: "1" },
+          to: { opacity: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -95,6 +131,15 @@ export default {
         "glow-pulse": "glow-pulse 1.5s ease-in-out 3",
         "pin-bounce": "pin-bounce 0.6s ease-in-out",
         "ring-fill": "ring-fill 1.2s ease-out forwards",
+        "promo-slide-in": "promo-slide-in-right 0.5s ease-out forwards",
+        "promo-slide-out": "promo-slide-out-left 0.5s ease-out forwards",
+        "promo-punch": "promo-punch-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "promo-fade-up": "promo-fade-up 0.8s ease-out forwards",
+        "promo-glow": "promo-glow-pulse 2s ease-in-out infinite",
+        "promo-text-glow": "promo-text-glow 2s ease-in-out infinite",
+        "promo-underline": "promo-underline 0.8s ease-out forwards",
+        "promo-fade-in": "promo-fade-in 0.8s ease-out forwards",
+        "promo-fade-out": "promo-fade-out 0.5s ease-out forwards",
       },
     },
   },
