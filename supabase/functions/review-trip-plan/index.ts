@@ -463,16 +463,44 @@ async function verifyVenue(name: string, destination: string, apiKey: string): P
     const places = data.places || [];
     if (places.length === 0) return { matched: false };
 
-    // Token-overlap match: at least one significant word from the venue name
-    // must appear in the matched place displayName.
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(w => w.length >= 3);
-    const wantedTokens = new Set(norm(name));
+    // Strict token-overlap match. We require:
+    //   • at least 50% of the venue's significant words appear in the match name, AND
+    //   • at least one matched word is "specific" (length >= 5) — common words like
+    //     "café", "park", "tower" alone are not enough to claim a match.
+    // This prevents "Skansen Restaurant" from matching a generic "Restaurant" in another city.
+    const COMMON = new Set([
+      "the", "and", "of", "in", "at", "on", "to", "for", "by", "with",
+      "café", "cafe", "bar", "club", "restaurant", "park", "tower",
+      "museum", "garden", "gardens", "house", "hall", "square", "plaza",
+      "hotel", "inn", "place", "centre", "center", "shop", "store",
+      "bistro", "brasserie", "kitchen", "lounge", "room", "rooms",
+    ]);
+    const norm = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(w => w.length >= 3);
+    const isSpecific = (w: string) => w.length >= 5 && !COMMON.has(w);
+    const wantedTokens = norm(name);
+    const wantedSet = new Set(wantedTokens);
+    if (wantedSet.size === 0) return { matched: false };
+
     for (const p of places) {
       const dn = p.displayName?.text || "";
       const haveTokens = new Set(norm(dn));
       let overlap = 0;
-      for (const w of wantedTokens) if (haveTokens.has(w)) overlap++;
-      const ok = wantedTokens.size > 0 && overlap >= Math.min(1, wantedTokens.size);
+      let specificOverlap = 0;
+      for (const w of wantedSet) {
+        if (haveTokens.has(w)) {
+          overlap++;
+          if (isSpecific(w)) specificOverlap++;
+        }
+      }
+
+      // Require ≥ 50% overlap AND at least one specific match.
+      // Special case: if the venue name is just one or two words and they
+      // both match exactly, accept it (e.g. "Rijksmuseum" vs "Rijksmuseum").
+      const ratio = overlap / wantedSet.size;
+      const exactShortName = wantedSet.size <= 2 && overlap === wantedSet.size;
+      const ok = exactShortName || (ratio >= 0.5 && specificOverlap >= 1);
+
       if (ok) {
         const countryComp = (p.addressComponents || []).find((c: any) =>
           Array.isArray(c.types) && c.types.includes("country")
@@ -638,10 +666,8 @@ serve(async (req) => {
       if (r?.matched) {
         // Country enforcement: reject venues that resolve outside the
         // destination country. ISO country code is the primary signal; a
-        // tight 150 km haversine radius is only a last-resort fallback
-        // when Google didn't return address components. 300 km was too
-        // loose — Stockholm's 300 km circle covers Denmark, Norway,
-        // Finland, and the Baltic states.
+        // tight 80 km haversine radius is only a last-resort fallback
+        // when Google didn't return address components.
         let outsideCountry = false;
         if (destCountry && r.countryCode && r.countryCode !== destCountry) {
           outsideCountry = true;
@@ -650,9 +676,26 @@ serve(async (req) => {
           !r.countryCode &&
           typeof r.lat === "number" &&
           typeof r.lng === "number" &&
-          haversineKm(destGeo.lat, destGeo.lng, r.lat, r.lng) > 150
+          haversineKm(destGeo.lat, destGeo.lng, r.lat, r.lng) > 80
         ) {
           outsideCountry = true;
+        }
+
+        // Extra guard: reject venues that land in the ocean / large body of
+        // water. Google sometimes returns lat/lng for incorrectly-tagged
+        // results. We can't perfectly detect water, but if the venue is
+        // > 200 km from the destination centroid AND has no country code,
+        // it's almost certainly wrong.
+        if (
+          !outsideCountry &&
+          destGeo &&
+          typeof r.lat === "number" &&
+          typeof r.lng === "number"
+        ) {
+          const distKm = haversineKm(destGeo.lat, destGeo.lng, r.lat, r.lng);
+          if (distKm > 200) {
+            outsideCountry = true;
+          }
         }
 
         if (outsideCountry) {

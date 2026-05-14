@@ -483,39 +483,108 @@ export const useRzumaChat = () => {
       const planText = await runStream();
 
       // === QA review — verify and enrich with Google Places data ===
-      // Single pass only: if approved, swap in enriched coords/names.
-      // No revision loops — they caused flickering and broken state.
+      // If approved, swap in enriched coords/names.
+      // If rejected with concrete issues, run ONE revision pass:
+      //   1) Ask the AI to fix the listed issues
+      //   2) Re-verify the revised plan
+      //   3) If still rejected, keep what we have rather than loop forever
       if (hasStructuredPlan(planText)) {
         try {
           setQaStatus("verifying");
-          const reviewAuth = await getAuthHeader();
-          const reviewResp = await fetch(REVIEW_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: reviewAuth,
-            },
-            body: JSON.stringify({
-              planText,
-              destinationHint: extractDestinationHint(planText),
-            }),
-          });
-          if (reviewResp.ok) {
-            const review = await reviewResp.json();
-            // Only swap in the enriched plan if it was approved (has verified coords)
-            if (review.approved && review.enrichedPlan && review.enrichedPlan !== planText) {
-              assistantContent = review.enrichedPlan;
-              const finalContent = review.enrichedPlan;
-              setConversations(prev => prev.map(c => {
-                if (c.id !== currentId) return c;
-                const msgs = c.messages;
-                const last = msgs[msgs.length - 1];
-                if (last?.role === "assistant") {
-                  return { ...c, messages: msgs.map((m, i) => i === msgs.length - 1 ? { ...m, content: finalContent } : m), updatedAt: Date.now() };
+          const runReview = async (text: string) => {
+            const auth = await getAuthHeader();
+            const resp = await fetch(REVIEW_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: auth,
+              },
+              body: JSON.stringify({
+                planText: text,
+                destinationHint: extractDestinationHint(text),
+              }),
+            });
+            if (!resp.ok) return null;
+            return await resp.json() as { approved: boolean; issues: string[]; enrichedPlan?: string };
+          };
+
+          const applyContent = (finalContent: string) => {
+            assistantContent = finalContent;
+            setConversations(prev => prev.map(c => {
+              if (c.id !== currentId) return c;
+              const msgs = c.messages;
+              const last = msgs[msgs.length - 1];
+              if (last?.role === "assistant") {
+                return { ...c, messages: msgs.map((m, i) => i === msgs.length - 1 ? { ...m, content: finalContent } : m), updatedAt: Date.now() };
+              }
+              return c;
+            }));
+          };
+
+          let review = await runReview(planText);
+
+          // Revision pass — only if rejected with actionable issues.
+          if (review && !review.approved && Array.isArray(review.issues) && review.issues.length > 0) {
+            console.log(`[QA] First pass rejected with ${review.issues.length} issues, requesting revision`);
+            try {
+              const revisionAuth = await getAuthHeader();
+              const revisedResp = await fetch(CHAT_URL, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: revisionAuth,
+                },
+                body: JSON.stringify({
+                  messages: baseMessages,
+                  preferences: fullPrefs,
+                  revisionRequest: review.issues.slice(0, 8),
+                }),
+              });
+              if (revisedResp.ok && revisedResp.body) {
+                // Drain the SSE stream into a single revised text.
+                const reader = revisedResp.body.getReader();
+                const decoder = new TextDecoder();
+                let textBuf = "";
+                let revised = "";
+                let done = false;
+                while (!done) {
+                  const { value, done: rd } = await reader.read();
+                  if (rd) break;
+                  textBuf += decoder.decode(value, { stream: true });
+                  let nl: number;
+                  while ((nl = textBuf.indexOf("\n")) !== -1) {
+                    let line = textBuf.slice(0, nl);
+                    textBuf = textBuf.slice(nl + 1);
+                    if (line.endsWith("\r")) line = line.slice(0, -1);
+                    if (line.startsWith(":") || line.trim() === "") continue;
+                    if (!line.startsWith("data: ")) continue;
+                    const json = line.slice(6).trim();
+                    if (json === "[DONE]") { done = true; break; }
+                    try {
+                      const parsed = JSON.parse(json);
+                      const c = parsed.choices?.[0]?.delta?.content as string | undefined;
+                      if (c) revised += c;
+                    } catch { /* ignore */ }
+                  }
                 }
-                return c;
-              }));
+                if (revised && hasStructuredPlan(revised)) {
+                  // Show the revised content immediately — even if the second
+                  // review hasn't returned yet.
+                  applyContent(revised);
+                  const review2 = await runReview(revised);
+                  if (review2?.approved && review2.enrichedPlan && review2.enrichedPlan !== revised) {
+                    applyContent(review2.enrichedPlan);
+                  }
+                  // Even if review2 also fails, we keep the revised plan —
+                  // it's at least an attempt at fixing the original issues.
+                  review = review2 || review;
+                }
+              }
+            } catch (revErr) {
+              console.warn("[QA] Revision pass failed:", revErr);
             }
+          } else if (review?.approved && review.enrichedPlan && review.enrichedPlan !== planText) {
+            applyContent(review.enrichedPlan);
           }
         } catch (err) {
           console.warn("Reviewer failed, fail-open:", err);

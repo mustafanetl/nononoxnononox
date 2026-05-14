@@ -271,12 +271,26 @@ and only then output.
      restaurant / trattoria / izakaya / etc.
    - If a day has only 2 meals, add the missing one before emitting.
 
-4. REAL VENUE NAMES ON EVERY SLOT
-   - Every slot's \`venue\` MUST be a famous, verifiable place (the QA
-     reviewer Google-searches every venue and rejects unknowns).
-   - Every slot's \`neighborhood\` MUST be the actual district name.
+4. REAL VENUE NAMES ON EVERY SLOT — ABSOLUTE NON-NEGOTIABLE
+   - Every slot's \`venue\` MUST be a famous, verifiable place that you are
+     CERTAIN exists right now in the destination city. The QA reviewer
+     calls Google Places Text Search on every venue and rejects unknowns.
+   - REQUIRED THINKING: Before you write a venue name, ask yourself:
+     "Have I actually heard of this place? Could I find its address on
+     Google Maps in the destination city?" If NO, do NOT include it.
+   - ALWAYS prefer landmark, well-known venues over obscure ones:
+     restaurants with Michelin stars, museums with millions of visitors,
+     parks/squares from guidebooks, hotel chains tourists actually book.
+   - Every slot's \`neighborhood\` MUST be the actual district name as
+     used by locals (e.g. "Södermalm", "Kreuzberg", "Le Marais").
+   - NEVER invent venue names. NEVER combine two real names into one
+     (e.g. "Café Nordica Bistro" if neither exists). NEVER add fake
+     descriptors ("The Royal Stockholm Tea House").
    - NEVER use generic strings like "local café", "nearby restaurant",
-     "your hotel area" — those fail verification.
+     "your hotel area", "a charming bistro" — those fail verification.
+   - If you only know 2 famous restaurants in a small destination,
+     repeat-use them across days rather than inventing fake ones — but
+     remember the activities-block dedup rule (each appears ONCE there).
 
 5. GEOGRAPHIC FLOW
    - Within a day, consecutive slots should be walkable or ≤ 15 min transit.
