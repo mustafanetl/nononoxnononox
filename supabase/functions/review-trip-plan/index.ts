@@ -405,10 +405,34 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
  *  If it does, we already verified it before — no need to call Google Places again.
  *  Returns { cached: true, verified: true/false } — if verified=false, the venue was
  *  previously rejected (fake/wrong place) and should be rejected again without API call. */
+/** Normalize a venue name for cache lookup — lowercase, strip accents, collapse whitespace.
+ *  Used ONLY for matching, never for display. */
+function normalizeVenueName(name: string): string {
+  let n = name.toLowerCase().trim();
+  // Transliterate common accented characters
+  const charMap: Record<string, string> = {
+    "ö": "o", "ä": "a", "å": "a", "ü": "u", "ø": "o", "æ": "ae",
+    "ñ": "n", "ç": "c", "é": "e", "è": "e", "ê": "e", "ë": "e",
+    "á": "a", "à": "a", "â": "a", "í": "i", "ì": "i", "î": "i",
+    "ó": "o", "ò": "o", "ô": "o", "ú": "u", "ù": "u", "û": "u",
+    "ý": "y", "ð": "d", "þ": "th", "ß": "ss", "ś": "s", "ź": "z",
+    "ż": "z", "ł": "l", "ć": "c", "ń": "n", "ř": "r", "š": "s",
+    "č": "c", "ž": "z", "ď": "d", "ť": "t", "ň": "n", "ğ": "g",
+    "ı": "i", "ş": "s", "ő": "o", "ű": "u",
+  };
+  n = n.split("").map(c => charMap[c] || c).join("");
+  // Remove remaining non-ascii, collapse spaces
+  n = n.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  return n;
+}
+
 async function checkVenueCache(venueName: string, destination: string): Promise<{ cached: boolean; verified: boolean; lat?: number; lng?: number; placeId?: string; matchedName?: string } | null> {
   try {
     const sb = getServiceClient();
     const norm = normalizeDest(destination);
+    const normalizedName = normalizeVenueName(venueName);
+
+    // Try exact match first (fast)
     const { data, error } = await sb
       .from("destination_media")
       .select("name, metadata")
@@ -416,17 +440,44 @@ async function checkVenueCache(venueName: string, destination: string): Promise<
       .eq("name", venueName.trim())
       .limit(1);
 
-    if (error || !data || data.length === 0) return null;
+    if (!error && data && data.length > 0) {
+      const meta = data[0].metadata || {};
+      return {
+        cached: true,
+        verified: meta.verified !== false,
+        lat: meta.lat ?? undefined,
+        lng: meta.lng ?? undefined,
+        placeId: meta.placeId ?? undefined,
+        matchedName: meta.matchedName ?? data[0].name ?? undefined,
+      };
+    }
 
-    const meta = data[0].metadata || {};
-    return {
-      cached: true,
-      verified: meta.verified !== false, // default true for old rows without this field
-      lat: meta.lat ?? undefined,
-      lng: meta.lng ?? undefined,
-      placeId: meta.placeId ?? undefined,
-      matchedName: meta.matchedName ?? data[0].name ?? undefined,
-    };
+    // Fallback: search by normalized name using ilike with stripped accents
+    // This catches "Café de Flore" matching "Cafe de Flore" etc.
+    const { data: fuzzyData } = await sb
+      .from("destination_media")
+      .select("name, metadata")
+      .eq("destination", norm)
+      .eq("type", "activity")
+      .limit(200);
+
+    if (fuzzyData && fuzzyData.length > 0) {
+      for (const row of fuzzyData) {
+        if (normalizeVenueName(row.name) === normalizedName) {
+          const meta = row.metadata || {};
+          return {
+            cached: true,
+            verified: meta.verified !== false,
+            lat: meta.lat ?? undefined,
+            lng: meta.lng ?? undefined,
+            placeId: meta.placeId ?? undefined,
+            matchedName: meta.matchedName ?? row.name ?? undefined,
+          };
+        }
+      }
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -438,6 +489,11 @@ async function saveVenueToCache(venueName: string, destination: string, lat?: nu
   try {
     const sb = getServiceClient();
     const norm = normalizeDest(destination);
+
+    // Check if already cached (by normalized name) to avoid duplicates
+    const existing = await checkVenueCache(venueName, destination);
+    if (existing?.cached) return; // Already have it
+
     await sb.from("destination_media").insert({
       destination: norm,
       type: "activity",
@@ -509,8 +565,22 @@ async function verifyVenue(name: string, destination: string, apiKey: string): P
       "hotel", "inn", "place", "centre", "center", "shop", "store",
       "bistro", "brasserie", "kitchen", "lounge", "room", "rooms",
     ]);
-    const norm = (s: string) =>
-      s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(w => w.length >= 3);
+    const norm = (s: string) => {
+      // Transliterate accented chars before splitting into tokens
+      let lower = s.toLowerCase();
+      const cm: Record<string, string> = {
+        "ö": "o", "ä": "a", "å": "a", "ü": "u", "ø": "o", "æ": "ae",
+        "ñ": "n", "ç": "c", "é": "e", "è": "e", "ê": "e", "ë": "e",
+        "á": "a", "à": "a", "â": "a", "í": "i", "ì": "i", "î": "i",
+        "ó": "o", "ò": "o", "ô": "o", "ú": "u", "ù": "u", "û": "u",
+        "ý": "y", "ð": "d", "þ": "th", "ß": "ss", "ś": "s", "ź": "z",
+        "ż": "z", "ł": "l", "ć": "c", "ń": "n", "ř": "r", "š": "s",
+        "č": "c", "ž": "z", "ď": "d", "ť": "t", "ň": "n", "ğ": "g",
+        "ı": "i", "ş": "s", "ő": "o", "ű": "u",
+      };
+      lower = lower.split("").map(c => cm[c] || c).join("");
+      return lower.replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(w => w.length >= 3);
+    };
     const isSpecific = (w: string) => w.length >= 5 && !COMMON.has(w);
     const wantedTokens = norm(name);
     const wantedSet = new Set(wantedTokens);

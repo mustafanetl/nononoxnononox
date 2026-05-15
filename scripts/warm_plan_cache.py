@@ -72,30 +72,27 @@ HEADERS = {
 # ── Destinations ────────────────────────────────────────────────────────────
 
 DESTINATIONS = [
-    "Paris", "Amsterdam", "Barcelona", "Madrid", "Lisbon", "Porto",
+    # Missing EU cities (not yet in destination_media)
     "Rome", "Florence", "Milan", "Venice", "Naples",
+    "Lisbon", "Porto",
     "Berlin", "Munich", "Hamburg",
     "Vienna", "Prague", "Budapest",
     "Brussels", "Bruges",
     "Dublin", "Edinburgh", "London",
     "Stockholm", "Copenhagen", "Oslo", "Helsinki", "Reykjavik",
-    "Athens", "Santorini", "Dubrovnik", "Split",
+    "Athens", "Santorini",
+    "Dubrovnik", "Split",
     "Valletta", "Nice", "Marseille",
     "Krakow", "Warsaw",
-    "Zurich", "Istanbul",
-    "Malaga", "Seville",
+    "Zurich",
+    "Seville", "Malaga",
 ]
 
 ORIGIN = "Stockholm"
 
 COMBOS: list[tuple[int, str, str]] = [
-    (7, "mixed", "couple"),
-    (7, "cultural", "couple"),
-    (7, "foodie", "couple"),
-    (7, "romantic", "couple"),
-    (7, "adventure", "couple"),
-    (7, "nightlife", "friends"),
-    (7, "family-friendly", "family"),
+    (5, "mixed", "couple"),
+    (5, "cultural", "couple"),
 ]
 
 VIBE_PHRASE = {
