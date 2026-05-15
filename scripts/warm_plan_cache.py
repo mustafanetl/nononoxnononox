@@ -62,6 +62,7 @@ if not SUPABASE_URL or not ANON_KEY:
 
 CHAT_URL = f"{SUPABASE_URL}/functions/v1/rzuma-chat"
 CACHE_URL = f"{SUPABASE_URL}/functions/v1/cache-plan"
+REVIEW_URL = f"{SUPABASE_URL}/functions/v1/review-trip-plan"
 
 
 # ── Combos to warm ─────────────────────────────────────────────────────────
@@ -136,9 +137,18 @@ def make_prompt(destination: str, duration: int, vibe: str, traveler: str) -> st
     Includes destination + origin + duration + vibe + who + dates so the
     AI generates the plan in one shot (no follow-up questions).
     """
+    # Use a specific date range so the AI doesn't ask for dates
+    import datetime
+    start = datetime.date.today() + datetime.timedelta(days=30)
+    end = start + datetime.timedelta(days=duration - 1)
+    date_range = f"{start.strftime('%B %d')}-{end.strftime('%d')}"
+
+    traveler_text = TRAVELER_PHRASE[traveler]
+    vibe_text = VIBE_PHRASE[vibe]
+
     return (
-        f"{ORIGIN} → {destination} for {duration} days, {VIBE_PHRASE[vibe]} vibe, "
-        f"{TRAVELER_PHRASE[traveler]}, traveling next month. Generate the full plan now."
+        f"{ORIGIN} → {destination}, {date_range}, {duration} days, "
+        f"{traveler_text}, {vibe_text} vibe. Generate the full plan now."
     )
 
 
@@ -231,6 +241,33 @@ def save_to_cache(destination: str, duration: int, vibe: str, traveler: str, con
         return False, str(e)
 
 
+def review_plan(plan_text: str, destination: str) -> tuple[bool, str]:
+    """Call review-trip-plan to verify venues via Google Places and cache them.
+    This is what populates destination_media with verified venues + photos."""
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {ANON_KEY}",
+        "apikey": ANON_KEY,
+    }
+    body = {
+        "planText": plan_text,
+        "destinationHint": destination,
+    }
+    try:
+        r = requests.post(REVIEW_URL, headers=headers, json=body, timeout=60)
+        if r.status_code == 429:
+            return False, "rate limited"
+        if r.status_code != 200:
+            return False, f"HTTP {r.status_code}"
+        data = r.json()
+        if data.get("approved"):
+            return True, "approved"
+        issues = data.get("issues", [])
+        return False, f"rejected ({len(issues)} issues)"
+    except Exception as e:
+        return False, str(e)
+
+
 # ── Main loop ──────────────────────────────────────────────────────────────
 
 
@@ -281,16 +318,16 @@ def main():
                 print(f"        ❌ empty response")
                 failures += 1
             elif not looks_like_plan(res.text):
-                # AI asked a clarifying question instead of generating — our
-                # prompt failed to provide enough info to skip discovery.
                 preview = res.text.replace("\n", " ")[:140]
                 print(f"        ⚠ no plan (got: {preview!r})")
                 skipped += 1
             else:
                 kb = len(res.text) // 1024
                 cached_ok, cache_msg = save_to_cache(dest, duration, vibe, traveler, res.text)
+                # Call review to verify venues via Google Places and cache them
+                review_ok, review_msg = review_plan(res.text, dest)
                 marker = "✅" if cached_ok else "⚠"
-                print(f"        {marker} {res.elapsed:.1f}s · {res.chunks} chunks · {kb}KB · cache: {cache_msg}")
+                print(f"        {marker} {res.elapsed:.1f}s · {kb}KB · cache: {cache_msg} · review: {review_msg}")
                 if cached_ok:
                     successes += 1
                 else:
