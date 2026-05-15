@@ -330,6 +330,25 @@ function checkItineraryCompleteness(blocks: Block[]): string[] {
         );
       }
     }
+
+    // Catch travel logistics / hotel-based slots that waste the user's plan
+    const logisticsPattern =
+      /\b(arrive at airport|depart from airport|flight to|transfer to hotel|check.?in|check.?out|head to.*station|train to airport|taxi to airport|pack bags|leave hotel|drop off luggage|arrive at destination|settle in|rest at hotel|go to airport|central station|departure)\b/i;
+    const hotelMealPattern =
+      /\b(breakfast at hotel|dinner at hotel|eat at hotel|hotel breakfast|hotel restaurant|in.?room dining)\b/i;
+    for (const s of slots) {
+      const text = `${s?.activity || ""} ${s?.venue || ""}`;
+      if (logisticsPattern.test(text)) {
+        issues.push(
+          `Day ${dayNum} slot "${s.venue || s.activity}" is travel logistics (airport/station/check-in/check-out). Remove it and replace with a real venue — a café, museum, park, or restaurant. The user's plan should only contain experiences, not logistics.`,
+        );
+      }
+      if (hotelMealPattern.test(text)) {
+        issues.push(
+          `Day ${dayNum} slot "${s.venue || s.activity}" is a meal at the hotel. Replace with a real external restaurant or café — the user wants to explore the city, not eat at their hotel.`,
+        );
+      }
+    }
   }
 
   return issues;
@@ -727,6 +746,14 @@ serve(async (req) => {
     }
 
     if (issues.length > 0) {
+      // If many activities failed, explicitly ask for more real ones
+      const failedActivities = issues.filter(i => i.includes("Activity") || i.includes("Itinerary venue")).length;
+      const totalActivities = venues.filter(v => v.kind === "activity").length;
+      if (failedActivities >= 2 && totalActivities > 0) {
+        issues.push(
+          `${failedActivities} out of ${totalActivities} activities could not be verified. You need more REAL, FAMOUS venues in ${destination}. Think of the most iconic, well-known places that any tourist guidebook would list. Replace ALL unverified venues with places you are 100% certain exist.`
+        );
+      }
       console.log(`Plan rejected: ${issues.length} unverified venues`);
       limitCheck.commit().catch(() => {});
       return new Response(JSON.stringify({ approved: false, issues: issues.slice(0, 12) }), {
