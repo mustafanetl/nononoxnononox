@@ -320,11 +320,13 @@ function checkItineraryCompleteness(blocks: Block[]): string[] {
 
     // Catch travel logistics / hotel-based slots that waste the user's plan
     const logisticsPattern =
-      /\b(arrive at airport|depart from airport|flight to|transfer to hotel|check.?in|check.?out|head to.*station|train to airport|taxi to airport|pack bags|leave hotel|drop off luggage|arrive at destination|settle in|rest at hotel|go to airport|central station|departure)\b/i;
+      /\b(arriv|depart|flight|transfer|check.?in|check.?out|head to.*station|train to airport|taxi to airport|pack bag|leave hotel|drop off luggage|settle in|rest at hotel|go to airport|central station|departure|airport|incheckning|utcheckning|flyg till|åka till flygplats|lämna hotellet|ankomst|avresa|arlanda|schiphol|charles de gaulle|heathrow|fiumicino|barajas|atatürk|heading to|getting ready to leave|ready to depart|leaving for|travel to airport|uber to|grab to|shuttle to)\b/i;
     const hotelMealPattern =
-      /\b(breakfast at hotel|dinner at hotel|eat at hotel|hotel breakfast|hotel restaurant|in.?room dining)\b/i;
+      /\b(breakfast at hotel|dinner at hotel|eat at hotel|hotel breakfast|hotel restaurant|in.?room dining|frukost på hotellet|middag på hotellet|hotel dining|room service|breakfast buffet at.*hotel|meal at.*hotel|hotel.*buffet)\b/i;
+    const hotelVenuePattern =
+      /\b(your hotel|the hotel|hotellet|hotel lobby|hotel room|hotel pool|hotel spa|hotel bar)\b/i;
     for (const s of slots) {
-      const text = `${s?.activity || ""} ${s?.venue || ""}`;
+      const text = `${s?.activity || ""} ${s?.venue || ""}`.toLowerCase();
       if (logisticsPattern.test(text)) {
         issues.push(
           `Day ${dayNum} slot "${s.venue || s.activity}" is travel logistics (airport/station/check-in/check-out). Remove it and replace with a real venue — a café, museum, park, or restaurant. The user's plan should only contain experiences, not logistics.`,
@@ -333,6 +335,11 @@ function checkItineraryCompleteness(blocks: Block[]): string[] {
       if (hotelMealPattern.test(text)) {
         issues.push(
           `Day ${dayNum} slot "${s.venue || s.activity}" is a meal at the hotel. Replace with a real external restaurant or café — the user wants to explore the city, not eat at their hotel.`,
+        );
+      }
+      if (hotelVenuePattern.test(text) && !hotelMealPattern.test(text) && !logisticsPattern.test(text)) {
+        issues.push(
+          `Day ${dayNum} slot "${s.venue || s.activity}" references the hotel as the venue. Replace with a real external venue — the user's itinerary should only contain places to visit outside the hotel.`,
         );
       }
     }

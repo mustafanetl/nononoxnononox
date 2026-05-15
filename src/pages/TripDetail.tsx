@@ -32,6 +32,18 @@ import { detectLang, extractTripLangSample, getTripStrings, type TripStrings } f
 /* ═══════════════════════════════════════════
    Editorial-style trip view
    ═══════════════════════════════════════════ */
+
+/** Client-side filter: strip logistics/hotel slots that should never appear. */
+const LOGISTICS_RE = /\b(arriv|depart|flight|transfer|check.?in|check.?out|head to.*station|train to airport|taxi to|uber to|shuttle to|pack bag|leave hotel|drop off luggage|settle in|rest at hotel|go to airport|airport|heading to|getting ready|ready to leave|leaving for|travel to airport|central station|incheckning|utcheckning|flyg till|lämna hotellet|ankomst|avresa)\b/i;
+const HOTEL_VENUE_RE = /\b(your hotel|the hotel|hotellet|hotel lobby|hotel room|hotel pool|hotel breakfast|breakfast at hotel|dinner at hotel|eat at hotel|hotel restaurant|hotel buffet|room service|frukost på hotellet|middag på hotellet)\b/i;
+
+function isLogisticsSlot(slot: any): boolean {
+  if (!slot) return false;
+  const text = `${slot.activity || ""} ${slot.venue || ""}`.toLowerCase();
+  if (LOGISTICS_RE.test(text)) return true;
+  if (HOTEL_VENUE_RE.test(text)) return true;
+  return false;
+}
 type VenuePhotoMatch = {
   photo: string | null;
   thumbPhoto: string | null;
@@ -906,7 +918,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                   {/* Slots */}
                   {day.slots && day.slots.length > 0 ? (
                     <ol className="relative pl-7 sm:pl-9 border-l-2 border-primary/20 space-y-7">
-                      {day.slots.map((slot, sIdx) => (
+                      {day.slots.filter((slot: any) => !isLogisticsSlot(slot)).map((slot, sIdx) => (
                         <li key={sIdx} className="relative">
                           <span
                             className="absolute -left-[34px] sm:-left-[42px] top-1 w-7 h-7 rounded-full text-white ring-4 ring-background flex items-center justify-center text-[11px] font-bold tabular-nums shadow-sm"
@@ -1092,7 +1104,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         <Reveal>
           <Section eyebrow={t.dontMiss} title={t.experiences} maxWidth="max-w-6xl">
             <div className="bento-grid">
-              {data.activities.map((a, i) => (
+              {data.activities.filter((a: any) => !isLogisticsSlot({ venue: a.name, activity: a.description })).map((a, i) => (
                 <ActivityTile
                   key={a.id || i}
                   activity={a}
