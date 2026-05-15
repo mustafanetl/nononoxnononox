@@ -1,37 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-Warm the Jolliday plan cache by generating plans for popular EU destinations
-across common (duration, vibe, traveler) combinations.
+Warm the Jolliday venue/photo cache by generating plans for popular EU cities.
 
-The rzuma-chat edge function auto-saves every approved plan to public.cached_plans
-keyed by "destination|duration|vibe|travelerType". Once warmed, real users hit the
-cache and get a plan instantly without burning tokens.
+This script has a multi-turn conversation with the AI — if it asks questions,
+we answer them until it generates the full plan. Then we call review + enrich
+to cache all venues and photos.
 
-USAGE
+USAGE:
     python scripts/warm_plan_cache.py                    # full run
-    python scripts/warm_plan_cache.py --limit 5          # first 5 combos only
-    python scripts/warm_plan_cache.py --destination Paris  # one city
+    python scripts/warm_plan_cache.py --limit 5          # first 5 combos
+    python scripts/warm_plan_cache.py --destination Paris # one city
     python scripts/warm_plan_cache.py --dry-run          # show what would run
 
-REQUIRES
-    .env with VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY
-    pip install requests python-dotenv
+REQUIRES:
+    pip install requests
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
+import re
 import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import requests
 
-# ── Load .env (lightweight, no python-dotenv dependency) ────────────────────
+# ── Load .env ───────────────────────────────────────────────────────────────
 
 ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
 
@@ -63,123 +61,79 @@ if not SUPABASE_URL or not ANON_KEY:
 CHAT_URL = f"{SUPABASE_URL}/functions/v1/rzuma-chat"
 CACHE_URL = f"{SUPABASE_URL}/functions/v1/cache-plan"
 REVIEW_URL = f"{SUPABASE_URL}/functions/v1/review-trip-plan"
+ENRICH_URL = f"{SUPABASE_URL}/functions/v1/enrich-destination"
 
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {ANON_KEY}",
+    "apikey": ANON_KEY,
+}
 
-# ── Combos to warm ─────────────────────────────────────────────────────────
+# ── Destinations ────────────────────────────────────────────────────────────
 
-# Top EU destinations by international tourist arrivals + Jolliday's expected use.
 DESTINATIONS = [
-    # Western EU classics
     "Paris", "Amsterdam", "Barcelona", "Madrid", "Lisbon", "Porto",
     "Rome", "Florence", "Milan", "Venice", "Naples",
     "Berlin", "Munich", "Hamburg",
     "Vienna", "Prague", "Budapest",
     "Brussels", "Bruges",
     "Dublin", "Edinburgh", "London",
-    # Nordics
     "Stockholm", "Copenhagen", "Oslo", "Helsinki", "Reykjavik",
-    # Mediterranean / coast
-    "Athens", "Santorini", "Mykonos", "Crete",
-    "Dubrovnik", "Split",
+    "Athens", "Santorini", "Dubrovnik", "Split",
     "Valletta", "Nice", "Marseille",
-    # Eastern / scenic
     "Krakow", "Warsaw",
-    "Zurich", "Interlaken",
-    "Istanbul",
+    "Zurich", "Istanbul",
+    "Malaga", "Seville",
 ]
 
-# (duration_days, vibe, traveler_type, prompt_template)
-# Vibes match what the chat edge function detects:
-#   romantic | adventure | cultural | foodie | nightlife | relaxed | family-friendly | mixed
+ORIGIN = "Stockholm"
+
 COMBOS: list[tuple[int, str, str]] = [
-    (3, "mixed", "couple"),
-    (3, "cultural", "couple"),
-    (3, "foodie", "couple"),
-    (3, "romantic", "couple"),
-    (4, "mixed", "couple"),
-    (4, "foodie", "couple"),
-    (5, "cultural", "couple"),
-    (5, "relaxed", "couple"),
-    (3, "mixed", "solo"),
-    (3, "nightlife", "friends"),
-    (4, "mixed", "family"),
-    (5, "family-friendly", "family"),
+    (7, "mixed", "couple"),
+    (7, "cultural", "couple"),
+    (7, "foodie", "couple"),
+    (7, "romantic", "couple"),
+    (7, "adventure", "couple"),
+    (7, "nightlife", "friends"),
+    (7, "family-friendly", "family"),
 ]
 
 VIBE_PHRASE = {
     "mixed": "a bit of everything",
     "cultural": "culture and museums",
     "foodie": "food and restaurants",
-    "romantic": "romantic and intimate",
-    "adventure": "adventure and active",
-    "nightlife": "nightlife and going out",
-    "relaxed": "relaxed and slow-paced",
-    "family-friendly": "family-friendly with kids",
+    "romantic": "romantic",
+    "adventure": "adventure",
+    "nightlife": "nightlife",
+    "relaxed": "relaxed",
+    "family-friendly": "family-friendly",
 }
 
 TRAVELER_PHRASE = {
-    "couple": "as a couple",
-    "solo": "solo traveler",
-    "friends": "with friends",
-    "family": "as a family with two kids (ages 6 and 9)",
+    "couple": "couple",
+    "solo": "solo",
+    "friends": "friends",
+    "family": "family with 2 kids ages 6 and 9",
 }
 
-# Origin city — needed because the AI requires an origin to generate flights.
-# Stockholm is a good default for an EU-wide cache (same flight prices order
-# of magnitude from all major EU hubs; users who visit from elsewhere will
-# only see slightly different flight prices, everything else is identical).
-ORIGIN = "Stockholm"
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
+
+def looks_like_plan(text: str) -> bool:
+    return "```activities" in text and "```itinerary" in text
 
 
-def make_prompt(destination: str, duration: int, vibe: str, traveler: str) -> str:
-    """Build a single user message that bypasses every clarifying question.
-
-    Includes destination + origin + duration + vibe + who + dates so the
-    AI generates the plan in one shot (no follow-up questions).
-    """
-    # Use a specific date range so the AI doesn't ask for dates
-    import datetime
-    start = datetime.date.today() + datetime.timedelta(days=30)
-    end = start + datetime.timedelta(days=duration - 1)
-    date_range = f"{start.strftime('%B %d')}-{end.strftime('%d')}"
-
-    traveler_text = TRAVELER_PHRASE[traveler]
-    vibe_text = VIBE_PHRASE[vibe]
-
-    return (
-        f"{ORIGIN} → {destination}, {date_range}, {duration} days, "
-        f"{traveler_text}, {vibe_text} vibe. Generate the full plan now."
-    )
-
-
-# ── Streaming chat call ────────────────────────────────────────────────────
-
-@dataclass
-class StreamResult:
-    text: str
-    elapsed: float
-    chunks: int
-
-
-def call_chat_streaming(prompt: str, timeout: float = 180.0) -> StreamResult:
-    """POST to rzuma-chat and drain the SSE stream. Returns concatenated content."""
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {ANON_KEY}",
-        "apikey": ANON_KEY,
-    }
-    body = {
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    started = time.monotonic()
+def stream_chat(messages: list[dict], timeout: float = 300.0) -> str:
+    """Send messages to rzuma-chat and drain the SSE stream. Returns full text."""
+    body = {"messages": messages}
     out = []
     chunks = 0
 
-    with requests.post(CHAT_URL, headers=headers, json=body, stream=True, timeout=timeout) as r:
+    with requests.post(CHAT_URL, headers=HEADERS, json=body, stream=True, timeout=timeout) as r:
         if r.status_code == 429:
             raise RuntimeError("rate limited (429)")
         if r.status_code != 200:
-            raise RuntimeError(f"chat failed: {r.status_code} — {r.text[:200]}")
+            raise RuntimeError(f"chat failed: {r.status_code} — {r.text[:300]}")
 
         for raw in r.iter_lines(decode_unicode=True):
             if not raw:
@@ -193,32 +147,134 @@ def call_chat_streaming(prompt: str, timeout: float = 180.0) -> StreamResult:
                 break
             try:
                 parsed = json.loads(data)
-                content = (
-                    parsed.get("choices", [{}])[0].get("delta", {}).get("content")
-                    or ""
-                )
+                content = parsed.get("choices", [{}])[0].get("delta", {}).get("content") or ""
                 if content:
                     out.append(content)
                     chunks += 1
+                    if chunks % 30 == 0:
+                        sys.stdout.write(".")
+                        sys.stdout.flush()
             except json.JSONDecodeError:
                 continue
 
-    return StreamResult(text="".join(out), elapsed=time.monotonic() - started, chunks=chunks)
+    if chunks > 20:
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
+    return "".join(out)
 
 
-def looks_like_plan(text: str) -> bool:
-    """Quick check that we got a real structured plan back, not a follow-up question."""
-    needed = ["```flights", "```hotels", "```activities", "```itinerary"]
-    return all(tok in text for tok in needed)
+def auto_reply(ai_response: str) -> str:
+    """Generate an automatic reply to the AI's question based on what it's asking."""
+    lower = ai_response.lower()
+
+    # If it asks about vibe
+    if "vibe" in lower or "type of trip" in lower or "what kind" in lower:
+        return "Mixed - a bit of everything"
+
+    # If it asks about dates/when
+    if "when" in lower or "date" in lower or "which month" in lower or "timeframe" in lower:
+        start = datetime.date.today() + datetime.timedelta(days=30)
+        end = start + datetime.timedelta(days=6)
+        return f"{start.strftime('%B %d')} to {end.strftime('%B %d')}"
+
+    # If it asks about who/travelers
+    if "who" in lower or "travel" in lower and ("solo" in lower or "couple" in lower or "friend" in lower):
+        return "Couple"
+
+    # If it asks about origin/flying from
+    if "flying from" in lower or "origin" in lower or "departing" in lower or "where are you" in lower:
+        return f"Flying from {ORIGIN}"
+
+    # If it asks about budget
+    if "budget" in lower:
+        return "Mid-range"
+
+    # If it asks about family details
+    if "kids" in lower or "children" in lower or "ages" in lower:
+        return "2 adults and 2 kids, ages 6 and 9"
+
+    # Generic fallback — just give all info
+    start = datetime.date.today() + datetime.timedelta(days=30)
+    end = start + datetime.timedelta(days=6)
+    return f"{start.strftime('%B %d')} to {end.strftime('%B %d')}, couple, mixed vibe"
 
 
-def save_to_cache(destination: str, duration: int, vibe: str, traveler: str, content: str) -> tuple[bool, str]:
-    """Call cache-plan to persist the generated plan. Returns (success, message)."""
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {ANON_KEY}",
-        "apikey": ANON_KEY,
-    }
+def converse_until_plan(destination: str, duration: int, vibe: str, traveler: str) -> str | None:
+    """Have a multi-turn conversation until the AI generates a full plan."""
+    start = datetime.date.today() + datetime.timedelta(days=30)
+    end = start + datetime.timedelta(days=duration - 1)
+    date_range = f"{start.strftime('%B %d')}-{end.strftime('%d')}"
+
+    initial_msg = (
+        f"{ORIGIN} to {destination}, {date_range}, {duration} days, "
+        f"{TRAVELER_PHRASE[traveler]}, {VIBE_PHRASE[vibe]} vibe. "
+        f"Generate the full plan."
+    )
+
+    messages = [{"role": "user", "content": initial_msg}]
+    max_turns = 5
+
+    for turn in range(max_turns):
+        response = stream_chat(messages)
+
+        if looks_like_plan(response):
+            return response
+
+        if turn == max_turns - 1:
+            print(f"        ⚠ Max turns reached without plan")
+            return None
+
+        # AI asked a question — auto-reply
+        messages.append({"role": "assistant", "content": response})
+        reply = auto_reply(response)
+        messages.append({"role": "user", "content": reply})
+        print(f"        💬 AI asked, replied: '{reply[:60]}'")
+
+    return None
+
+
+def extract_activity_names(plan_text: str) -> list[str]:
+    """Extract activity/venue names from the plan text."""
+    names = []
+    act_match = re.search(r'```activities\s*(\[[\s\S]*?\])\s*```', plan_text)
+    if act_match:
+        try:
+            activities = json.loads(act_match.group(1))
+            for a in activities:
+                if isinstance(a, dict) and a.get("name"):
+                    names.append(a["name"])
+        except json.JSONDecodeError:
+            pass
+    itin_match = re.search(r'```itinerary\s*(\[[\s\S]*?\])\s*```', plan_text)
+    if itin_match:
+        try:
+            itinerary = json.loads(itin_match.group(1))
+            for day in itinerary:
+                if isinstance(day, dict) and isinstance(day.get("slots"), list):
+                    for slot in day["slots"]:
+                        if isinstance(slot, dict) and slot.get("venue"):
+                            names.append(slot["venue"])
+        except json.JSONDecodeError:
+            pass
+    return list(set(names))
+
+
+def extract_hotel_names(plan_text: str) -> list[str]:
+    names = []
+    hotel_match = re.search(r'```hotels\s*(\[[\s\S]*?\])\s*```', plan_text)
+    if hotel_match:
+        try:
+            hotels = json.loads(hotel_match.group(1))
+            for h in hotels:
+                if isinstance(h, dict) and h.get("name"):
+                    names.append(h["name"])
+        except json.JSONDecodeError:
+            pass
+    return names
+
+
+def save_to_cache(destination: str, duration: int, vibe: str, traveler: str, content: str) -> str:
     body = {
         "destination": destination,
         "duration": duration,
@@ -228,48 +284,52 @@ def save_to_cache(destination: str, duration: int, vibe: str, traveler: str, con
         "content": content,
     }
     try:
-        r = requests.post(CACHE_URL, headers=headers, json=body, timeout=20)
+        r = requests.post(CACHE_URL, headers=HEADERS, json=body, timeout=20)
         if r.status_code != 200:
-            return False, f"cache HTTP {r.status_code}: {r.text[:200]}"
+            return f"HTTP {r.status_code}"
         data = r.json()
-        if data.get("cached"):
-            return True, "already cached"
-        if data.get("ok"):
-            return True, "saved"
-        return False, f"unexpected response: {data}"
+        return "already cached" if data.get("cached") else "saved"
     except Exception as e:
-        return False, str(e)
+        return str(e)
 
 
-def review_plan(plan_text: str, destination: str) -> tuple[bool, str]:
-    """Call review-trip-plan to verify venues via Google Places and cache them.
-    This is what populates destination_media with verified venues + photos."""
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {ANON_KEY}",
-        "apikey": ANON_KEY,
-    }
-    body = {
-        "planText": plan_text,
-        "destinationHint": destination,
-    }
+def review_plan(plan_text: str, destination: str) -> str:
+    body = {"planText": plan_text, "destinationHint": destination}
     try:
-        r = requests.post(REVIEW_URL, headers=headers, json=body, timeout=60)
+        r = requests.post(REVIEW_URL, headers=HEADERS, json=body, timeout=90)
         if r.status_code == 429:
-            return False, "rate limited"
+            return "rate limited"
         if r.status_code != 200:
-            return False, f"HTTP {r.status_code}"
+            return f"HTTP {r.status_code}"
         data = r.json()
         if data.get("approved"):
-            return True, "approved"
-        issues = data.get("issues", [])
-        return False, f"rejected ({len(issues)} issues)"
+            return "approved"
+        return f"rejected ({len(data.get('issues', []))} issues)"
     except Exception as e:
-        return False, str(e)
+        return str(e)
 
 
-# ── Main loop ──────────────────────────────────────────────────────────────
+def enrich_destination(destination: str, activity_names: list[str], hotel_names: list[str]) -> str:
+    body = {
+        "destination": destination,
+        "activities": activity_names[:30],
+        "hotelNames": hotel_names,
+    }
+    try:
+        r = requests.post(ENRICH_URL, headers=HEADERS, json=body, timeout=120)
+        if r.status_code == 429:
+            return "rate limited"
+        if r.status_code != 200:
+            return f"HTTP {r.status_code}"
+        data = r.json()
+        photos = data.get("activityPhotos", {})
+        images = data.get("images", [])
+        return f"{len(photos)} venues + {len(images)} hero"
+    except Exception as e:
+        return str(e)
 
+
+# ── Main ────────────────────────────────────────────────────────────────────
 
 def iter_jobs(destinations: list[str], combos: list[tuple[int, str, str]]):
     for dest in destinations:
@@ -278,69 +338,72 @@ def iter_jobs(destinations: list[str], combos: list[tuple[int, str, str]]):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Warm the Jolliday plan cache.")
-    parser.add_argument("--destination", help="Single destination (e.g. Paris)", default=None)
-    parser.add_argument("--limit", type=int, help="Only run the first N combos", default=None)
-    parser.add_argument("--dry-run", action="store_true", help="Print prompts without calling")
-    parser.add_argument("--delay", type=float, default=2.5,
-                        help="Seconds to sleep between calls (default 2.5)")
+    parser = argparse.ArgumentParser(description="Warm the Jolliday plan + venue cache.")
+    parser.add_argument("--destination", help="Single destination", default=None)
+    parser.add_argument("--limit", type=int, help="Only first N combos", default=None)
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--delay", type=float, default=5, help="Seconds between calls")
     args = parser.parse_args()
 
     destinations = [args.destination] if args.destination else DESTINATIONS
     jobs = list(iter_jobs(destinations, COMBOS))
     if args.limit:
-        jobs = jobs[: args.limit]
+        jobs = jobs[:args.limit]
 
-    print(f"Warming {len(jobs)} plan combos against {CHAT_URL}")
-    print(f"Destinations: {len(destinations)}  ·  Combos per destination: {len(COMBOS)}")
-    print(f"Delay between calls: {args.delay}s")
+    print(f"🌍 Warming {len(jobs)} plans ({len(destinations)} cities × {len(COMBOS)} vibes)")
+    print(f"   All 7-day plans for maximum venue coverage")
+    print(f"   Delay: {args.delay}s between calls")
     if args.dry_run:
-        print("\n=== DRY RUN — no requests will be sent ===\n")
+        print("\n=== DRY RUN ===\n")
 
     successes = 0
     failures = 0
-    skipped = 0
-    started_total = time.monotonic()
+    total_start = time.monotonic()
 
     for i, (dest, duration, vibe, traveler) in enumerate(jobs, start=1):
-        prompt = make_prompt(dest, duration, vibe, traveler)
         cache_key = f"{dest.lower()}|{duration}|{vibe}|{traveler}"
-        label = f"[{i:>3}/{len(jobs)}] {cache_key}"
-        print(f"{label}")
-        print(f"        prompt: {prompt}")
+        print(f"\n[{i:>3}/{len(jobs)}] {cache_key}")
 
         if args.dry_run:
             continue
 
         try:
-            res = call_chat_streaming(prompt)
-            if not res.text:
-                print(f"        ❌ empty response")
+            plan_text = converse_until_plan(dest, duration, vibe, traveler)
+
+            if not plan_text:
+                print(f"        ❌ No plan generated")
                 failures += 1
-            elif not looks_like_plan(res.text):
-                preview = res.text.replace("\n", " ")[:140]
-                print(f"        ⚠ no plan (got: {preview!r})")
-                skipped += 1
-            else:
-                kb = len(res.text) // 1024
-                cached_ok, cache_msg = save_to_cache(dest, duration, vibe, traveler, res.text)
-                # Call review to verify venues via Google Places and cache them
-                review_ok, review_msg = review_plan(res.text, dest)
-                marker = "✅" if cached_ok else "⚠"
-                print(f"        {marker} {res.elapsed:.1f}s · {kb}KB · cache: {cache_msg} · review: {review_msg}")
-                if cached_ok:
-                    successes += 1
-                else:
-                    failures += 1
+                time.sleep(args.delay)
+                continue
+
+            kb = len(plan_text) // 1024
+            activities = extract_activity_names(plan_text)
+            hotels = extract_hotel_names(plan_text)
+            print(f"        📋 Plan: {kb}KB · {len(activities)} venues · {len(hotels)} hotels")
+
+            # Save plan to cache
+            cache_msg = save_to_cache(dest, duration, vibe, traveler, plan_text)
+            print(f"        💾 Cache: {cache_msg}")
+
+            # Review (verifies venues via Google Places, caches results)
+            review_msg = review_plan(plan_text, dest)
+            print(f"        🔍 Review: {review_msg}")
+
+            # Enrich (fetches photos, caches in destination_media)
+            enrich_msg = enrich_destination(dest, activities, hotels)
+            print(f"        📸 Enrich: {enrich_msg}")
+
+            successes += 1
+
         except Exception as e:
             print(f"        ❌ {e}")
             failures += 1
 
         time.sleep(args.delay)
 
-    total = time.monotonic() - started_total
-    print()
-    print(f"Done in {total/60:.1f} min  ·  ✅ {successes}  ⚠ {skipped}  ❌ {failures}")
+    total = time.monotonic() - total_start
+    print(f"\n{'='*50}")
+    print(f"Done in {total/60:.1f} min  ·  ✅ {successes}  ❌ {failures}")
 
 
 if __name__ == "__main__":
