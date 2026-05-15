@@ -39,15 +39,17 @@ const AdminMediaPanel = () => {
   const [nav, setNav] = useState<NavigationState>({ level: 1 });
   const [uploading, setUploading] = useState(false);
 
-  // Level 1: fetch just distinct cities with a hero thumbnail and count
+  // Level 1: fetch just distinct city names + one hero thumbnail each
   const fetchCities = useCallback(async () => {
     setLoading(true);
-    // Use a lightweight query: get one hero row per destination + count
+
+    // Only fetch hero rows (type=hero) — one per city is enough for the grid
     const { data, error } = await supabase
       .from("destination_media" as any)
-      .select("destination, url, thumb_url, type, source, sort_order")
-      .order("destination", { ascending: true })
-      .order("sort_order", { ascending: true });
+      .select("destination, url, thumb_url, source, sort_order")
+      .eq("type", "hero")
+      .order("sort_order", { ascending: true })
+      .limit(2000);
 
     if (error) {
       toast.error("Failed to load destinations");
@@ -56,27 +58,20 @@ const AdminMediaPanel = () => {
       return;
     }
 
-    // Group by destination, pick best hero, count entries
-    const byCity: Record<string, { rows: any[]; hero: string | null }> = {};
+    // One hero per city (admin source wins)
+    const byCity: Record<string, string | null> = {};
     for (const row of (data as any[]) || []) {
       const dest = row.destination;
-      if (!byCity[dest]) byCity[dest] = { rows: [], hero: null };
-      byCity[dest].rows.push(row);
-      // Pick hero: prefer admin source, then type=hero with lowest sort_order
-      if (row.type === "hero" && !byCity[dest].hero) {
-        byCity[dest].hero = row.thumb_url || row.url;
+      if (!byCity[dest]) {
+        byCity[dest] = row.thumb_url || row.url || null;
       }
-      if (row.source === "admin" && row.type === "hero") {
-        byCity[dest].hero = row.thumb_url || row.url;
+      if (row.source === "admin") {
+        byCity[dest] = row.thumb_url || row.url || byCity[dest];
       }
     }
 
     const cityList = Object.entries(byCity)
-      .map(([dest, info]) => ({
-        destination: dest,
-        heroUrl: info.hero,
-        count: info.rows.length,
-      }))
+      .map(([dest, heroUrl]) => ({ destination: dest, heroUrl, count: 0 }))
       .sort((a, b) => a.destination.localeCompare(b.destination));
 
     setCities(cityList);
@@ -312,7 +307,6 @@ const CitiesGrid = ({
             )}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
               <span className="text-white font-semibold text-sm capitalize">{city.destination}</span>
-              <span className="block text-white/70 text-[10px]">{city.count} items</span>
             </div>
           </button>
       ))}
