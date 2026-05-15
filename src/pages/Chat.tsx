@@ -1349,7 +1349,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                               </>
                             )}
 
-                            {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && (
+                            {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && !isFullPlan && (
                               <QuickReplies replies={parsed.quickReplies} onSelect={(reply) => {
                                 sendMessage(reply);
                               }} />

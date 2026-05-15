@@ -143,7 +143,7 @@ const TripSummaryCard = ({
       className="group/card relative mt-4 w-full max-w-md cursor-pointer select-none rounded-3xl overflow-hidden bg-card border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.04),0_14px_36px_-14px_rgba(0,0,0,0.18)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_50px_-18px_rgba(0,0,0,0.25)] transition-shadow duration-300"
     >
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100">
+      <div className="relative aspect-[16/10] overflow-hidden bg-neutral-100">
         {heroVideoUrl ? (
           <video
             src={heroVideoUrl}
@@ -214,7 +214,7 @@ const TripSummaryCard = ({
       </div>
 
       {/* ── BODY ─────────────────────────────────────────────── */}
-      <div className="p-5 space-y-4">
+      <div className="p-4 space-y-3">
         {/* Inline meta row */}
         <div className="flex items-center justify-between gap-1 text-[11px]">
           <Meta icon={<Hotel className="h-3 w-3" />} value={data.hotels.length} label={data.hotels.length === 1 ? "hotel" : "hotels"} />
@@ -286,7 +286,7 @@ const TripSummaryCard = ({
         {/* CTA — brand indigo */}
         <button
           type="button"
-          className="group/btn w-full flex items-center justify-between rounded-xl pl-4 pr-2 py-3 text-sm font-semibold text-white transition-all active:scale-[0.99] shadow-sm"
+          className="group/btn w-full flex items-center justify-between rounded-xl pl-4 pr-2 py-2.5 text-[13px] font-semibold text-white transition-all active:scale-[0.99] shadow-sm"
           style={{
             background:
               "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 38%))",
