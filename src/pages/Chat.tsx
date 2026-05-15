@@ -39,6 +39,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthHeader } from "@/lib/authFetch";
 import { setWikimediaImage } from "@/utils/cityImages";
+import { setCachedVenuePhotos, setCachedEnrichedImages } from "@/utils/imageCache";
 import { Link, useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -107,6 +108,19 @@ const fetchEnrichment = async (destination: string, travelMonth?: string, activi
     if (!res.ok) return null;
     const data = await res.json();
     enrichmentCache[cacheKey] = data;
+
+    // Persist to localStorage for cross-session caching (saves bandwidth on revisits)
+    if (data && destination) {
+      try {
+        if (data.activityPhotos && Object.keys(data.activityPhotos).length > 0) {
+          setCachedVenuePhotos(destination, data.activityPhotos);
+        }
+        if (data.images && data.images.length > 0) {
+          setCachedEnrichedImages(destination, data.images);
+        }
+      } catch { /* quota — ignore */ }
+    }
+
     return data;
   } catch {
     return null;

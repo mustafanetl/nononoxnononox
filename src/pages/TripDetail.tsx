@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { detectLang, extractTripLangSample, getTripStrings, type TripStrings } from "@/utils/tripI18n";
+import { getCachedVenuePhotos, setCachedVenuePhotos, getCachedEnrichedImages, setCachedEnrichedImages } from "@/utils/imageCache";
 
 /* ═══════════════════════════════════════════
    Editorial-style trip view
@@ -188,10 +189,51 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   // hotels, and the destination hero — even if the user navigated here
   // before the chat page finished its own enrichment, or if the trip was
   // reopened from "My Trips" without cached photos.
+  // Uses localStorage cache to avoid re-fetching on every visit.
   useEffect(() => {
     if (!tripData) return;
     const { data, destination } = tripData;
     if (!destination) return;
+
+    // Check localStorage cache first
+    const cachedVenues = getCachedVenuePhotos(destination);
+    const cachedImages = getCachedEnrichedImages(destination);
+    if (cachedVenues && cachedImages && cachedImages.length > 0) {
+      // Apply cached data without hitting the server
+      const needsUpdate = data.activities.some(
+        (a: any) => !a.realPhoto || !Array.isArray(a.realPhotos) || a.realPhotos.length === 0
+      );
+      if (needsUpdate || !tripData.itineraryVenuePhotos || Object.keys(tripData.itineraryVenuePhotos).length === 0) {
+        const newActivities = data.activities.map((a: any) => {
+          const m = cachedVenues[a.name] || Object.values(cachedVenues).find(
+            (v: any) => v.matchedName?.toLowerCase() === a.name.toLowerCase()
+          );
+          if (!m) return a;
+          const next = { ...a };
+          if (m.hasRealPhoto && (m.thumbPhoto || m.photo)) {
+            if (!next.realPhoto) next.realPhoto = m.photo || m.thumbPhoto;
+            next.verified = true;
+          }
+          next.realPhotos = createDistinctPhotoGallery({
+            primary: next.realPhoto,
+            sources: [m.photos, next.realPhotos],
+            limit: 4,
+          });
+          if (!next.realPhoto && next.realPhotos.length > 0) next.realPhoto = next.realPhotos[0];
+          return next;
+        });
+        const merged = {
+          ...tripData,
+          data: { ...data, activities: newActivities },
+          enrichedImages: tripData.enrichedImages?.length ? tripData.enrichedImages : cachedImages,
+          itineraryVenuePhotos: { ...(tripData.itineraryVenuePhotos || {}), ...cachedVenues },
+        };
+        setTripData(merged);
+        try { sessionStorage.setItem("jolliday-trip-detail", JSON.stringify(merged)); } catch {}
+        if (cachedImages.length > 0) setWikimediaImage(destination, cachedImages[0].thumbUrl || cachedImages[0].url || cachedImages[0]);
+      }
+      return; // Skip server call — cache is fresh
+    }
 
     const itineraryVenues = data.itinerary.flatMap((day: any) =>
       Array.isArray(day?.slots) ? day.slots.map((slot: any) => slot?.venue).filter(Boolean) : []
@@ -285,6 +327,14 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         setTripData(merged);
         sessionStorage.setItem("jolliday-trip-detail", JSON.stringify(merged));
         if (images.length > 0) setWikimediaImage(destination, images[0].url || images[0].thumbUrl);
+
+        // Save to localStorage cache for future visits (avoids re-fetching)
+        if (Object.keys(activityPhotos).length > 0) {
+          setCachedVenuePhotos(destination, activityPhotos as any);
+        }
+        if (images.length > 0) {
+          setCachedEnrichedImages(destination, images);
+        }
       } catch { /* silent */ }
     })();
     return () => { cancelled = true; };
