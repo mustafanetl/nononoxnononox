@@ -6,7 +6,7 @@ export type ChatMessage = { role: "system" | "user" | "assistant"; content: stri
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash-lite";
-const DEFAULT_MAX_TOKENS = 7260;
+const DEFAULT_MAX_TOKENS = 16000;
 
 const DEFAULT_HEADERS = {
   "HTTP-Referer": "https://jolliday.online",
