@@ -162,6 +162,27 @@ function checkDuplicateActivities(blocks: Block[]): string[] {
     );
   }
 
+  // Check for duplicate venues within the same day in the itinerary
+  const itineraryBlock = blocks.find((b) => b.type === "itinerary");
+  if (itineraryBlock && Array.isArray(itineraryBlock.json)) {
+    for (const day of itineraryBlock.json) {
+      const dayNum = day?.day || "?";
+      const slots = Array.isArray(day?.slots) ? day.slots : [];
+      const dayVenues = new Map<string, number>();
+      for (const slot of slots) {
+        if (!slot?.venue || typeof slot.venue !== "string") continue;
+        const norm = slot.venue.toLowerCase().trim();
+        dayVenues.set(norm, (dayVenues.get(norm) || 0) + 1);
+      }
+      const dayDupes = [...dayVenues.entries()].filter(([, count]) => count > 1);
+      for (const [name] of dayDupes) {
+        issues.push(
+          `Day ${dayNum} uses venue "${name}" multiple times. Every slot must be a DIFFERENT specific venue. If you want to visit the same area twice, name the specific establishments (e.g. a named restaurant ON the square, not the square itself).`,
+        );
+      }
+    }
+  }
+
   return issues;
 }
 

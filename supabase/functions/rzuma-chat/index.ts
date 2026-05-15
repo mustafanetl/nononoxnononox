@@ -309,6 +309,8 @@ DUPLICATE PREVENTION — ABSOLUTE RULE (ZERO TOLERANCE):
 - Before emitting the activities block, LIST every name you're about to include. If ANY name appears more than once, REPLACE the duplicate with a DIFFERENT real venue. If you don't have enough unique venues, think of more — there are always more real places in any city.
 - SELF-CHECK: After writing the activities array, re-read it. Count unique names. If count < array length, you have duplicates. Fix them.
 - This rule also applies to the itinerary: do NOT schedule the exact same venue at the same time slot on multiple days (e.g. same restaurant for dinner on day 1 AND day 2). Vary the venues.
+- ALSO: NEVER use the same venue for TWO DIFFERENT slots on the SAME day. Example: "Explore Lilla Torg" at 18:00 and "Dinner at Lilla Torg" at 19:30 is WRONG — that's the same place twice. Pick a DIFFERENT restaurant for dinner. Every single slot in the itinerary must be a DIFFERENT venue name. If you want the user to eat at a square, name the specific restaurant ON that square, not the square itself.
+- VENUE vs AREA: A venue must be a SPECIFIC place (a named restaurant, a named museum, a named café), NOT a neighborhood or square. "Lilla Torg" is a square — it's not a venue. "Bastard Restaurant" (which is ON Lilla Torg) IS a venue. Always use the specific establishment name.
 
 AIRPORT/TRAVEL LOGISTICS — NEVER INCLUDE (ABSOLUTE RULE):
 - NEVER include ANY of these as activities OR itinerary slots:
