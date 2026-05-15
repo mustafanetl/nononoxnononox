@@ -44,7 +44,8 @@ const AdminMediaPanel = () => {
       .select("*")
       .order("destination", { ascending: true })
       .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(5000);
 
     if (error) {
       toast.error("Failed to load media");
