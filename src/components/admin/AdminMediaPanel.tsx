@@ -32,31 +32,83 @@ type NavigationState =
 // ─── Main Component ───────────────────────────────────────────────────────
 
 const AdminMediaPanel = () => {
-  const [media, setMedia] = useState<MediaRow[]>([]);
+  const [cities, setCities] = useState<{ destination: string; heroUrl: string | null; count: number }[]>([]);
+  const [cityMedia, setCityMedia] = useState<MediaRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cityLoading, setCityLoading] = useState(false);
   const [nav, setNav] = useState<NavigationState>({ level: 1 });
   const [uploading, setUploading] = useState(false);
 
-  const fetchMedia = useCallback(async () => {
+  // Level 1: fetch just distinct cities with a hero thumbnail and count
+  const fetchCities = useCallback(async () => {
     setLoading(true);
+    // Use a lightweight query: get one hero row per destination + count
     const { data, error } = await supabase
       .from("destination_media" as any)
-      .select("*")
+      .select("destination, url, thumb_url, type, source, sort_order")
       .order("destination", { ascending: true })
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true })
-      .limit(5000);
+      .order("sort_order", { ascending: true });
 
     if (error) {
-      toast.error("Failed to load media");
+      toast.error("Failed to load destinations");
       console.error(error);
-    } else {
-      setMedia((data as any) ?? []);
+      setLoading(false);
+      return;
     }
+
+    // Group by destination, pick best hero, count entries
+    const byCity: Record<string, { rows: any[]; hero: string | null }> = {};
+    for (const row of (data as any[]) || []) {
+      const dest = row.destination;
+      if (!byCity[dest]) byCity[dest] = { rows: [], hero: null };
+      byCity[dest].rows.push(row);
+      // Pick hero: prefer admin source, then type=hero with lowest sort_order
+      if (row.type === "hero" && !byCity[dest].hero) {
+        byCity[dest].hero = row.thumb_url || row.url;
+      }
+      if (row.source === "admin" && row.type === "hero") {
+        byCity[dest].hero = row.thumb_url || row.url;
+      }
+    }
+
+    const cityList = Object.entries(byCity)
+      .map(([dest, info]) => ({
+        destination: dest,
+        heroUrl: info.hero,
+        count: info.rows.length,
+      }))
+      .sort((a, b) => a.destination.localeCompare(b.destination));
+
+    setCities(cityList);
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchMedia(); }, [fetchMedia]);
+  // Level 2+: fetch all media for a specific city
+  const fetchCityMedia = useCallback(async (city: string) => {
+    setCityLoading(true);
+    const { data, error } = await supabase
+      .from("destination_media" as any)
+      .select("*")
+      .eq("destination", city)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      toast.error("Failed to load city media");
+      console.error(error);
+    } else {
+      setCityMedia((data as any) ?? []);
+    }
+    setCityLoading(false);
+  }, []);
+
+  useEffect(() => { fetchCities(); }, [fetchCities]);
+
+  // When navigating to a city, fetch its media
+  const navigateToCity = useCallback((city: string) => {
+    setNav({ level: 2, city });
+    fetchCityMedia(city);
+  }, [fetchCityMedia]);
 
   // ─── Actions ──────────────────────────────────────────────────────────
 
@@ -65,7 +117,7 @@ const AdminMediaPanel = () => {
     if (error) {
       toast.error("Delete failed");
     } else {
-      setMedia((prev) => prev.filter((m) => m.id !== id));
+      setCityMedia((prev) => prev.filter((m) => m.id !== id));
       toast.success("Deleted");
     }
   };
@@ -84,7 +136,7 @@ const AdminMediaPanel = () => {
       supabase.from("destination_media" as any).update({ sort_order: current.sort_order }).eq("id", swap.id),
     ]);
 
-    setMedia((prev) => {
+    setCityMedia((prev) => {
       const next = [...prev];
       const ci = next.findIndex((m) => m.id === current.id);
       const si = next.findIndex((m) => m.id === swap.id);
@@ -99,7 +151,7 @@ const AdminMediaPanel = () => {
   };
 
   const handleSetHero = async (row: MediaRow) => {
-    const siblings = media
+    const siblings = cityMedia
       .filter((m) => m.destination === row.destination && m.type === row.type && m.name === row.name)
       .sort((a, b) => a.sort_order - b.sort_order);
 
@@ -111,7 +163,7 @@ const AdminMediaPanel = () => {
       }
     }
     toast.success("Set as hero image");
-    fetchMedia();
+    fetchCityMedia(row.destination);
   };
 
   const handleUpload = async (
@@ -139,7 +191,7 @@ const AdminMediaPanel = () => {
 
       const publicUrl = urlData.publicUrl;
 
-      const existing = media.filter(
+      const existing = cityMedia.filter(
         (m) => m.destination === destination && m.type === type && m.name === name
       );
       const maxOrder = existing.length > 0 ? Math.max(...existing.map((m) => m.sort_order)) : -1;
@@ -159,7 +211,7 @@ const AdminMediaPanel = () => {
       if (insertError) throw insertError;
 
       toast.success(`Uploaded ${mediaType}`);
-      fetchMedia();
+      fetchCityMedia(destination);
     } catch (e: any) {
       toast.error(`Upload failed: ${e.message}`);
     } finally {
@@ -183,28 +235,34 @@ const AdminMediaPanel = () => {
     <div className="space-y-4">
       {/* Header with refresh */}
       <div className="flex items-center justify-between">
-        <Badge variant="secondary">{new Set(media.map((m) => m.destination)).size} destinations</Badge>
-        <Button variant="outline" size="sm" onClick={fetchMedia}>
+        <Badge variant="secondary">{cities.length} destinations</Badge>
+        <Button variant="outline" size="sm" onClick={fetchCities}>
           <RefreshCw className="h-4 w-4 mr-1" /> Refresh
         </Button>
       </div>
 
       {nav.level === 1 && (
-        <CitiesGrid media={media} onSelectCity={(city) => setNav({ level: 2, city })} />
+        <CitiesGrid cities={cities} onSelectCity={navigateToCity} />
       )}
 
       {nav.level === 2 && (
-        <VenuesGrid
-          media={media}
-          city={nav.city}
-          onBack={() => setNav({ level: 1 })}
-          onSelectVenue={(venue, type) => setNav({ level: 3, city: nav.city, venue, type })}
-        />
+        cityLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          <VenuesGrid
+            media={cityMedia}
+            city={nav.city}
+            onBack={() => setNav({ level: 1 })}
+            onSelectVenue={(venue, type) => setNav({ level: 3, city: nav.city, venue, type })}
+          />
+        )
       )}
 
       {nav.level === 3 && (
         <PhotosGrid
-          media={media}
+          media={cityMedia}
           city={nav.city}
           venue={nav.venue}
           type={nav.type}
@@ -223,35 +281,29 @@ const AdminMediaPanel = () => {
 // ─── Level 1: Cities Grid ─────────────────────────────────────────────────
 
 const CitiesGrid = ({
-  media,
+  cities,
   onSelectCity,
 }: {
-  media: MediaRow[];
+  cities: { destination: string; heroUrl: string | null; count: number }[];
   onSelectCity: (city: string) => void;
 }) => {
-  const cities = [...new Set(media.map((m) => m.destination))].sort();
-
   if (cities.length === 0) {
     return <p className="text-center text-muted-foreground py-8">No destinations with cached media found.</p>;
   }
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-      {cities.map((city) => {
-        const heroRow = media.find((m) => m.destination === city && m.type === "hero");
-        const heroUrl = heroRow?.thumb_url || heroRow?.url;
-
-        return (
+      {cities.map((city) => (
           <button
-            key={city}
+            key={city.destination}
             type="button"
-            onClick={() => onSelectCity(city)}
+            onClick={() => onSelectCity(city.destination)}
             className="relative aspect-square rounded-xl overflow-hidden border border-border group focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            {heroUrl ? (
+            {city.heroUrl ? (
               <img
-                src={heroUrl}
-                alt={city}
+                src={city.heroUrl}
+                alt={city.destination}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
               />
@@ -259,11 +311,11 @@ const CitiesGrid = ({
               <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900" />
             )}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
-              <span className="text-white font-semibold text-sm capitalize">{city}</span>
+              <span className="text-white font-semibold text-sm capitalize">{city.destination}</span>
+              <span className="block text-white/70 text-[10px]">{city.count} items</span>
             </div>
           </button>
-        );
-      })}
+      ))}
     </div>
   );
 };
