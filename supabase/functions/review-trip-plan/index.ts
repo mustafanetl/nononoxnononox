@@ -240,21 +240,9 @@ function checkItineraryCompleteness(blocks: Block[]): string[] {
       continue;
     }
 
-    // Detect arrival/departure days by checking the earliest slot time.
-    // If the first slot starts at 11:00+ it's likely an arrival day (flew in).
-    // If the last slot ends before 16:00 it's likely a departure day.
-    const slotTimes = slots.map((s: any) => {
-      const m = (s?.time || "").match(/^(\d{1,2}):(\d{2})/);
-      return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
-    }).filter((t: number | null): t is number => t !== null);
-    const earliestSlot = slotTimes.length > 0 ? Math.min(...slotTimes) : 0;
-    const latestSlot = slotTimes.length > 0 ? Math.max(...slotTimes) : 24 * 60;
-    const isArrivalDay = dayNum === 1 && earliestSlot >= 11 * 60;
-    const isLastDay = dayNum === dayNums[dayNums.length - 1];
-    const isDepartureDay = isLastDay && latestSlot <= 18 * 60;
-
-    // Relaxed slot minimum for arrival/departure days (4 instead of 6)
-    const effectiveMinSlots = (isArrivalDay || isDepartureDay) ? 4 : minSlotsPerDay;
+    // Every day is treated equally — no relaxed rules for first/last day.
+    // The AI should fill every day with a full schedule regardless of flights.
+    const effectiveMinSlots = minSlotsPerDay;
 
     if (slots.length < effectiveMinSlots) {
       issues.push(
@@ -308,11 +296,10 @@ function checkItineraryCompleteness(blocks: Block[]): string[] {
       }
 
       const missingMeals: string[] = [];
-      // Skip breakfast check on arrival days (traveler hasn't arrived yet)
-      if (!hasBreakfast && !isArrivalDay) missingMeals.push("breakfast (7:00-10:00)");
+      // Every day must have all 3 meals — no exceptions for first/last day
+      if (!hasBreakfast) missingMeals.push("breakfast (7:00-10:00)");
       if (!hasLunch) missingMeals.push("lunch (11:30-14:30)");
-      // Skip dinner check on departure days (traveler may be flying out)
-      if (!hasDinner && !isDepartureDay) missingMeals.push("dinner (18:30-21:30)");
+      if (!hasDinner) missingMeals.push("dinner (18:30-21:30)");
       if (missingMeals.length > 0) {
         issues.push(
           `Day ${dayNum} is missing ${missingMeals.join(", ")}. Add a slot at a real, named venue for each missing meal.`,

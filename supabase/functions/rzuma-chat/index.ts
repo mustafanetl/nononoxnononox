@@ -321,8 +321,8 @@ AIRPORT/TRAVEL LOGISTICS — NEVER INCLUDE (ABSOLUTE RULE):
   • ANY slot where the venue is the hotel itself (unless it's a famous restaurant INSIDE the hotel with its own name)
 - Activities and itinerary slots are ONLY real external venues: restaurants, cafés, museums, parks, attractions, bars, markets, landmarks.
 - The flights block handles travel. The hotel block handles accommodation. Activities/itinerary are strictly things to DO OUTSIDE the hotel.
-- LAST DAY RULE: The last day of the trip must STILL be filled with real activities (breakfast at a café, a morning walk, a museum visit, lunch). Do NOT waste the last day on "go to airport" or "check out". The user knows they need to leave — fill the day with experiences until their flight time. If the flight is early, start the day earlier. If the flight is late, fill the whole day.
-- FIRST DAY RULE: Even if the user arrives in the afternoon, fill the remaining hours with real venues (dinner, evening walk, bar). Do NOT waste slots on "arrive at hotel" or "settle in".
+- LAST DAY RULE: The last day of the trip must be a FULL day of activities — breakfast at a café, morning sightseeing, lunch, afternoon activity, dinner. Treat it exactly like any other day. Do NOT cut it short. Do NOT mention the flight or airport. The user will figure out their own departure logistics.
+- FIRST DAY RULE: The first day must also be a FULL day — start with breakfast, fill the whole day with real venues. Do NOT start late because of a flight arrival. Treat every day identically: breakfast → sightseeing → lunch → more activities → dinner → optional evening.
 
 FINAL MENTAL CHECK (answer each silently):
   a. Does my itinerary array length equal the trip duration? YES/NO
