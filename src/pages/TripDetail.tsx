@@ -848,53 +848,70 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
         <Section eyebrow={t.thePlan} title={t.dayByDay} maxWidth="max-w-5xl">
           {/* Sticky day rail */}
           <DayRail days={data.itinerary.map((d: any) => ({ day: d.day, title: d.title }))} dayLabel={t.day} />
-          <div className="space-y-20 sm:space-y-24 mt-10">
+          <div className="space-y-16 sm:space-y-20 mt-10">
             {data.itinerary.map((day, dayIdx) => {
               const dayPhoto = photoForDay(day.day);
-              const reverse = dayIdx % 2 === 1;
               return (
                 <Reveal key={day.day}>
                 <article id={`day-${day.day}`} className="group scroll-mt-24">
-                  {/* Day banner with big outlined number */}
-                  <div className={`grid gap-5 lg:gap-7 mb-6 ${reverse ? "lg:grid-cols-[1fr_1.4fr]" : "lg:grid-cols-[1.4fr_1fr]"}`}>
-                    <div className={`relative h-56 sm:h-72 lg:h-80 rounded-3xl overflow-hidden ${reverse ? "lg:order-2" : ""}`}>
+                  {/* Day banner — full-width hero with overlaid number */}
+                  <div className="relative rounded-3xl overflow-hidden mb-8">
+                    <div className="relative h-48 sm:h-64 lg:h-72">
                       {dayPhoto ? (
                         <img src={dayPhoto} alt={day.title}
-                          className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
+                          className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-[1.03]" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted to-accent/20" />
+                        <div
+                          className="w-full h-full"
+                          style={{
+                            background: `linear-gradient(135deg, hsl(234 62% ${52 - dayIdx * 4}%), hsl(234 62% ${38 - dayIdx * 3}%))`,
+                          }}
+                        />
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
-                      <div className="absolute top-4 left-5">
-                        <span className="px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[10px] font-bold tracking-[0.2em] uppercase text-foreground">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                      {/* Big number — bottom-left, partially clipped for drama */}
+                      <div className="absolute -bottom-4 -left-2 sm:left-2 pointer-events-none select-none">
+                        <p
+                          className="text-[120px] sm:text-[160px] lg:text-[200px] font-black leading-none tracking-tighter text-white/[0.12]"
+                        >
+                          {String(day.day).padStart(2, "0")}
+                        </p>
+                      </div>
+
+                      {/* Day chip + title — bottom-left, above the number */}
+                      <div className="absolute bottom-5 left-5 sm:bottom-7 sm:left-7 z-10">
+                        <span
+                          className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold tracking-[0.2em] uppercase text-white mb-2"
+                          style={{ background: "hsl(234 62% 47% / 0.85)", backdropFilter: "blur(4px)" }}
+                        >
                           {t.day} {day.day}
                         </span>
+                        <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight leading-tight drop-shadow-sm max-w-md">
+                          {day.title}
+                        </h3>
                       </div>
-                    </div>
-                    <div className={`flex flex-col justify-center ${reverse ? "lg:order-1 lg:items-end lg:text-right" : ""}`}>
-                      <p
-                        className="text-[100px] sm:text-[140px] font-bold leading-none tracking-tighter text-transparent"
-                        style={{ WebkitTextStroke: "1.5px hsl(var(--foreground))" }}
-                      >
-                        {String(day.day).padStart(2, "0")}
-                      </p>
-                      <h3 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mt-2 leading-tight">
-                        {day.title}
-                      </h3>
+
+                      {/* Stops count — top-right */}
                       {day.slots && day.slots.length > 0 && (
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {t.stopsStartsAt(day.slots.length, day.slots[0]?.time || "")}
-                        </p>
+                        <div className="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm">
+                          <span className="text-[10px] font-semibold text-neutral-900">
+                            {day.slots.length} stops · starts {day.slots[0]?.time || ""}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
 
                   {/* Slots */}
                   {day.slots && day.slots.length > 0 ? (
-                    <ol className="relative pl-7 sm:pl-9 border-l-2 border-border space-y-7">
+                    <ol className="relative pl-7 sm:pl-9 border-l-2 border-primary/20 space-y-7">
                       {day.slots.map((slot, sIdx) => (
                         <li key={sIdx} className="relative">
-                          <span className="absolute -left-[34px] sm:-left-[42px] top-1 w-7 h-7 rounded-full bg-foreground text-background ring-4 ring-background flex items-center justify-center text-[11px] font-bold tabular-nums">
+                          <span
+                            className="absolute -left-[34px] sm:-left-[42px] top-1 w-7 h-7 rounded-full text-white ring-4 ring-background flex items-center justify-center text-[11px] font-bold tabular-nums shadow-sm"
+                            style={{ background: "hsl(234 62% 47%)" }}
+                          >
                             {sIdx + 1}
                           </span>
                           {(() => {
