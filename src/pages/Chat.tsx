@@ -401,6 +401,17 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const [selectedSlotRef, setSelectedSlotRef] = useState<{ day: number; slotIdx: number } | null>(null);
   const { compareItems } = useTripContext();
   const [enrichedData, setEnrichedData] = useState<Record<string, any>>({});
+  const [enrichingDest, setEnrichingDest] = useState<string | null>(null);
+  // Track whether we just generated a plan in this session (vs loading from storage on refresh).
+  // Set to true when isLoading becomes true, cleared after enrichment finishes.
+  const [justGenerated, setJustGenerated] = useState(false);
+  const prevIsLoadingRef = useRef(false);
+  useEffect(() => {
+    if (isLoading && !prevIsLoadingRef.current) {
+      setJustGenerated(true);
+    }
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading]);
   const [craftingPlan, setCraftingPlan] = useState<{ destination: string; progress: number } | null>(null);
   const prevActiveId = useRef(activeId);
   const prefsSynced = useRef(false);
@@ -711,6 +722,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       if (msg.role !== "assistant") return;
       if (msg.parsed.destinationEnrich && !enrichedData[msg.parsed.destinationEnrich.destination]) {
         const { destination, travelMonth } = msg.parsed.destinationEnrich;
+        setEnrichingDest(destination);
         if (isPremium) {
           // Include BOTH activity names AND itinerary slot venues so every
           // stop in the plan gets a chance to resolve to a real Google Places
@@ -730,6 +742,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 setWikimediaImage(destination, data.images[0].thumbUrl || data.images[0].url);
               }
             }
+            setEnrichingDest((prev) => prev === destination ? null : prev);
+            setJustGenerated(false);
           });
         } else {
           // Free users: just fetch 1 real Google image for the paywall card
@@ -738,6 +752,8 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
               warmEnrichmentAssets(data);
               setEnrichedData((prev) => ({ ...prev, [destination]: mergeEnrichmentData(prev[destination], data) }));
             }
+            setEnrichingDest((prev) => prev === destination ? null : prev);
+            setJustGenerated(false);
           });
         }
       }
@@ -1300,7 +1316,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                             )}
 
                             {/* Full plan → show the plan card (only when fully done) */}
-                            {isFullPlan && destination && (!isLastAssistant || (!isLoading && qaStatus !== 'verifying')) ? (
+                            {isFullPlan && destination && (!isLastAssistant || (!isLoading && qaStatus !== 'verifying' && !(justGenerated && enrichingDest))) ? (
                               <div className="animate-fade-in">
                                 <TripSummaryCard
                                   data={parsed as TripPlanData}
@@ -1314,7 +1330,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                   }
                                 />
                               </div>
-                            ) : isFullPlan && destination && isLastAssistant && (isLoading || qaStatus === 'verifying') ? (
+                            ) : isFullPlan && destination && isLastAssistant && (isLoading || qaStatus === 'verifying' || (justGenerated && enrichingDest)) ? (
                               <div className="animate-fade-in">
                                 {/* Show loading state while plan is being prepared */}
                                 <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-4">
@@ -1324,10 +1340,10 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                                     </div>
                                     <div>
                                       <p className="text-sm font-medium">
-                                        {qaStatus === 'verifying' ? 'Verifying venues…' : 'Preparing your trip…'}
+                                        {qaStatus === 'verifying' ? 'Verifying venues…' : enrichingDest ? 'Loading photos…' : 'Preparing your trip…'}
                                       </p>
                                       <p className="text-xs text-muted-foreground">
-                                        {qaStatus === 'verifying' ? 'Checking real places and photos' : 'Almost ready'}
+                                        {qaStatus === 'verifying' ? 'Checking real places and photos' : enrichingDest ? 'Getting real venue photos' : 'Almost ready'}
                                       </p>
                                     </div>
                                   </div>
