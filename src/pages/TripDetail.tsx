@@ -1018,29 +1018,22 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                               setActivityModalOpen(true);
                             };
                             return (
-                              <div className="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-5 sm:gap-6 transition-transform duration-300 hover:-translate-y-0.5">
-                                {/* Hero photo column */}
+                              <div className={`${heroPhoto ? "grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-5 sm:gap-6" : ""} transition-transform duration-300 hover:-translate-y-0.5`}>
+                                {/* Hero photo column — only show if we have a real photo */}
+                                {heroPhoto && (
                                 <button
                                   type="button"
                                   onClick={openModal}
                                   className="relative h-52 sm:h-56 sm:w-[220px] rounded-3xl overflow-hidden group/photo bg-gradient-to-br from-muted via-muted to-secondary shadow-sm hover:shadow-xl transition-all duration-500"
                                 >
-                                  {heroPhoto ? (
                                     <>
                                       <img
                                         src={heroPhoto}
                                         alt={slot.venue}
                                         className="w-full h-full object-cover transition-transform duration-[1100ms] ease-out group-hover/photo:scale-[1.08]"
                                       />
-                                      {/* Soft gradient that only darkens the very bottom — keeps photo bright */}
                                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
                                     </>
-                                  ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                                      <MapPin className="h-7 w-7 text-muted-foreground/50" />
-                                      <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60">No photo yet</span>
-                                    </div>
-                                  )}
                                   <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur text-[10px] font-bold tabular-nums tracking-wide text-foreground shadow-sm">
                                     {slot.time}
                                   </span>
@@ -1050,14 +1043,13 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                       {reels.length}
                                     </span>
                                   )}
-                                  {heroPhoto && (
-                                    <div className="absolute inset-x-0 bottom-0 p-3 text-left">
-                                      <p className="text-[10px] uppercase tracking-[0.2em] text-white/80 font-semibold opacity-0 group-hover/photo:opacity-100 transition-opacity duration-300">
-                                        Tap to open
-                                      </p>
-                                    </div>
-                                  )}
+                                  <div className="absolute inset-x-0 bottom-0 p-3 text-left">
+                                    <p className="text-[10px] uppercase tracking-[0.2em] text-white/80 font-semibold opacity-0 group-hover/photo:opacity-100 transition-opacity duration-300">
+                                      Tap to open
+                                    </p>
+                                  </div>
                                 </button>
+                                )}
 
                                 {/* Text column */}
                                 <div className="min-w-0">
