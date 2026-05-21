@@ -1,7 +1,14 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/shared-trip.ts": {
+      "memory": 128,
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
+    { "source": "/trip-seo/:slug", "destination": "/api/shared-trip?slug=:slug" },
     { "source": "/destinations/:city", "destination": "/destinations/:city/index.html" },
     { "source": "/blog", "destination": "/blog/index.html" },
     { "source": "/blog/:slug", "destination": "/blog/:slug/index.html" },

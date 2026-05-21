@@ -31,3 +31,4 @@ Allow: /
 
 # Sitemap
 Sitemap: https://jolliday.online/sitemap.xml
+Sitemap: https://jolliday.online/api/sitemap-trips
