@@ -8,6 +8,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
+    <!-- Hide static SEO content from users (crawlers still read it).
+         React replaces the root innerHTML on mount, removing this content.
+         The noscript fallback shows it if JS is disabled. -->
+    <style>
+      #root > main[style] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+      noscript + main { position: static !important; width: auto !important; height: auto !important; overflow: visible !important; clip: auto !important; white-space: normal !important; }
+    </style>
+
     <!-- Primary SEO -->
     <title>Jolliday — AI Trip Planner | Plan Any Trip in One Chat</title>
     <meta name="description" content="Jolliday is the AI trip planner that creates personalized travel itineraries in under a minute. Get day-by-day plans with flights, hotels, activities, and booking links. Plan your next vacation, honeymoon, family trip, or weekend getaway with AI." />
