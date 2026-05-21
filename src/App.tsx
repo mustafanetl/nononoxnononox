@@ -24,6 +24,8 @@ import Promo from "./pages/Promo";
 import PromoMalmo from "./pages/PromoMalmo";
 import Promox from "./pages/Promox";
 import Promoar from "./pages/Promoar";
+import Destination from "./pages/Destination";
+import Blog from "./pages/Blog";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +56,9 @@ const App = () => (
               <Route path="/promomalmo" element={<PromoMalmo />} />
               <Route path="/promox" element={<Promox />} />
               <Route path="/promoar" element={<Promoar />} />
+              <Route path="/destinations/:city" element={<Destination />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<Blog />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
