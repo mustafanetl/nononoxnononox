@@ -1386,7 +1386,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   );
                 })}
 
-                {/* Simple loading indicator — shows only when message is hidden (plan streaming) or before content arrives */}
+                {/* Loading/crafting indicator — shows while streaming plan or verifying */}
                 {(isLoading || qaStatus === 'verifying') && (() => {
                   const lastMsg = messages[messages.length - 1];
                   const lastIsAssistant = lastMsg?.role === "assistant";
@@ -1395,15 +1395,25 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   if (qaStatus === 'verifying') return true;
                   return (!hasContent || (craftingActive && hasBlocks));
                 })() && (
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 42%))" }}>
-                      <LogoMark size={16} color="white" />
+                  <div className="flex gap-3 animate-fade-in">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-lg shadow-primary/20" style={{ background: "linear-gradient(135deg, hsl(234 62% 52%), hsl(234 62% 38%))" }}>
+                      <LogoMark size={17} color="white" className="animate-spin" style={{ animationDuration: "3s" }} />
                     </div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground self-start">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                      <span className="font-medium text-foreground/80">
-                        {qaStatus === 'verifying' ? 'Verifying venues…' : getThinkingText(messages, craftingActive)}
-                      </span>
+                    <div className="flex flex-col gap-1.5">
+                      {craftingActive && craftingPlan?.destination && (
+                        <span className="text-sm font-semibold text-foreground">
+                          Crafting your {craftingPlan.destination} trip
+                        </span>
+                      )}
+                      <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-gradient-to-r from-primary/[0.06] to-primary/[0.02] border border-primary/15 text-xs self-start">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                        </span>
+                        <span className="font-medium text-foreground/90">
+                          {qaStatus === 'verifying' ? 'Verifying all venues against Google Places…' : getThinkingText(messages, craftingActive)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
