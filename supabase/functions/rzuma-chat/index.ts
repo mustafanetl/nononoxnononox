@@ -726,6 +726,133 @@ serve(async (req) => {
       });
     }
 
+    // ── INJECT GYG ACTIVITIES (smart algorithm: scales with trip length + budget) ──
+    // Only inject when we detect a plan-generation request (not revisions/chat)
+    if (!revisionRequest.length) {
+      const cacheParams = extractCacheParams(trimmedMessages);
+      if (cacheParams?.destination) {
+        try {
+          const admin = getAdminClient();
+
+          // ── STEP 1: Determine how many activities to inject based on trip duration ──
+          // Formula: ~3 bookable activities per day, capped at reasonable limits
+          // Short trip (3 days) = 8-10 activities
+          // Week trip (7 days) = 15-18 activities  
+          // 2 weeks (14 days) = 25-30 activities
+          const days = cacheParams.duration;
+          const targetCount = Math.min(Math.max(Math.ceil(days * 2.5), 8), 35);
+
+          // ── STEP 2: Category distribution based on vibe ──
+          // Each vibe has a "recipe" — percentage allocation per category
+          const vibeRecipes: Record<string, Record<string, number>> = {
+            "foodie":          { dining: 0.40, sightseeing: 0.25, culture: 0.15, adventure: 0.10, nightlife: 0.10 },
+            "romantic":        { romance: 0.30, dining: 0.30, sightseeing: 0.20, culture: 0.10, nightlife: 0.10 },
+            "adventure":       { adventure: 0.40, sightseeing: 0.25, dining: 0.15, culture: 0.10, nightlife: 0.10 },
+            "cultural":        { culture: 0.40, sightseeing: 0.25, dining: 0.20, adventure: 0.10, nightlife: 0.05 },
+            "nightlife":       { nightlife: 0.35, dining: 0.25, sightseeing: 0.20, culture: 0.10, adventure: 0.10 },
+            "relaxed":         { romance: 0.30, sightseeing: 0.25, dining: 0.25, culture: 0.10, adventure: 0.10 },
+            "family-friendly": { sightseeing: 0.35, adventure: 0.25, culture: 0.20, dining: 0.15, nightlife: 0.05 },
+            "mixed":           { sightseeing: 0.25, dining: 0.25, culture: 0.20, adventure: 0.15, nightlife: 0.15 },
+          };
+          const recipe = vibeRecipes[cacheParams.vibe] || vibeRecipes["mixed"];
+
+          // ── STEP 3: Detect budget from conversation ──
+          let budget: "budget" | "mid" | "luxury" = "mid";
+          for (const msg of trimmedMessages) {
+            if (msg.role !== "user") continue;
+            const t = msg.content.toLowerCase();
+            if (/cheap|budget|backpack|hostel|billig/i.test(t)) budget = "budget";
+            else if (/luxury|luxur|splurge|5.star|premium|lyx/i.test(t)) budget = "luxury";
+          }
+
+          // ── STEP 4: Query all GYG activities for this city ──
+          const { data: gygActivities } = await admin
+            .from("destination_media")
+            .select("name, metadata")
+            .eq("destination", cacheParams.destination)
+            .eq("type", "gyg_activity")
+            .limit(100);
+
+          if (gygActivities && gygActivities.length >= 3) {
+            // ── STEP 5: Score and filter by budget ──
+            const allScored = gygActivities
+              .map((a: any) => ({ name: a.name, meta: a.metadata || {} }))
+              .filter((a: any) => {
+                // Budget filter: skip expensive activities for budget travelers
+                const price = Number(a.meta.price) || 0;
+                if (budget === "budget" && price > 80) return false;
+                if (budget === "luxury" && price < 20 && price > 0) return false;
+                return true;
+              });
+
+            // ── STEP 6: Distribute across categories using the recipe ──
+            const selected: Array<{ name: string; meta: any }> = [];
+            const usedNames = new Set<string>();
+
+            for (const [category, ratio] of Object.entries(recipe)) {
+              const slotsForCat = Math.max(Math.round(targetCount * ratio), 1);
+              const catActivities = allScored
+                .filter((a: any) => (a.meta.category || "sightseeing") === category)
+                .filter((a: any) => !usedNames.has(a.name))
+                .sort((a: any, b: any) => (a.meta.priority || 5) - (b.meta.priority || 5));
+
+              for (const act of catActivities.slice(0, slotsForCat)) {
+                selected.push(act);
+                usedNames.add(act.name);
+              }
+            }
+
+            // ── STEP 7: Fill remaining slots with best overall (any category) ──
+            if (selected.length < targetCount) {
+              const remaining = allScored
+                .filter((a: any) => !usedNames.has(a.name))
+                .sort((a: any, b: any) => (a.meta.priority || 5) - (b.meta.priority || 5));
+              for (const act of remaining.slice(0, targetCount - selected.length)) {
+                selected.push(act);
+                usedNames.add(act.name);
+              }
+            }
+
+            // ── STEP 8: Format and inject ──
+            if (selected.length >= 3) {
+              // Group by category for cleaner AI consumption
+              const byCategory: Record<string, string[]> = {};
+              for (const a of selected) {
+                const cat = a.meta.category || "sightseeing";
+                if (!byCategory[cat]) byCategory[cat] = [];
+                const price = a.meta.price ? `€${a.meta.price}` : "";
+                const rating = a.meta.rating ? `★${Number(a.meta.rating).toFixed(1)}` : "";
+                const dur = a.meta.duration ? `(${a.meta.duration})` : "";
+                byCategory[cat].push(`• ${a.name} ${price} ${rating} ${dur}`.trim());
+              }
+
+              const formatted = Object.entries(byCategory)
+                .map(([cat, items]) => `[${cat.toUpperCase()}]\n${items.join("\n")}`)
+                .join("\n\n");
+
+              systemMessages.push({
+                role: "system" as const,
+                content: `BOOKABLE ACTIVITIES DATABASE for ${cacheParams.destination} (${selected.length} activities for ${days}-day ${cacheParams.vibe} trip, ${budget} budget):
+
+${formatted}
+
+RULES:
+- Use these activities in your plan — they have verified booking links and real pricing
+- For a ${days}-day trip, include at least ${Math.min(Math.ceil(days * 1.5), selected.length)} of these across your activities + itinerary
+- You MAY also add well-known restaurants/cafés/venues you're confident about (for meals, coffee stops)
+- Match the exact activity name as listed — our system links them to booking pages
+- Spread activities across all days — don't cluster them on day 1
+- Mix categories naturally: tours in the morning, food midday, culture afternoon, nightlife evening`,
+              });
+              console.log(`[gyg-inject] ${selected.length}/${gygActivities.length} activities for ${cacheParams.destination} (${days}d ${cacheParams.vibe} ${budget})`);
+            }
+          }
+        } catch (e) {
+          console.warn("[gyg-inject] failed, proceeding without:", e);
+        }
+      }
+    }
+
     if (revisionRequest.length > 0) {
       const issuesText = revisionRequest.map((s, i) => `${i + 1}. ${s}`).join("\n");
       systemMessages.push({
