@@ -314,6 +314,14 @@ const Index = () => {
                     Destinations
                   </a>
                 </li>
+                <li>
+                  <Link
+                    to="/blog"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Blog
+                  </Link>
+                </li>
               </ul>
             </div>
 

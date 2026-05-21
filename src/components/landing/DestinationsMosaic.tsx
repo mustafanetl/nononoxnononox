@@ -69,7 +69,7 @@ const DestinationsMosaic = () => {
           {destinations.map((d) => (
             <Link
               key={d.name}
-              to={`/chat?q=Plan a trip to ${d.name}`}
+              to={`/destinations/${d.name.toLowerCase()}`}
               className="group relative rounded-2xl overflow-hidden bg-white border border-border hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/20 hover:-translate-y-1 transition-all duration-300"
             >
               <div className="aspect-[4/3] overflow-hidden relative">
