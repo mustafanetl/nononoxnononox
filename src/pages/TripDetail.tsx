@@ -650,24 +650,31 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
     }
     setSharing(true);
     try {
-      // Generate a short, URL-safe slug.
-      const slug = Array.from(crypto.getRandomValues(new Uint8Array(8)))
-        .map((b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36])
-        .join("");
-      const snapshot = {
-        data: tripData!.data,
-        destination: tripData!.destination,
-        enrichedImages: tripData!.enrichedImages || [],
-        itineraryVenuePhotos: tripData!.itineraryVenuePhotos || {},
-      };
-      const { error } = await supabase.from("shared_trips").insert({
-        slug,
-        owner_user_id: user?.id || null,
-        title: `Trip to ${destination}`,
-        destination,
-        data_json: snapshot as any,
-      });
-      if (error) throw error;
+      // Reuse the auto-published slug if it exists (avoids duplicate pages)
+      let slug = sessionStorage.getItem(`jolliday-trip-slug-${destination}`);
+
+      if (!slug) {
+        // Generate a new slug only if auto-publish didn't fire
+        slug = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+          .map((b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36])
+          .join("");
+        const snapshot = {
+          data: tripData!.data,
+          destination: tripData!.destination,
+          enrichedImages: tripData!.enrichedImages || [],
+          itineraryVenuePhotos: tripData!.itineraryVenuePhotos || {},
+        };
+        const { error } = await supabase.from("shared_trips").insert({
+          slug,
+          owner_user_id: user?.id || null,
+          title: `Trip to ${destination}`,
+          destination,
+          data_json: snapshot as any,
+        });
+        if (error) throw error;
+        sessionStorage.setItem(`jolliday-trip-slug-${destination}`, slug);
+      }
+
       const url = `${window.location.origin}/p/${slug}`;
       try { await navigator.clipboard.writeText(url); } catch {}
       if ((navigator as any).share) {

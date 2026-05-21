@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plane,
@@ -19,6 +19,7 @@ import { TimelineLeg } from "@/components/TripTimeline";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
 import { useDestinationVideo } from "@/hooks/useCityImages";
 import { LogoMark } from "@/components/Logo";
+import { supabase } from "@/integrations/supabase/client";
 
 export type TripPlanData = {
   flights: FlightData[];
@@ -91,6 +92,51 @@ const TripSummaryCard = ({
     }
     navigate("/trip/view");
   };
+
+  // ── Auto-publish: every completed plan gets a public page for SEO ──
+  // Creates a shared_trips entry on first render (fire-and-forget).
+  // Stores the slug in sessionStorage so "Share" button reuses it (no duplicates).
+  const autoPublished = useRef(false);
+  useEffect(() => {
+    if (autoPublished.current) return;
+    if (!data || !destination || data.itinerary.length === 0) return;
+    autoPublished.current = true;
+
+    // Check if we already have a slug for this trip (from a previous render)
+    const existingSlug = sessionStorage.getItem(`jolliday-trip-slug-${destination}`);
+    if (existingSlug) return; // already published
+
+    (async () => {
+      try {
+        const slug = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+          .map((b) => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36])
+          .join("");
+
+        const { data: session } = await supabase.auth.getSession();
+        const userId = session?.session?.user?.id || null;
+
+        const snapshot = {
+          data,
+          destination,
+          enrichedImages: enrichedImages?.slice(0, 5) || [],
+          itineraryVenuePhotos: itineraryVenuePhotos || {},
+        };
+
+        await supabase.from("shared_trips").insert({
+          slug,
+          owner_user_id: userId,
+          title: `Trip to ${destination}`,
+          destination,
+          data_json: snapshot as any,
+        });
+
+        // Store slug so TripDetail's Share button can reuse it
+        sessionStorage.setItem(`jolliday-trip-slug-${destination}`, slug);
+      } catch {
+        // Silent — SEO publishing is non-critical for the user
+      }
+    })();
+  }, [data, destination, enrichedImages, itineraryVenuePhotos]);
 
   const days = data.itinerary.length;
   const activitiesCount =
