@@ -36,15 +36,17 @@ const FinalCTA = () => {
             </div>
 
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
-              Your next trip is
+              Stop planning.
               <br />
               <span className="text-primary bg-gradient-to-r from-primary to-indigo-400 bg-clip-text text-transparent">
-                one message away.
+                Start going.
               </span>
             </h2>
 
             <p className="mt-5 md:mt-6 text-base sm:text-lg text-white/60 max-w-xl mx-auto leading-relaxed">
-              Start for free. Full itinerary in under 60 seconds.
+              One message. Full itinerary. Real prices. Verified venues.
+              <br className="hidden sm:block" />
+              Your next trip, ready to book in 60 seconds.
             </p>
 
             <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">

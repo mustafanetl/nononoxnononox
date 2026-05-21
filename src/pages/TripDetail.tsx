@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Download, Share2, Plane, Hotel, Sparkles,
@@ -29,6 +29,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { detectLang, extractTripLangSample, getTripStrings, type TripStrings } from "@/utils/tripI18n";
 import { getCachedVenuePhotos, setCachedVenuePhotos, getCachedEnrichedImages, setCachedEnrichedImages } from "@/utils/imageCache";
+import { useTripEnrichment } from "@/hooks/useTripEnrichment";
+import type { WalkingSlot } from "@/hooks/useEnrichWalking";
 
 /* ═══════════════════════════════════════════
    Editorial-style trip view
@@ -364,6 +366,78 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
     setHeroSrcFinal(primaryHero || undefined);
     setHeroFallbackStage("enriched");
   }, [primaryHero]);
+
+  // ── Progressive enrichment: real prices, walking times, booking links ──
+  // Must be called before early return to satisfy React hooks rules.
+  // All computed arrays/objects are memoized to prevent infinite re-render loops.
+  const _enrichData = tripData?.data;
+  const _enrichDest = tripData?.destination || "";
+  const _enrichOrigin = _enrichData?.flights?.[0]?.from || "";
+  const _enrichStartDate = _enrichData?.flights?.[0]?.date || "";
+  const _enrichEndDate = _enrichData?.flights && _enrichData.flights.length > 1
+    ? _enrichData.flights[_enrichData.flights.length - 1]?.date || ""
+    : _enrichStartDate;
+  const _enrichCurrency = _enrichData?.flights?.[0]?.currency || _enrichData?.hotels?.[0]?.currency || _enrichData?.activities?.[0]?.currency || "$";
+
+  // Count how many venue photos have coordinates — used as a stable dep for walking enrichment
+  const _venuePhotosWithCoords = useMemo(() => {
+    const photos = tripData?.itineraryVenuePhotos || {};
+    return Object.values(photos).filter(
+      (v: any) => typeof v?.lat === "number" && typeof v?.lng === "number"
+    ).length;
+  }, [tripData?.itineraryVenuePhotos]);
+
+  const _enrichDaySlots = useMemo(() => {
+    if (!_enrichData?.itinerary) return [];
+    return _enrichData.itinerary.map((day: any) => ({
+      day: day.day,
+      slots: (Array.isArray(day?.slots) ? day.slots : [])
+        .map((slot: any) => {
+          const pm = tripData?.itineraryVenuePhotos?.[slot?.venue] ||
+            Object.values(tripData?.itineraryVenuePhotos || {}).find(
+              (v: any) => v?.matchedName?.toLowerCase() === slot?.venue?.toLowerCase()
+            );
+          if (pm && typeof (pm as any).lat === "number" && typeof (pm as any).lng === "number") {
+            return { venue: slot.venue, lat: (pm as any).lat, lng: (pm as any).lng } as WalkingSlot;
+          }
+          return null;
+        })
+        .filter(Boolean) as WalkingSlot[],
+    }));
+    // Recomputes when destination/itinerary changes, or when more venues get coordinates
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_enrichDest, _enrichData?.itinerary?.length, _venuePhotosWithCoords]);
+
+  const _enrichHotel = useMemo(() => {
+    const h = _enrichData?.hotels?.[0];
+    if (h && typeof h.lat === "number" && typeof h.lng === "number") return { lat: h.lat, lng: h.lng };
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_enrichData?.hotels?.[0]?.lat, _enrichData?.hotels?.[0]?.lng]);
+
+  const _enrichActivities = useMemo(() => {
+    if (!_enrichData?.activities) return [];
+    return _enrichData.activities.map((a: any) => ({
+      name: a.name,
+      city: _enrichDest,
+      category: a.category || "sightseeing",
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_enrichDest, _enrichData?.activities?.length]);
+
+  const enrichment = useTripEnrichment({
+    origin: _enrichOrigin,
+    destination: _enrichDest,
+    startDate: _enrichStartDate,
+    endDate: _enrichEndDate,
+    groupSize: 2,
+    budget: "mid",
+    currency: _enrichCurrency === "$" ? "USD" : _enrichCurrency === "€" ? "EUR" : _enrichCurrency === "£" ? "GBP" : "EUR",
+    daySlots: _enrichDaySlots,
+    hotel: _enrichHotel,
+    activities: _enrichActivities,
+    enabled: !!(_enrichOrigin && _enrichDest && _enrichStartDate),
+  });
 
   if (!tripData) return null;
   const { data, destination } = tripData;
@@ -876,11 +950,19 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
                     <Plane className="h-3.5 w-3.5" /> {t.flights}
+                    {enrichment.loading.pricing && (
+                      <span className="ml-auto text-[9px] normal-case tracking-normal text-primary animate-pulse">checking real prices…</span>
+                    )}
+                    {enrichment.pricing?.flights?.outbound && !enrichment.loading.pricing && (
+                      <span className="ml-auto text-[9px] normal-case tracking-normal text-emerald-600 dark:text-emerald-400">✓ Prices verified</span>
+                    )}
                   </div>
                   <div className="space-y-3">
                     {data.flights.map((f, i) => (
                       <FlightRow key={f.id || i} flight={f}
                         t={t}
+                        enrichedPrice={enrichment.pricing?.flights?.outbound?.price || null}
+                        enrichedBookingUrl={enrichment.pricing?.flights?.outbound?.booking_url || null}
                         onClick={() => { setSelectedFlight(f); setFlightModalOpen(true); }} />
                     ))}
                   </div>
@@ -890,13 +972,24 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
                     <Hotel className="h-3.5 w-3.5" /> {t.hotels}
+                    {enrichment.loading.pricing && (
+                      <span className="ml-auto text-[9px] normal-case tracking-normal text-primary animate-pulse">checking prices…</span>
+                    )}
+                    {enrichment.pricing?.hotels?.length > 0 && !enrichment.loading.pricing && (
+                      <span className="ml-auto text-[9px] normal-case tracking-normal text-emerald-600 dark:text-emerald-400">✓ Verified</span>
+                    )}
                   </div>
                   <div className="space-y-3">
-                    {data.hotels.map((h, i) => (
-                      <HotelRow key={h.id || i} hotel={h}
-                        t={t}
-                        onClick={() => { setSelectedHotel(h); setHotelModalOpen(true); }} />
-                    ))}
+                    {data.hotels.map((h, i) => {
+                      const enrichedHotel = enrichment.pricing?.hotels?.[i];
+                      return (
+                        <HotelRow key={h.id || i} hotel={h}
+                          t={t}
+                          enrichedPricePerNight={enrichedHotel?.price_per_night || null}
+                          enrichedBookingUrl={enrichedHotel?.booking_url || null}
+                          onClick={() => { setSelectedHotel(h); setHotelModalOpen(true); }} />
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -968,7 +1061,9 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                   {/* Slots */}
                   {day.slots && day.slots.length > 0 ? (
                     <ol className="relative pl-7 sm:pl-9 border-l-2 border-primary/20 space-y-7">
-                      {day.slots.filter((slot: any) => !isLogisticsSlot(slot)).map((slot, sIdx) => (
+                      {(() => {
+                        const filteredSlots = day.slots.filter((slot: any) => !isLogisticsSlot(slot));
+                        return filteredSlots.map((slot: any, sIdx: number) => (
                         <li key={sIdx} className="relative">
                           <span
                             className="absolute -left-[34px] sm:-left-[42px] top-1 w-7 h-7 rounded-full text-white ring-4 ring-background flex items-center justify-center text-[11px] font-bold tabular-nums shadow-sm"
@@ -1116,15 +1211,30 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                                     </div>
                                   )}
 
-                                  {slot.transitNext && slot.transitNext !== "—" && sIdx < day.slots!.length - 1 && (
-                                    <TransitPill text={slot.transitNext} />
+                                  {slot.transitNext && slot.transitNext !== "—" && sIdx < filteredSlots.length - 1 && (
+                                    (() => {
+                                      // Use real OSRM walking time if available
+                                      const dayWalking = enrichment.walking[day.day];
+                                      const nextSlot = filteredSlots[sIdx + 1];
+                                      const segment = dayWalking?.segments?.find(
+                                        (s: any) => s.from === slot.venue && s.to === nextSlot?.venue
+                                      );
+                                      if (segment) {
+                                        const label = segment.suggestion === "transit"
+                                          ? `${segment.walking_minutes} min · transit recommended`
+                                          : `${segment.walking_minutes} min walk`;
+                                        return <TransitPill text={label} verified />;
+                                      }
+                                      return <TransitPill text={slot.transitNext} />;
+                                    })()
                                   )}
                                 </div>
                               </div>
                             );
                           })()}
                         </li>
-                      ))}
+                      ));
+                      })()}
                     </ol>
                   ) : (
                     <div className="space-y-2 text-sm text-muted-foreground pl-1">
@@ -1446,11 +1556,12 @@ const DayRail: React.FC<{ days: { day: number; title: string }[]; dayLabel?: str
 };
 
 /** Pill that shows transit info (walk/transit) between two slots. */
-const TransitPill: React.FC<{ text: string }> = ({ text }) => (
+const TransitPill: React.FC<{ text: string; verified?: boolean }> = ({ text, verified }) => (
   <div className="mt-4 flex items-center gap-2">
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/70 text-muted-foreground text-[11px] font-medium">
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${verified ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400" : "bg-muted/70 text-muted-foreground"}`}>
       <Footprints className="h-3 w-3" />
       {text}
+      {verified && <span className="text-[9px]">✓</span>}
     </span>
     <span className="h-px flex-1 bg-border" />
   </div>
@@ -1511,7 +1622,7 @@ const ClosingCard: React.FC<{
   </div>
 );
 
-const FlightRow = ({ flight: f, onClick, t }: { flight: FlightData; onClick: () => void; t: TripStrings }) => (
+const FlightRow = ({ flight: f, onClick, t, enrichedPrice, enrichedBookingUrl }: { flight: FlightData; onClick: () => void; t: TripStrings; enrichedPrice?: number | null; enrichedBookingUrl?: string | null }) => (
   <div onClick={onClick}
     className="group relative p-4 rounded-2xl bg-card border border-border transition-all duration-300 cursor-pointer hover:shadow-lg hover:border-foreground/30 hover:-translate-y-0.5">
     <div className="flex items-center justify-between gap-4">
@@ -1537,23 +1648,37 @@ const FlightRow = ({ flight: f, onClick, t }: { flight: FlightData; onClick: () 
         </div>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-lg font-bold text-foreground">{f.currency}{f.price}</p>
-        <p className="text-xs text-muted-foreground">{f.airline}</p>
+        {enrichedPrice ? (
+          <>
+            <p className="text-lg font-bold text-foreground">
+              <span className="text-[10px] font-normal text-muted-foreground">from </span>
+              {f.currency}{enrichedPrice}
+            </p>
+            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded-full font-medium">
+              ✓ Verified
+            </span>
+          </>
+        ) : (
+          <>
+            <p className="text-lg font-bold text-foreground">{f.currency}{f.price}</p>
+            <p className="text-xs text-muted-foreground">{f.airline}</p>
+          </>
+        )}
       </div>
     </div>
     <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
       <span className="text-xs text-muted-foreground">{f.date}</span>
-      <a href={getSkyscannerUrl(f.from, f.to, f.date)} target="_blank" rel="noopener noreferrer"
+      <a href={enrichedBookingUrl || getSkyscannerUrl(f.from, f.to, f.date)} target="_blank" rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
         className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
-        {t.searchOnSkyscanner} <ExternalLink className="h-3 w-3" />
+        {enrichedBookingUrl ? "Book now" : t.searchOnSkyscanner} <ExternalLink className="h-3 w-3" />
       </a>
     </div>
   </div>
 );
 
 /** Compact hotel row used inside the side-by-side Logistics block. */
-const HotelRow = ({ hotel: h, onClick, t }: { hotel: HotelData; onClick: () => void; t: TripStrings }) => (
+const HotelRow = ({ hotel: h, onClick, t, enrichedPricePerNight, enrichedBookingUrl }: { hotel: HotelData; onClick: () => void; t: TripStrings; enrichedPricePerNight?: number | null; enrichedBookingUrl?: string | null }) => (
   <div onClick={onClick}
     className="group flex gap-3 p-3 rounded-2xl bg-card border border-border cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-foreground/30 hover:-translate-y-0.5">
     <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/15 via-muted to-accent/15">
@@ -1581,8 +1706,16 @@ const HotelRow = ({ hotel: h, onClick, t }: { hotel: HotelData; onClick: () => v
         </div>
       </div>
       <div className="flex items-center justify-between mt-2">
-        <span className="text-sm font-bold text-foreground">{h.currency}{h.pricePerNight}<span className="text-[10px] font-normal text-muted-foreground">{t.perNight}</span></span>
-        <a href={getBookingDotComUrl(h.name, h.location)} target="_blank" rel="noopener noreferrer"
+        {enrichedPricePerNight ? (
+          <span className="text-sm font-bold text-foreground">
+            <span className="text-[10px] font-normal text-muted-foreground">from </span>
+            {h.currency}{enrichedPricePerNight}<span className="text-[10px] font-normal text-muted-foreground">{t.perNight}</span>
+            <span className="ml-1.5 text-[9px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded-full font-medium">✓</span>
+          </span>
+        ) : (
+          <span className="text-sm font-bold text-foreground">{h.currency}{h.pricePerNight}<span className="text-[10px] font-normal text-muted-foreground">{t.perNight}</span></span>
+        )}
+        <a href={enrichedBookingUrl || getBookingDotComUrl(h.name, h.location)} target="_blank" rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline">
           {t.bookingShort} <ExternalLink className="h-2.5 w-2.5" />

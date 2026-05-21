@@ -4,23 +4,23 @@ const steps = [
   {
     icon: MessageSquare,
     number: "01",
-    title: "Tell us where",
+    title: "Describe your trip",
     description:
-      "Type your destination, dates, and who's coming along. That's all we need to get started.",
+      "Any destination, any style. Just type it like you'd tell a friend: \"4 days in Barcelona, love food and architecture.\"",
   },
   {
     icon: Calendar,
     number: "02",
-    title: "Get your itinerary",
+    title: "Get a verified plan",
     description:
-      "A full day-by-day plan with hotels, things to do, and where to eat — in under 60 seconds.",
+      "Full itinerary with real prices, verified venues, and walking routes. Every place checked against Google Places.",
   },
   {
     icon: Ticket,
     number: "03",
-    title: "Book and go",
+    title: "Book everything",
     description:
-      "Everything links directly to booking. Tweak anything you want, then hit the road.",
+      "One-click links to Skyscanner, Booking.com, and GetYourGuide. Your entire trip, bookable in minutes.",
   },
 ];
 

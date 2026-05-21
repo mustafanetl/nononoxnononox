@@ -38,7 +38,7 @@ describe("HeroSection", () => {
   it("navigates to /chat?q=<encoded> on form submission", () => {
     renderHero();
 
-    const input = screen.getByPlaceholderText(/describe your dream trip/i);
+    const input = screen.getByPlaceholderText(/5 days in Tokyo/i);
     fireEvent.change(input, { target: { value: "Paris France" } });
 
     const form = input.closest("form")!;
@@ -52,7 +52,7 @@ describe("HeroSection", () => {
   it("does not navigate when input is empty or whitespace", () => {
     renderHero();
 
-    const input = screen.getByPlaceholderText(/describe your dream trip/i);
+    const input = screen.getByPlaceholderText(/5 days in Tokyo/i);
     const form = input.closest("form")!;
     fireEvent.submit(form);
 
@@ -62,7 +62,7 @@ describe("HeroSection", () => {
   it("URL-encodes special characters in the query", () => {
     renderHero();
 
-    const input = screen.getByPlaceholderText(/describe your dream trip/i);
+    const input = screen.getByPlaceholderText(/5 days in Tokyo/i);
     fireEvent.change(input, { target: { value: "Tokyo & Osaka" } });
 
     const form = input.closest("form")!;

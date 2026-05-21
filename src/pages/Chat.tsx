@@ -1112,34 +1112,34 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 {/* Greeting */}
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground text-center mb-3">
                   {preferences.displayName
-                    ? `Hey ${preferences.displayName},`
+                    ? `Hey ${preferences.displayName} 👋`
                     : "Where to next?"}
                 </h1>
                 <p className="text-base md:text-lg text-muted-foreground text-center mb-10 max-w-lg">
                   {preferences.displayName
-                    ? "Where are we going today? Tell me about your dream trip."
-                    : "I'm Jolliday, your AI travel planner. Tell me about the trip you want."}
+                    ? "Tell me about your next trip — destination, dates, vibe. I'll handle the rest."
+                    : "Describe your dream trip in plain language. I'll build a complete plan with flights, hotels, and day-by-day itinerary."}
                 </p>
 
                 {/* Quick start categories */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 w-full max-w-2xl mb-8">
                   {[
-                    { icon: Plane, label: "Weekend trip", q: "Plan a quick weekend getaway" },
-                    { icon: Mountain, label: "Adventure", q: "Plan an adventure trip" },
-                    { icon: Utensils, label: "Food & culture", q: "Plan a food & culture trip" },
-                    { icon: Users, label: "Family", q: "Plan a family vacation" },
+                    { icon: Plane, label: "Weekend escape", q: "Plan a 3-day weekend trip somewhere in Europe" },
+                    { icon: Mountain, label: "Adventure", q: "Plan a week-long adventure trip with hiking and nature" },
+                    { icon: Utensils, label: "Food & culture", q: "Plan a food and culture trip, 4-5 days" },
+                    { icon: Users, label: "With family", q: "Plan a family vacation with kids, 5-7 days" },
                   ].map((cat) => {
                     const Icon = cat.icon;
                     return (
                       <button
                         key={cat.label}
                         onClick={() => sendMessage(cat.q)}
-                        className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-border bg-white hover:border-primary/30 hover:bg-primary/[0.02] hover:-translate-y-0.5 transition-all duration-200 group"
+                        className="flex flex-col items-center gap-2.5 p-4 sm:p-5 rounded-2xl border border-border bg-white hover:border-primary/30 hover:bg-primary/[0.02] hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group"
                       >
-                        <div className="w-10 h-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all">
+                        <div className="w-11 h-11 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:border-primary group-hover:scale-110 transition-all duration-300">
                           <Icon className="h-5 w-5 text-primary group-hover:text-white transition-colors" />
                         </div>
-                        <span className="text-xs sm:text-sm font-medium text-foreground">
+                        <span className="text-xs sm:text-sm font-semibold text-foreground">
                           {cat.label}
                         </span>
                       </button>
@@ -1150,7 +1150,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                 {/* Smart suggestions */}
                 <div className="w-full max-w-2xl">
                   <p className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3 text-center">
-                    Or try one of these
+                    Popular right now
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
                     {suggestions.map((s) => (
@@ -1163,6 +1163,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Trust line */}
+                <div className="mt-10 flex items-center gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" /> AI-verified venues</span>
+                  <span className="text-border">·</span>
+                  <span>Real prices</span>
+                  <span className="text-border">·</span>
+                  <span>Free to start</span>
                 </div>
               </div>
             ) : (

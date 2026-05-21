@@ -72,6 +72,8 @@ const TripSummaryCard = ({
             verified: (val as any).verified || false,
             matchedName: (val as any).matchedName || null,
             hasRealPhoto: (val as any).hasRealPhoto || false,
+            lat: typeof (val as any).lat === "number" ? (val as any).lat : null,
+            lng: typeof (val as any).lng === "number" ? (val as any).lng : null,
           };
         }
       }

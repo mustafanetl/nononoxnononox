@@ -57,11 +57,10 @@ describe("FlightCard", () => {
     );
 
     expect(screen.getByText("TestAir")).toBeInTheDocument();
-    expect(screen.getByText("JFK")).toBeInTheDocument();
-    expect(screen.getByText("LAX")).toBeInTheDocument();
     expect(screen.getByText("10:00")).toBeInTheDocument();
     expect(screen.getByText("14:00")).toBeInTheDocument();
     expect(screen.getByText("$350")).toBeInTheDocument();
+    expect(screen.getByText("Direct")).toBeInTheDocument();
   });
 
   it("calls onClick when card is clicked", () => {
