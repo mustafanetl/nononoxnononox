@@ -185,7 +185,60 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- SEO: Visible content for crawlers before React hydrates -->
+      <main style="font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 4rem 1rem; text-align: center;">
+        <h1 style="font-size: 3rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1;">Any trip. In one chat.</h1>
+        <p style="font-size: 1.25rem; color: #666; margin-top: 1rem; max-width: 600px; margin-left: auto; margin-right: auto;">Jolliday is the AI trip planner that creates complete, personalized travel itineraries in under 60 seconds. Flights, hotels, activities, and day-by-day plans — all from a single message.</p>
+        <a href="/chat" style="display: inline-block; margin-top: 2rem; background: #2d42b3; color: white; padding: 1rem 2.5rem; border-radius: 9999px; text-decoration: none; font-weight: 700; font-size: 1.1rem;">Plan my trip →</a>
+        <section style="margin-top: 4rem; text-align: left;">
+          <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem;">How Jolliday works</h2>
+          <ol style="line-height: 2; color: #444; padding-left: 1.5rem;">
+            <li><strong>Describe your trip</strong> — destination, dates, budget, who's traveling, and what vibe you want.</li>
+            <li><strong>Get a verified plan</strong> — full day-by-day itinerary with real venues checked against Google Places.</li>
+            <li><strong>Book everything</strong> — direct links to Skyscanner, Booking.com, and GetYourGuide.</li>
+          </ol>
+        </section>
+        <section style="margin-top: 3rem; text-align: left;">
+          <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem;">What makes Jolliday different</h2>
+          <ul style="line-height: 2; color: #444; padding-left: 1.5rem;">
+            <li><strong>AI-verified venues</strong> — every restaurant, hotel, and attraction is checked against Google Places. No hallucinated recommendations.</li>
+            <li><strong>Real-time prices</strong> — actual flight and hotel costs from Travelpayouts, not AI-invented numbers.</li>
+            <li><strong>Walking intelligence</strong> — real walking times between stops calculated via OSRM routing.</li>
+            <li><strong>One-click booking</strong> — affiliate links to Skyscanner, Booking.com, and GetYourGuide for instant booking.</li>
+            <li><strong>Any destination</strong> — works for 100+ cities worldwide, from Barcelona to Bali to Bangkok.</li>
+          </ul>
+        </section>
+        <section style="margin-top: 3rem; text-align: left;">
+          <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem;">Popular destinations</h2>
+          <p style="line-height: 2; color: #444;">
+            <a href="/destinations/amsterdam" style="color: #2d42b3;">Amsterdam</a> ·
+            <a href="/destinations/barcelona" style="color: #2d42b3;">Barcelona</a> ·
+            <a href="/destinations/berlin" style="color: #2d42b3;">Berlin</a> ·
+            <a href="/destinations/tokyo" style="color: #2d42b3;">Tokyo</a> ·
+            <a href="/destinations/paris" style="color: #2d42b3;">Paris</a> ·
+            <a href="/destinations/london" style="color: #2d42b3;">London</a> ·
+            <a href="/destinations/rome" style="color: #2d42b3;">Rome</a> ·
+            <a href="/destinations/bangkok" style="color: #2d42b3;">Bangkok</a> ·
+            <a href="/destinations/dubai" style="color: #2d42b3;">Dubai</a> ·
+            <a href="/destinations/lisbon" style="color: #2d42b3;">Lisbon</a> ·
+            <a href="/destinations/stockholm" style="color: #2d42b3;">Stockholm</a> ·
+            <a href="/destinations/singapore" style="color: #2d42b3;">Singapore</a> ·
+            <a href="/destinations/new-york" style="color: #2d42b3;">New York</a> ·
+            <a href="/destinations/bali" style="color: #2d42b3;">Bali</a> ·
+            <a href="/destinations/marrakech" style="color: #2d42b3;">Marrakech</a>
+          </p>
+        </section>
+        <section style="margin-top: 3rem; text-align: left;">
+          <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem;">From the blog</h2>
+          <ul style="line-height: 2.5;">
+            <li><a href="/blog/best-ai-trip-planner-2026" style="color: #2d42b3;">Best AI Trip Planner in 2026: What Actually Works</a></li>
+            <li><a href="/blog/3-days-barcelona-itinerary" style="color: #2d42b3;">3 Days in Barcelona: AI-Planned Itinerary</a></li>
+            <li><a href="/blog/how-to-plan-trip-with-ai" style="color: #2d42b3;">How to Plan a Trip with AI (Complete Guide)</a></li>
+          </ul>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
