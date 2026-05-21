@@ -307,8 +307,8 @@ def scroll_page(page: Page, times: int = 6):
         time.sleep(1)
 
 
-def scrape_listing(page: Page, city: str, max_items: int = 40) -> list[dict]:
-    """Scrape GYG search results. Returns [{name, url, image}]."""
+def scrape_listing(page: Page, city: str, max_items: int = 200) -> list[dict]:
+    """Scrape GYG search results. Clicks 'Load more' repeatedly to get all activities."""
     url = f"https://www.getyourguide.com/s/?q={quote_plus(city)}&searchSource=1"
     print(f"  Loading: {url}")
 
@@ -317,12 +317,46 @@ def scrape_listing(page: Page, city: str, max_items: int = 40) -> list[dict]:
     accept_cookies(page)
     scroll_page(page)
 
+    # Click "Load more" / "Show more" button repeatedly until no more results
+    load_more_clicks = 0
+    for _ in range(20):  # Max 20 clicks (safety limit)
+        try:
+            # GYG uses various button texts for loading more
+            load_btn = None
+            for selector in [
+                'button:has-text("Show more")',
+                'button:has-text("Load more")',
+                'button:has-text("See more")',
+                'button:has-text("Mehr anzeigen")',
+                '[data-testid*="load-more"]',
+                '[class*="load-more"]',
+                '[class*="show-more"]',
+                'button[class*="pagination"]',
+            ]:
+                btn = page.locator(selector).first
+                if btn.is_visible(timeout=1500):
+                    load_btn = btn
+                    break
+
+            if not load_btn:
+                break
+
+            load_btn.click()
+            load_more_clicks += 1
+            time.sleep(2.5)
+            scroll_page(page, 3)
+        except Exception:
+            break
+
+    if load_more_clicks > 0:
+        print(f"  → Clicked 'Load more' {load_more_clicks} times")
+
     results: list[dict] = []
     seen: set[str] = set()
 
     # Strategy 1: JSON-LD
     ld_results = _parse_json_ld(page)
-    if ld_results:
+    if ld_results and len(ld_results) > 5:
         print(f"  → {len(ld_results)} from JSON-LD")
         return ld_results[:max_items]
 
@@ -331,7 +365,7 @@ def scrape_listing(page: Page, city: str, max_items: int = 40) -> list[dict]:
     count = links.count()
     print(f"  → Scanning {count} links...")
 
-    for i in range(min(count, 500)):
+    for i in range(min(count, 2000)):
         try:
             el = links.nth(i)
             href = el.get_attribute("href") or ""
@@ -782,6 +816,17 @@ def process_city(page: Page, city: str, dry_run: bool = False, max_activities: i
             "scraped_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
 
+        # Skip activities with less than 100 reviews (low quality signal)
+        review_count = 0
+        try:
+            review_count = int(metadata.get("review_count") or 0)
+        except (ValueError, TypeError):
+            pass
+
+        if review_count < 100:
+            print(f"    ⊘ Skipped (only {review_count} reviews, need 100+)")
+            continue
+
         if save_to_db(city, final_name, server_img_url, idx, metadata):
             saved += 1
             cached.add(final_name)
@@ -802,7 +847,7 @@ def main():
     parser = argparse.ArgumentParser(description="Scrape GetYourGuide → Supabase")
     parser.add_argument("--city", type=str, help="Scrape one city")
     parser.add_argument("--limit", type=int, default=0, help="Max cities")
-    parser.add_argument("--max-activities", type=int, default=200, help="Max per city")
+    parser.add_argument("--max-activities", type=int, default=50, help="Max per city")
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
     parser.add_argument("--start-from", type=str, help="Resume from city")
     args = parser.parse_args()

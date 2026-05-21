@@ -44,18 +44,34 @@ const AdminMediaPanel = () => {
   // Fetch all destinations (just distinct cities + thumbnail per source)
   const fetchCities = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("destination_media" as any)
-      .select("destination, type, url, thumb_url, source, sort_order")
-      .order("sort_order", { ascending: true })
-      .limit(5000);
 
-    if (error) {
-      toast.error("Failed to load destinations");
-      setLoading(false);
-      return;
-    }
-    setAllMedia((data as any[]) || []);
+    // Two parallel queries: one for Google Places cities, one for GYG cities
+    const [googleRes, gygRes] = await Promise.all([
+      // Google Places: get hero rows for city thumbnails
+      supabase
+        .from("destination_media" as any)
+        .select("destination, url, thumb_url, source")
+        .eq("type", "hero")
+        .order("sort_order", { ascending: true })
+        .limit(5000),
+      // GYG: get all gyg_activity rows for city list + counts
+      supabase
+        .from("destination_media" as any)
+        .select("destination, url, thumb_url, source, type")
+        .eq("type", "gyg_activity")
+        .order("sort_order", { ascending: true })
+        .limit(5000),
+    ]);
+
+    const combined = [
+      ...((googleRes.data as any[]) || []),
+      ...((gygRes.data as any[]) || []),
+    ];
+
+    if (googleRes.error) console.warn("Google fetch error:", googleRes.error);
+    if (gygRes.error) console.warn("GYG fetch error:", gygRes.error);
+
+    setAllMedia(combined);
     setLoading(false);
   }, []);
 
@@ -158,10 +174,11 @@ const AdminMediaPanel = () => {
   const googleCities = (() => {
     const map: Record<string, string | null> = {};
     for (const row of allMedia) {
-      if (row.type === "gyg_activity" || row.source === "getyourguide") continue;
+      // Skip GYG rows
+      if ((row as any).type === "gyg_activity" || row.source === "getyourguide") continue;
       const d = row.destination;
       if (!map[d]) map[d] = row.thumb_url || row.url || null;
-      if (row.source === "admin" || row.type === "hero") map[d] = row.thumb_url || row.url || map[d];
+      if (row.source === "admin") map[d] = row.thumb_url || row.url || map[d];
     }
     return Object.entries(map).map(([dest, img]) => ({ destination: dest, img })).sort((a, b) => a.destination.localeCompare(b.destination));
   })();
@@ -169,7 +186,8 @@ const AdminMediaPanel = () => {
   const gygCities = (() => {
     const map: Record<string, { img: string | null; count: number }> = {};
     for (const row of allMedia) {
-      if (row.type !== "gyg_activity" && row.source !== "getyourguide") continue;
+      // Only GYG rows
+      if ((row as any).type !== "gyg_activity" && row.source !== "getyourguide") continue;
       const d = row.destination;
       if (!map[d]) map[d] = { img: null, count: 0 };
       map[d].count++;
