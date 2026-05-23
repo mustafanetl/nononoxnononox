@@ -45,13 +45,20 @@ const AdminMediaPanel = () => {
   const fetchCities = useCallback(async () => {
     setLoading(true);
 
-    // Two parallel queries: one for Google Places cities, one for GYG cities
-    const [googleRes, gygRes] = await Promise.all([
+    // Two parallel queries: one for Google/venue cities, one for GYG cities
+    const [googleRes, venueRes, gygRes] = await Promise.all([
       // Google Places: get hero rows for city thumbnails
       supabase
         .from("destination_media" as any)
         .select("destination, url, thumb_url, source")
         .eq("type", "hero")
+        .order("sort_order", { ascending: true })
+        .limit(5000),
+      // Venue pool (Google Maps scraped): get venue rows
+      supabase
+        .from("destination_media" as any)
+        .select("destination, url, thumb_url, source, type")
+        .eq("type", "venue")
         .order("sort_order", { ascending: true })
         .limit(5000),
       // GYG: get all gyg_activity rows for city list + counts
@@ -65,10 +72,12 @@ const AdminMediaPanel = () => {
 
     const combined = [
       ...((googleRes.data as any[]) || []),
+      ...((venueRes.data as any[]) || []),
       ...((gygRes.data as any[]) || []),
     ];
 
     if (googleRes.error) console.warn("Google fetch error:", googleRes.error);
+    if (venueRes.error) console.warn("Venue fetch error:", venueRes.error);
     if (gygRes.error) console.warn("GYG fetch error:", gygRes.error);
 
     setAllMedia(combined);
@@ -174,7 +183,6 @@ const AdminMediaPanel = () => {
   const googleCities = (() => {
     const map: Record<string, string | null> = {};
     for (const row of allMedia) {
-      // Skip GYG rows
       if ((row as any).type === "gyg_activity" || row.source === "getyourguide") continue;
       const d = row.destination;
       if (!map[d]) map[d] = row.thumb_url || row.url || null;
@@ -346,7 +354,7 @@ const GoogleCityView = ({
 
   const venueMap = new Map<string, { type: string; items: MediaRow[] }>();
   for (const row of cityMedia) {
-    if (row.type === "activity" || row.type === "hotel") {
+    if (row.type === "activity" || row.type === "hotel" || row.type === "venue") {
       if (row.sort_order < 0 || row.metadata?.verified === false || !row.url) continue;
       const name = row.name || "Unknown";
       const key = `${row.type}::${name}`;
