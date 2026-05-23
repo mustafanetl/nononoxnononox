@@ -676,6 +676,8 @@ async function searchAndValidateActivities(
         }
       );
       if (!res.ok) {
+        // API error (429/500) — DON'T mark as false, just skip for now
+        console.warn(`[venue_cache] API ${res.status} for "${actName}" — skipping (will retry next time)`);
         results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null };
         return;
       }
