@@ -31,15 +31,15 @@ function extractCacheParams(
     if (msg.role !== "user") continue;
     const text = msg.content;
 
-    // Destination from arrow notation: "Stockholm → Rotterdam"
-    const arrowMatch = text.match(/(?:\w[\w\s]*?)\s*(?:→|->|to)\s+([\w\s]+?)(?:\s+for|\s+\d|\s*$)/i);
+    // Destination from arrow notation: "Stockholm → Rotterdam" or "Stockholm -> Rotterdam"
+    const arrowMatch = text.match(/[\w\s]+\s*(?:→|->)\s+([\w\s]+?)(?:\s+for|\s+\d|\s*$)/i);
     if (arrowMatch && !destination) {
       destination = arrowMatch[1].trim();
     }
 
-    // Direct destination mention
+    // Direct destination mention: "go to X", "trip to X", "visit X", etc.
     if (!destination) {
-      const cityMatch = text.match(/(?:i want to go to|trip to|visit|fly to|travel to|going to|plan for|days? in|nights? in|week in)\s+([\w\s]+?)(?:\s+for|\s+with|\s+\d|\.|,|$)/i);
+      const cityMatch = text.match(/(?:go to|trip to|visit|fly to|travel to|going to|plan for|days? in|nights? in|week in)\s+([\w\s]+?)(?:\s+for|\s+with|\s+\d|\.|,|!|\?|$)/i);
       if (cityMatch) destination = cityMatch[1].trim();
     }
 
@@ -80,7 +80,7 @@ function extractCacheParams(
   }
 
   // Clean up destination (remove trailing words that aren't city names)
-  destination = destination.replace(/\s*(trip|vacation|holiday|please|thanks)$/i, "").trim();
+  destination = destination.replace(/\s*(trip|vacation|holiday|please|thanks|vibe)$/i, "").trim();
 
   if (!destination || !duration) return null;
 
