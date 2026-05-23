@@ -136,32 +136,85 @@ async function getCachedActivityPhotos(destination: string, names: string[]): Pr
     const db = getAdminClient();
     const norm = normalizeDestination(destination);
 
+    // Fetch ALL venue/activity/hotel rows for this city, then fuzzy-match locally.
+    // This handles cases like AI saying "Bazar" when DB has "Restaurant Bazar".
     const { data } = await db
       .from("destination_media")
       .select("*")
       .eq("destination", norm)
-      .in("type", ["activity", "hotel"])
-      .gte("sort_order", 0) // exclude rejected venues (sort_order = -1)
-      .order("sort_order", { ascending: true });
+      .in("type", ["activity", "hotel", "venue"])
+      .gte("sort_order", 0)
+      .order("sort_order", { ascending: true })
+      .limit(3000);
 
     if (!data || data.length === 0) return {};
 
-    // Group by name, preferring admin-uploaded media
-    const byName: Record<string, any[]> = {};
+    // Group DB rows by name
+    const byDbName: Record<string, any[]> = {};
     for (const row of data) {
       if (!row.name) continue;
-      // Skip rows marked as not verified (rejected venues)
       if (row.metadata?.verified === false) continue;
-      // Skip rows with no actual photo URL
       if (!row.url || row.url === "") continue;
       const key = row.name;
-      if (!byName[key]) byName[key] = [];
-      byName[key].push(row);
+      if (!byDbName[key]) byDbName[key] = [];
+      byDbName[key].push(row);
     }
 
+    // For each requested name, find the best matching DB entry
     const result: Record<string, any> = {};
-    for (const [name, rows] of Object.entries(byName)) {
-      // Admin rows take absolute priority
+    const dbNames = Object.keys(byDbName);
+
+    for (const requestedName of names) {
+      if (result[requestedName]) continue; // already matched
+
+      const reqLower = requestedName.toLowerCase().trim();
+      let matchedDbName: string | null = null;
+
+      // 1. Exact match
+      if (byDbName[requestedName]) {
+        matchedDbName = requestedName;
+      }
+      // 2. Case-insensitive exact match
+      if (!matchedDbName) {
+        for (const dbName of dbNames) {
+          if (dbName.toLowerCase().trim() === reqLower) {
+            matchedDbName = dbName;
+            break;
+          }
+        }
+      }
+      // 3. Partial match: DB name contains requested OR requested contains DB name
+      //    But require at least 60% length overlap to avoid "Bazar" matching "Bazar Hotel" when looking for restaurant
+      if (!matchedDbName) {
+        for (const dbName of dbNames) {
+          const dbLower = dbName.toLowerCase().trim();
+          if (dbLower === reqLower) { matchedDbName = dbName; break; }
+          const shorter = reqLower.length < dbLower.length ? reqLower : dbLower;
+          const longer = reqLower.length >= dbLower.length ? reqLower : dbLower;
+          if (longer.includes(shorter) && shorter.length >= longer.length * 0.5) {
+            matchedDbName = dbName;
+            break;
+          }
+        }
+      }
+      // 4. Word-based match: first significant word matches
+      if (!matchedDbName && reqLower.length > 3) {
+        const reqWords = reqLower.split(/\s+/).filter(w => w.length > 2);
+        for (const dbName of dbNames) {
+          const dbLower = dbName.toLowerCase().trim();
+          const dbWords = dbLower.split(/\s+/).filter(w => w.length > 2);
+          // Check if main words overlap
+          const overlap = reqWords.filter(w => dbWords.includes(w));
+          if (overlap.length > 0 && overlap.length >= Math.min(reqWords.length, dbWords.length) * 0.5) {
+            matchedDbName = dbName;
+            break;
+          }
+        }
+      }
+
+      if (!matchedDbName) continue;
+
+      const rows = byDbName[matchedDbName];
       const adminRows = rows.filter((r: any) => r.source === "admin");
       const effectiveRows = adminRows.length > 0 ? adminRows : rows;
       const primaryRow = effectiveRows[0];
@@ -185,8 +238,11 @@ async function getCachedActivityPhotos(destination: string, names: string[]): Pr
         _isAdmin: adminRows.length > 0,
         videoUrl: videoRow?.url || null,
       };
-      result[name] = entry;
-      result[name.toLowerCase()] = entry;
+      // Store under both the requested name AND the DB name
+      result[requestedName] = entry;
+      result[requestedName.toLowerCase()] = entry;
+      result[matchedDbName] = entry;
+      result[matchedDbName.toLowerCase()] = entry;
     }
     return result;
   } catch (e) {
@@ -542,12 +598,70 @@ async function searchAndValidateActivities(
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey || activities.length === 0) return {};
 
+  const db = getAdminClient();
+  const norm = normalizeDestination(destination);
   const results: Record<string, any> = {};
   const batch = Array.from(new Set(activities.filter(Boolean))).slice(0, 15);
-  const promises = batch.map(async (actName) => {
+
+  // ── STEP 1: Check venue_cache first ──
+  // Venues already verified=true → use stored data (no API call)
+  // Venues already verified=false → return as failed (no API call, ever)
+  const namesToCheck = batch.map(n => n);
+  const { data: cachedVenues } = await db
+    .from("venue_cache")
+    .select("*")
+    .eq("destination", norm)
+    .in("name", namesToCheck);
+
+  const venueMap = new Map<string, any>();
+  for (const v of (cachedVenues || [])) {
+    venueMap.set(v.name, v);
+    venueMap.set(v.name.toLowerCase(), v);
+  }
+
+  // Separate into: cached-true, cached-false, needs-verification
+  const needsVerification: string[] = [];
+  for (const actName of batch) {
+    const cached = venueMap.get(actName) || venueMap.get(actName.toLowerCase());
+    if (cached) {
+      if (cached.verified === true) {
+        // Use stored data — 0 API cost
+        const photos = Array.isArray(cached.photos) ? cached.photos : (typeof cached.photos === 'string' ? JSON.parse(cached.photos || '[]') : []);
+        const photoUrls = photos.map((p: any) => p.url || p);
+        results[actName] = {
+          photo: photoUrls[0] || null,
+          thumbPhoto: photoUrls[0] || null,
+          photos: photoUrls,
+          rating: cached.rating,
+          address: cached.address,
+          verified: true,
+          hasRealPhoto: photoUrls.length > 0,
+          matchedName: cached.name,
+          lat: cached.lat,
+          lng: cached.lng,
+          fromVenueCache: true,
+        };
+      } else if (cached.verified === false) {
+        // Known bad venue — never re-check
+        results[actName] = {
+          photo: null, thumbPhoto: null, photos: [], rating: null,
+          address: null, verified: false, hasRealPhoto: false,
+          matchedName: null, knownFalse: true,
+        };
+      } else {
+        // verified=null (pending) → needs verification
+        needsVerification.push(actName);
+      }
+    } else {
+      needsVerification.push(actName);
+    }
+  }
+
+  console.log(`[venue_cache] ${batch.length} requested: ${batch.length - needsVerification.length} cached, ${needsVerification.length} need verification`);
+
+  // ── STEP 2: Verify uncached venues via Google Places ──
+  const promises = needsVerification.map(async (actName) => {
     try {
-      // ALWAYS scope the lookup to the destination city so we don't pull
-      // a same-named venue from another city (e.g. an "Aura" in another country).
       const cityScopedQuery = `${actName}, ${destination}`;
       const res = await fetchWithTimeout(
         "https://places.googleapis.com/v1/places:searchText",
@@ -556,23 +670,18 @@ async function searchAndValidateActivities(
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": "places.displayName,places.photos,places.rating,places.formattedAddress,places.location",
+            "X-Goog-FieldMask": "places.id,places.displayName,places.photos,places.rating,places.userRatingCount,places.formattedAddress,places.location,places.types,places.regularOpeningHours,places.websiteUri",
           },
-          body: JSON.stringify({
-            textQuery: cityScopedQuery,
-            maxResultCount: 5,
-          }),
+          body: JSON.stringify({ textQuery: cityScopedQuery, maxResultCount: 5 }),
         }
       );
       if (!res.ok) {
-        results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, matchedName: null };
+        results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null };
         return;
       }
       const data = await res.json();
       const places = data.places || [];
 
-      // Strict match: name overlap AND the place address must contain the destination city.
-      // This prevents pulling a same-named venue from a different city.
       const destTokens = tokenize(destination);
       const addressMatchesCity = (addr: string) => {
         if (!addr) return false;
@@ -583,22 +692,11 @@ async function searchAndValidateActivities(
       for (const place of places) {
         const placeName = place.displayName?.text || "";
         const addr = place.formattedAddress || "";
-        if (
-          nameMatches(actName, placeName) &&
-          addressMatchesCity(addr) &&
-          place.photos?.length > 0
-        ) {
+        if (nameMatches(actName, placeName) && addressMatchesCity(addr) && place.photos?.length > 0) {
           bestPlace = place;
           break;
         }
       }
-
-      // Fallback 1: name matches and there's a photo — accept even if address
-      // city-token check fails. Many cities have different local names
-      // (Gothenburg/Göteborg, Munich/München, Florence/Firenze, Vienna/Wien,
-      // Copenhagen/København) so the address won't contain our English token.
-      // The query was already city-scoped, so Google's top result is
-      // overwhelmingly in that city.
       if (!bestPlace) {
         for (const place of places) {
           const placeName = place.displayName?.text || "";
@@ -608,45 +706,104 @@ async function searchAndValidateActivities(
           }
         }
       }
-
-      // Fallback 2: any first result with a photo — the search was already
-      // city-scoped ("{name}, {city}"), so trust Google's ranking.
       if (!bestPlace) {
         for (const place of places) {
-          if (place.photos?.length > 0) {
-            bestPlace = place;
-            break;
-          }
+          if (place.photos?.length > 0) { bestPlace = place; break; }
         }
       }
 
       if (!bestPlace) {
-        results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null };
+        // ── MARK AS FALSE — never check again ──
+        results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null, knownFalse: true };
+        // Save to venue_cache
+        await db.from("venue_cache").upsert({
+          name: actName, destination: norm, verified: false,
+          verification_date: new Date().toISOString(),
+          verification_source: "google_places",
+        }, { onConflict: "name,destination" }).then(() => {});
         return;
       }
 
-      const photoRef = bestPlace.photos?.[0]?.name;
-      const hasRealPhoto = !!photoRef;
-      const allPhotoUrls: string[] = hasRealPhoto
-        ? bestPlace.photos.slice(0, 4).map((p: any) =>
-            `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=1600&key=${apiKey}`
-          )
-        : [];
+      // ── FOUND — download photos to storage & save ──
+      const photoRefs = (bestPlace.photos || []).slice(0, 4);
+      const storedPhotos: Array<{ url: string; index: number }> = [];
+
+      for (let i = 0; i < photoRefs.length; i++) {
+        const photoName = photoRefs[i].name;
+        if (!photoName) continue;
+        try {
+          const photoUrl = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=800&key=${apiKey}`;
+          const photoRes = await fetch(photoUrl, { redirect: "follow" });
+          if (!photoRes.ok) continue;
+          const imgBytes = new Uint8Array(await photoRes.arrayBuffer());
+          if (imgBytes.length < 1000) continue;
+
+          const placeId = bestPlace.id || actName.replace(/[^a-zA-Z0-9]/g, '_');
+          const path = `${norm}/venues/${placeId}/photo_${i}.jpg`;
+          const { error: uploadErr } = await db.storage
+            .from("destination-media")
+            .upload(path, imgBytes, { contentType: "image/jpeg", upsert: true });
+
+          if (!uploadErr) {
+            const { data: { publicUrl } } = db.storage
+              .from("destination-media")
+              .getPublicUrl(path);
+            storedPhotos.push({ url: publicUrl, index: i });
+          }
+        } catch (e) {
+          // Photo download failed — continue with others
+        }
+      }
+
+      // Build CDN fallback URLs (in case storage upload failed)
+      const cdnPhotos = photoRefs.map((p: any) =>
+        `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=1600&key=${apiKey}`
+      );
+      const finalPhotos = storedPhotos.length > 0 ? storedPhotos.map(p => p.url) : cdnPhotos;
+
+      // Parse hours
+      let hours: any = null;
+      if (bestPlace.regularOpeningHours?.weekdayDescriptions) {
+        hours = bestPlace.regularOpeningHours.weekdayDescriptions;
+      }
+
       results[actName] = {
-        photo: hasRealPhoto ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=1600&key=${apiKey}` : null,
-        thumbPhoto: hasRealPhoto ? `https://places.googleapis.com/v1/${photoRef}/media?maxWidthPx=400&key=${apiKey}` : null,
-        photos: allPhotoUrls,
+        photo: finalPhotos[0] || null,
+        thumbPhoto: finalPhotos[0] || null,
+        photos: finalPhotos,
         rating: bestPlace.rating || null,
         address: bestPlace.formattedAddress || null,
-        verified: hasRealPhoto,
-        hasRealPhoto,
+        verified: true,
+        hasRealPhoto: true,
         matchedName: bestPlace.displayName?.text || null,
         lat: typeof bestPlace.location?.latitude === "number" ? bestPlace.location.latitude : null,
         lng: typeof bestPlace.location?.longitude === "number" ? bestPlace.location.longitude : null,
       };
+
+      // ── Save to venue_cache (verified=true, photos on server) ──
+      await db.from("venue_cache").upsert({
+        name: actName,
+        destination: norm,
+        verified: true,
+        google_place_id: bestPlace.id || null,
+        lat: bestPlace.location?.latitude || null,
+        lng: bestPlace.location?.longitude || null,
+        address: bestPlace.formattedAddress || null,
+        rating: bestPlace.rating || null,
+        review_count: bestPlace.userRatingCount || null,
+        google_types: bestPlace.types || [],
+        hours,
+        website: bestPlace.websiteUri || null,
+        photos: storedPhotos,
+        photo_count: storedPhotos.length,
+        verification_date: new Date().toISOString(),
+        last_verified_at: new Date().toISOString(),
+        verification_source: "google_places",
+      }, { onConflict: "name,destination" }).then(() => {});
+
     } catch (e) {
       console.error(`Activity validation error for "${actName}":`, e);
-      results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, matchedName: null };
+      results[actName] = { photo: null, thumbPhoto: null, photos: [], rating: null, address: null, verified: false, hasRealPhoto: false, matchedName: null };
     }
   });
 
@@ -930,6 +1087,11 @@ serve(async (req) => {
     // Count verified items
     const verifiedActivities = Object.values(activityResults).filter((a: any) => a.verified).length;
     const verifiedHotels = Object.values(hotelResults).filter((h: any) => h.verified).length;
+    
+    // Collect venues that are known-false (so frontend can request replacements)
+    const failedVenues = Object.entries(activityResults)
+      .filter(([_, v]: [string, any]) => v.knownFalse === true)
+      .map(([name]) => name);
 
     const result = {
       destination,
@@ -939,6 +1101,7 @@ serve(async (req) => {
       images: googleImages,
       activityPhotos: activityResults,
       hotelPhotos: hotelResults,
+      failedVenues,
       verification: {
         activitiesTotal: activityNames.length,
         activitiesVerified: verifiedActivities,
