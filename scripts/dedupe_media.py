@@ -72,8 +72,7 @@ def normalize(name: str) -> str:
 def names_are_similar(a: str, b: str) -> bool:
     """
     Check if two venue names refer to the same place.
-    - One contains the other: "Jerash" in "Jerash Archaeological Site" → True
-    - High word overlap: "Archaeological Site Jerash" vs "Jerash Archaeological Park" → True
+    Conservative: only match when very clearly the same.
     """
     na = normalize(a)
     nb = normalize(b)
@@ -82,19 +81,19 @@ def names_are_similar(a: str, b: str) -> bool:
     # Exact match after normalization
     if na == nb:
         return True
-    # One contains the other (min 4 chars to avoid false matches like "bar")
-    if len(na) >= 4 and na in nb:
+    # One contains the other (min 6 chars to avoid false matches)
+    if len(na) >= 6 and na in nb and len(na) / len(nb) > 0.5:
         return True
-    if len(nb) >= 4 and nb in na:
+    if len(nb) >= 6 and nb in na and len(nb) / len(na) > 0.5:
         return True
-    # Word overlap: if 70%+ of words match
+    # Word overlap: need 80%+ of words to match AND at least 2 shared words
     words_a = set(na.split())
     words_b = set(nb.split())
     if not words_a or not words_b:
         return False
     overlap = words_a & words_b
     min_words = min(len(words_a), len(words_b))
-    if min_words > 0 and len(overlap) / min_words >= 0.7:
+    if min_words >= 2 and len(overlap) / min_words >= 0.8:
         return True
     return False
 
@@ -113,7 +112,8 @@ def photo_signature(url: str) -> str:
 
 
 def photos_overlap(urls_a: set[str], urls_b: set[str]) -> bool:
-    """Check if two sets of photo URLs share any images (= same venue)."""
+    """Check if two sets of photo URLs share images (= likely same venue).
+    Requires at least 2 shared photos to avoid false positives from nearby venues."""
     if not urls_a or not urls_b:
         return False
     sigs_a = {photo_signature(u) for u in urls_a if u}
@@ -123,7 +123,8 @@ def photos_overlap(urls_a: set[str], urls_b: set[str]) -> bool:
     if not sigs_a or not sigs_b:
         return False
     shared = sigs_a & sigs_b
-    return len(shared) > 0
+    # Need at least 2 shared photos to confirm same place
+    return len(shared) >= 2
 
 
 # ── Union-Find for grouping ────────────────────────────────────────────────
@@ -163,7 +164,7 @@ def fetch_city_media(city: str) -> list[dict]:
         resp = requests.get(
             f'{SUPABASE_URL}/rest/v1/destination_media'
             f'?destination=eq.{city}'
-            f'&type=in.("activity","hotel")'
+            f'&type=in.("activity","hotel","venue")'
             f'&select=*&order=created_at.asc&offset={offset}&limit=500',
             headers=HEADERS,
         )

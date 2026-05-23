@@ -22,59 +22,66 @@ import { streamChat, type ChatMessage } from "../_shared/aiProvider.ts";
 function extractCacheParams(
   messages: { role: string; content: string }[],
 ): { destination: string; duration: number; vibe: string; travelerType: string } | null {
-  // We look at the full conversation to find destination, duration, vibe, traveler type.
-  // The AI generates a plan when it has all required info. We detect this by looking
-  // for key signals in the conversation history.
-
-  // Extract destination — look for common patterns
   let destination = "";
   let duration = 0;
   let vibe = "mixed";
   let travelerType = "couple";
 
-  // Pattern: "X → Y" or "X to Y" in user messages
   for (const msg of messages) {
     if (msg.role !== "user") continue;
     const text = msg.content;
 
-    // Destination from arrow notation: "Stockholm → Amsterdam"
+    // Destination from arrow notation: "Stockholm → Rotterdam"
     const arrowMatch = text.match(/(?:\w[\w\s]*?)\s*(?:→|->|to)\s+([\w\s]+?)(?:\s+for|\s+\d|\s*$)/i);
-    if (arrowMatch) {
+    if (arrowMatch && !destination) {
       destination = arrowMatch[1].trim();
     }
 
-    // Direct destination mention (single city as the main subject)
+    // Direct destination mention
     if (!destination) {
-      // If the message is short and looks like a city name
-      const cityMatch = text.match(/^(?:i want to go to|trip to|visit|fly to|travel to)\s+([\w\s]+)/i);
+      const cityMatch = text.match(/(?:i want to go to|trip to|visit|fly to|travel to|going to|plan for|days? in|nights? in|week in)\s+([\w\s]+?)(?:\s+for|\s+with|\s+\d|\.|,|$)/i);
       if (cityMatch) destination = cityMatch[1].trim();
+    }
+
+    // Catch city name anywhere in short messages (< 50 chars) or after duration
+    if (!destination) {
+      const afterDuration = text.match(/\d+\s*(?:days?|nights?)\s+(?:in\s+)?([\w\s]+?)(?:\s+with|\s+for|\.|,|$)/i);
+      if (afterDuration) destination = afterDuration[1].trim();
+    }
+
+    // Catch "Rotterdam 5 days" or "5 days Rotterdam" patterns
+    if (!destination) {
+      const cityFirst = text.match(/^([\w\s]{3,20})\s+\d+\s*(?:days?|nights?)/i);
+      if (cityFirst) destination = cityFirst[1].trim();
     }
 
     // Duration: "X days", "X nights"
     const durMatch = text.match(/(\d+)\s*(?:days?|nights?|nätter|dagar)/i);
     if (durMatch) duration = parseInt(durMatch[1], 10);
-
-    // "long weekend" = 3, "a week" = 7
     if (/long\s*weekend|långhelg/i.test(text)) duration = duration || 3;
     if (/\ba\s*week\b|en\s*vecka/i.test(text)) duration = duration || 7;
+    if (/two\s*weeks?|2\s*weeks?/i.test(text)) duration = duration || 14;
+    if (/\ba\s*month\b/i.test(text)) duration = duration || 30;
 
-    // Vibe detection
-    if (/romantic|romantisk/i.test(text)) vibe = "romantic";
-    else if (/adventure|äventyr/i.test(text)) vibe = "adventure";
-    else if (/cultur|kultur/i.test(text)) vibe = "cultural";
-    else if (/food|mat|foodie/i.test(text)) vibe = "foodie";
-    else if (/nightlife|nattliv/i.test(text)) vibe = "nightlife";
-    else if (/relax|avslappn/i.test(text)) vibe = "relaxed";
-    else if (/family|familj/i.test(text)) vibe = "family-friendly";
+    // Vibe detection (check ALL, not else-if — user might say "romantic foodie")
+    if (/romantic|romantisk|honeymoon/i.test(text)) vibe = "romantic";
+    if (/adventure|äventyr/i.test(text)) vibe = "adventure";
+    if (/cultur|kultur/i.test(text)) vibe = "cultural";
+    if (/food|mat|foodie/i.test(text)) vibe = "foodie";
+    if (/nightlife|nattliv|party/i.test(text)) vibe = "nightlife";
+    if (/relax|avslappn|chill/i.test(text)) vibe = "relaxed";
+    if (/family|familj/i.test(text)) vibe = "family-friendly";
 
     // Traveler type
-    if (/solo/i.test(text)) travelerType = "solo";
-    else if (/couple|partner|girlfriend|boyfriend|flickvän|pojkvän/i.test(text)) travelerType = "couple";
-    else if (/family|familj|kids|barn/i.test(text)) travelerType = "family";
-    else if (/friends|vänner|kompisar/i.test(text)) travelerType = "friends";
+    if (/solo|alone|ensam/i.test(text)) travelerType = "solo";
+    if (/couple|partner|girlfriend|boyfriend|wife|husband|flickvän|pojkvän|honeymoon/i.test(text)) travelerType = "couple";
+    if (/family|familj|kids|barn|children/i.test(text)) travelerType = "family";
+    if (/friends|vänner|kompisar|group|guys|girls/i.test(text)) travelerType = "friends";
   }
 
-  // We need at minimum destination + duration to form a useful cache key
+  // Clean up destination (remove trailing words that aren't city names)
+  destination = destination.replace(/\s*(trip|vacation|holiday|please|thanks)$/i, "").trim();
+
   if (!destination || !duration) return null;
 
   return {
@@ -125,9 +132,10 @@ const SYSTEM_PROMPT = `You are Jolliday — a professional travel concierge. You
 ═══════════════════════════════════════════════════════════════
 🚨 RULE #1 — VIBE IS MANDATORY BEFORE ANY PLAN 🚨
 ═══════════════════════════════════════════════════════════════
-You CANNOT generate a trip plan without knowing the user's vibe. This is non-negotiable.
-
-BEFORE generating any plan, you MUST have explicitly asked about the vibe and received an answer. Even if the user gives you destination + origin + dates + who, if they haven't told you the VIBE, you ASK. Always.
+NEVER ask what the user already told you. If they said "5 days foodie couple Rotterdam" — generate the plan immediately, no questions.
+If the user gives destination + duration + vibe in ONE message, GENERATE THE PLAN. No follow-up questions.
+If vibe is missing, ask ONCE. If duration is missing, ask ONCE. Combine missing info into ONE question, never multiple.
+If the user says "surprise me" for vibe, default to "mixed" and proceed.
 
 WHAT IS A VIBE? It's the type/feel of trip the user wants. Examples to give them:
 - "Romantic" — couples, sunset spots, intimate dinners
@@ -201,7 +209,7 @@ REQUIRED INFO FOR TRIP MODE (do NOT generate until you have ALL of these):
      If user says "flexible" or "anytime" → pick a reasonable upcoming weekend/week and state it clearly in the plan.
   4. Who is traveling — solo? couple? family? friends? If FAMILY: how many people, any kids, and ages of kids.
   5. Vibe — what kind of trip do they want? (relaxed, adventurous, culture/museums, foodie, nightlife, romantic, family-friendly, mixed). Ask: "What's the vibe you're after?" quickreplies: ["Culture & food", "Adventure", "Relaxed", "Nightlife", "Romantic", "Mixed"]
-     ⚠ VIBE IS MANDATORY. Do NOT generate a plan without knowing the vibe. Ask explicitly if not provided. The vibe shapes restaurants, activities, hotel pick, and pacing — without it the plan is generic. If the user says "surprise me" or "you decide", default to "Mixed (culture + food + sightseeing)" and proceed.
+     If the user already stated their vibe (foodie, romantic, adventure, etc.) in their message, DO NOT ask again. Just proceed.
 
 DATE/DURATION LOGIC (CRITICAL — dates are as important as destination):
 - If user gives specific dates (e.g. "June 12-16") → calculate duration yourself (= 5 days). Don't ask for duration.

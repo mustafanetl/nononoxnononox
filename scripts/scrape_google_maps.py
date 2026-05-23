@@ -62,52 +62,121 @@ STORAGE_BUCKET = "destination-media"
 # ── Search categories per city ──────────────────────────────────────────────
 
 SEARCH_QUERIES = {
+    # ── RESTAURANTS (by cuisine & occasion) ──
     "restaurants_fine": "best fine dining restaurants in {city}",
     "restaurants_casual": "best casual restaurants in {city}",
     "restaurants_breakfast": "best breakfast spots in {city}",
     "restaurants_brunch": "best brunch places in {city}",
     "restaurants_italian": "best italian restaurants in {city}",
     "restaurants_asian": "best asian restaurants in {city}",
+    "restaurants_japanese": "best japanese sushi restaurants in {city}",
     "restaurants_seafood": "best seafood restaurants in {city}",
     "restaurants_local": "best local traditional food in {city}",
-    "restaurants_vegetarian": "best vegetarian restaurants in {city}",
+    "restaurants_vegetarian": "best vegetarian vegan restaurants in {city}",
     "restaurants_romantic": "romantic dinner restaurants in {city}",
-    "cafes": "best coffee shops cafes in {city}",
+    "restaurants_cheap": "best cheap eats street food in {city}",
+    "restaurants_steakhouse": "best steakhouse burger restaurants in {city}",
+    "restaurants_pizza": "best pizza restaurants in {city}",
+    "restaurants_family": "best family friendly restaurants kids in {city}",
+    # ── CAFES & BAKERIES ──
+    "cafes_specialty": "best specialty coffee shops in {city}",
+    "cafes_cozy": "cozy cafes to work or relax in {city}",
+    "bakeries": "best bakeries pastry shops in {city}",
+    # ── BARS & NIGHTLIFE ──
     "bars_cocktail": "best cocktail bars in {city}",
-    "bars_rooftop": "rooftop bars in {city}",
+    "bars_rooftop": "rooftop bars with view in {city}",
     "bars_wine": "wine bars in {city}",
     "bars_pub": "best pubs beer bars in {city}",
-    "attractions_museums": "best museums in {city}",
-    "attractions_landmarks": "famous landmarks in {city}",
-    "attractions_parks": "best parks gardens in {city}",
-    "attractions_viewpoints": "best viewpoints in {city}",
-    "attractions_markets": "best markets in {city}",
-    "attractions_neighborhoods": "best neighborhoods to walk in {city}",
+    "bars_speakeasy": "hidden speakeasy bars in {city}",
+    "clubs": "best nightclubs in {city}",
+    "live_music": "live music venues jazz bars in {city}",
+    # ── CULTURE & MUSEUMS ──
+    "museums_art": "best art museums galleries in {city}",
+    "museums_history": "best history museums in {city}",
+    "museums_unique": "unique unusual museums in {city}",
+    # ── SIGHTSEEING & LANDMARKS ──
+    "landmarks": "famous landmarks must see in {city}",
+    "viewpoints": "best viewpoints panoramic views in {city}",
+    "architecture": "best architecture buildings in {city}",
+    "churches": "beautiful churches cathedrals in {city}",
+    # ── OUTDOOR & NATURE ──
+    "parks": "best parks gardens in {city}",
+    "walks_scenic": "best scenic walks in {city}",
+    "beaches": "best beaches near {city}",
+    "day_trips": "best day trips from {city}",
+    # ── SHOPPING & MARKETS ──
+    "markets_food": "best food markets in {city}",
+    "markets_flea": "best flea markets vintage shops in {city}",
+    "shopping_streets": "best shopping streets areas in {city}",
+    # ── EXPERIENCES & ACTIVITIES ──
+    "spa_wellness": "best spa wellness hammam in {city}",
+    "cooking_classes": "cooking classes food experiences in {city}",
+    "boat_tours": "boat tours canal cruises in {city}",
+    # ── NEIGHBORHOODS ──
+    "neighborhoods_trendy": "trendy hip neighborhoods in {city}",
+    "neighborhoods_historic": "historic old town areas in {city}",
+    # ── SEASONAL ──
+    "summer_outdoor": "best outdoor terraces summer activities in {city}",
+    "winter_indoor": "best indoor activities rainy day in {city}",
 }
 
-# Map search category → venue tags
 CATEGORY_TAGS = {
-    "restaurants_fine": {"category": "dining", "meal_type": ["dinner"], "price_level": "luxury", "time_of_day": "evening", "vibes": ["foodie", "romantic"]},
-    "restaurants_casual": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["foodie", "mixed"]},
-    "restaurants_breakfast": {"category": "dining", "meal_type": ["breakfast"], "price_level": "budget", "time_of_day": "morning", "vibes": ["mixed", "relaxed"]},
-    "restaurants_brunch": {"category": "dining", "meal_type": ["breakfast", "lunch"], "price_level": "mid", "time_of_day": "morning", "vibes": ["relaxed", "foodie"]},
-    "restaurants_italian": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "evening", "vibes": ["romantic", "foodie"]},
-    "restaurants_asian": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "evening", "vibes": ["foodie", "mixed"]},
-    "restaurants_seafood": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["foodie", "relaxed"]},
-    "restaurants_local": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["cultural", "foodie"]},
-    "restaurants_vegetarian": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["relaxed", "mixed"]},
-    "restaurants_romantic": {"category": "dining", "meal_type": ["dinner"], "price_level": "luxury", "time_of_day": "evening", "vibes": ["romantic"]},
-    "cafes": {"category": "cafe", "meal_type": ["breakfast", "snack"], "price_level": "budget", "time_of_day": "morning", "vibes": ["relaxed", "mixed"]},
-    "bars_cocktail": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "mid", "time_of_day": "night", "vibes": ["nightlife", "romantic"]},
-    "bars_rooftop": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "mid", "time_of_day": "evening", "vibes": ["romantic", "nightlife"]},
-    "bars_wine": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "mid", "time_of_day": "evening", "vibes": ["romantic", "foodie"]},
-    "bars_pub": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "budget", "time_of_day": "night", "vibes": ["nightlife", "mixed"]},
-    "attractions_museums": {"category": "culture", "meal_type": [], "price_level": "mid", "time_of_day": "morning", "vibes": ["cultural", "mixed"]},
-    "attractions_landmarks": {"category": "sightseeing", "meal_type": [], "price_level": "budget", "time_of_day": "morning", "vibes": ["mixed", "cultural"]},
-    "attractions_parks": {"category": "sightseeing", "meal_type": [], "price_level": "budget", "time_of_day": "afternoon", "vibes": ["relaxed", "romantic", "family-friendly"]},
-    "attractions_viewpoints": {"category": "sightseeing", "meal_type": [], "price_level": "budget", "time_of_day": "evening", "vibes": ["romantic", "mixed"]},
-    "attractions_markets": {"category": "shopping", "meal_type": ["snack"], "price_level": "budget", "time_of_day": "morning", "vibes": ["foodie", "cultural"]},
-    "attractions_neighborhoods": {"category": "sightseeing", "meal_type": [], "price_level": "budget", "time_of_day": "afternoon", "vibes": ["mixed", "cultural", "relaxed"]},
+    # Restaurants
+    "restaurants_fine": {"category": "dining", "meal_type": ["dinner"], "price_level": "luxury", "time_of_day": "evening", "vibes": ["foodie", "romantic"], "season": "all"},
+    "restaurants_casual": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["foodie", "mixed"], "season": "all"},
+    "restaurants_breakfast": {"category": "dining", "meal_type": ["breakfast"], "price_level": "budget", "time_of_day": "morning", "vibes": ["mixed", "relaxed"], "season": "all"},
+    "restaurants_brunch": {"category": "dining", "meal_type": ["breakfast", "lunch"], "price_level": "mid", "time_of_day": "morning", "vibes": ["relaxed", "foodie"], "season": "all"},
+    "restaurants_italian": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "evening", "vibes": ["romantic", "foodie"], "season": "all"},
+    "restaurants_asian": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "evening", "vibes": ["foodie", "mixed"], "season": "all"},
+    "restaurants_japanese": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "evening", "vibes": ["foodie", "romantic"], "season": "all"},
+    "restaurants_seafood": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["foodie", "relaxed"], "season": "summer"},
+    "restaurants_local": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["cultural", "foodie"], "season": "all"},
+    "restaurants_vegetarian": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["relaxed", "mixed"], "season": "all"},
+    "restaurants_romantic": {"category": "dining", "meal_type": ["dinner"], "price_level": "luxury", "time_of_day": "evening", "vibes": ["romantic"], "season": "all"},
+    "restaurants_cheap": {"category": "dining", "meal_type": ["lunch", "snack"], "price_level": "budget", "time_of_day": "afternoon", "vibes": ["mixed", "adventure"], "season": "all"},
+    "restaurants_steakhouse": {"category": "dining", "meal_type": ["dinner"], "price_level": "mid", "time_of_day": "evening", "vibes": ["foodie", "mixed"], "season": "all"},
+    "restaurants_pizza": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "budget", "time_of_day": "evening", "vibes": ["mixed", "family-friendly"], "season": "all"},
+    "restaurants_family": {"category": "dining", "meal_type": ["lunch", "dinner"], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["family-friendly"], "season": "all"},
+    # Cafes
+    "cafes_specialty": {"category": "cafe", "meal_type": ["breakfast", "snack"], "price_level": "budget", "time_of_day": "morning", "vibes": ["relaxed", "mixed"], "season": "all"},
+    "cafes_cozy": {"category": "cafe", "meal_type": ["snack"], "price_level": "budget", "time_of_day": "afternoon", "vibes": ["relaxed", "romantic"], "season": "winter"},
+    "bakeries": {"category": "cafe", "meal_type": ["breakfast", "snack"], "price_level": "budget", "time_of_day": "morning", "vibes": ["foodie", "relaxed"], "season": "all"},
+    # Bars & Nightlife
+    "bars_cocktail": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "mid", "time_of_day": "night", "vibes": ["nightlife", "romantic"], "season": "all"},
+    "bars_rooftop": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "mid", "time_of_day": "evening", "vibes": ["romantic", "nightlife"], "season": "summer"},
+    "bars_wine": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "mid", "time_of_day": "evening", "vibes": ["romantic", "foodie"], "season": "all"},
+    "bars_pub": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "budget", "time_of_day": "night", "vibes": ["nightlife", "mixed"], "season": "all"},
+    "bars_speakeasy": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "mid", "time_of_day": "night", "vibes": ["nightlife", "romantic"], "season": "all"},
+    "clubs": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "mid", "time_of_day": "night", "vibes": ["nightlife"], "season": "all"},
+    "live_music": {"category": "nightlife", "meal_type": ["drinks"], "price_level": "mid", "time_of_day": "night", "vibes": ["nightlife", "cultural"], "season": "all"},
+    # Culture
+    "museums_art": {"category": "culture", "meal_type": [], "price_level": "mid", "time_of_day": "morning", "vibes": ["cultural", "romantic"], "season": "all"},
+    "museums_history": {"category": "culture", "meal_type": [], "price_level": "mid", "time_of_day": "morning", "vibes": ["cultural", "mixed"], "season": "all"},
+    "museums_unique": {"category": "culture", "meal_type": [], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["cultural", "adventure"], "season": "all"},
+    # Sightseeing
+    "landmarks": {"category": "sightseeing", "meal_type": [], "price_level": "budget", "time_of_day": "morning", "vibes": ["mixed", "cultural"], "season": "all"},
+    "viewpoints": {"category": "sightseeing", "meal_type": [], "price_level": "budget", "time_of_day": "evening", "vibes": ["romantic", "mixed"], "season": "all"},
+    "architecture": {"category": "sightseeing", "meal_type": [], "price_level": "budget", "time_of_day": "morning", "vibes": ["cultural", "mixed"], "season": "all"},
+    "churches": {"category": "sightseeing", "meal_type": [], "price_level": "budget", "time_of_day": "morning", "vibes": ["cultural"], "season": "all"},
+    # Outdoor
+    "parks": {"category": "outdoor", "meal_type": [], "price_level": "budget", "time_of_day": "afternoon", "vibes": ["relaxed", "romantic", "family-friendly"], "season": "summer"},
+    "walks_scenic": {"category": "outdoor", "meal_type": [], "price_level": "budget", "time_of_day": "morning", "vibes": ["relaxed", "romantic"], "season": "summer"},
+    "beaches": {"category": "outdoor", "meal_type": [], "price_level": "budget", "time_of_day": "afternoon", "vibes": ["relaxed", "adventure"], "season": "summer"},
+    "day_trips": {"category": "sightseeing", "meal_type": [], "price_level": "mid", "time_of_day": "morning", "vibes": ["adventure", "cultural"], "season": "all"},
+    # Shopping
+    "markets_food": {"category": "shopping", "meal_type": ["snack"], "price_level": "budget", "time_of_day": "morning", "vibes": ["foodie", "cultural"], "season": "all"},
+    "markets_flea": {"category": "shopping", "meal_type": [], "price_level": "budget", "time_of_day": "morning", "vibes": ["cultural", "adventure"], "season": "all"},
+    "shopping_streets": {"category": "shopping", "meal_type": [], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["mixed"], "season": "all"},
+    # Experiences
+    "spa_wellness": {"category": "wellness", "meal_type": [], "price_level": "luxury", "time_of_day": "afternoon", "vibes": ["relaxed", "romantic"], "season": "winter"},
+    "cooking_classes": {"category": "experience", "meal_type": ["lunch"], "price_level": "mid", "time_of_day": "morning", "vibes": ["foodie", "cultural"], "season": "all"},
+    "boat_tours": {"category": "experience", "meal_type": [], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["romantic", "relaxed"], "season": "summer"},
+    # Neighborhoods
+    "neighborhoods_trendy": {"category": "sightseeing", "meal_type": [], "price_level": "budget", "time_of_day": "afternoon", "vibes": ["mixed", "nightlife"], "season": "all"},
+    "neighborhoods_historic": {"category": "sightseeing", "meal_type": [], "price_level": "budget", "time_of_day": "morning", "vibes": ["cultural", "romantic"], "season": "all"},
+    # Seasonal
+    "summer_outdoor": {"category": "outdoor", "meal_type": ["drinks"], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["relaxed", "mixed"], "season": "summer"},
+    "winter_indoor": {"category": "culture", "meal_type": [], "price_level": "mid", "time_of_day": "afternoon", "vibes": ["relaxed", "cultural"], "season": "winter"},
 }
 
 # Traveler type mapping (all venues get tagged)
@@ -176,39 +245,62 @@ def download_image(url: str) -> bytes | None:
 
 
 def save_venue(city: str, name: str, photos: list[str], tags: dict, extra_meta: dict) -> bool:
-    """Save venue to destination_media with full tagging."""
+    """Save venue to destination_media — one row PER PHOTO (4 rows per venue)."""
     travelers = infer_travelers(tags)
-    row = {
-        "destination": city.lower().strip(),
-        "type": "venue",
-        "name": name,
-        "url": photos[0] if photos else "",
-        "thumb_url": photos[0] if photos else "",
-        "source": "google_maps_stored",
-        "media_type": "photo",
-        "sort_order": 0,
-        "metadata": {
-            **extra_meta,
-            "photos": photos,
-            "category": tags.get("category", ""),
-            "meal_type": tags.get("meal_type", []),
-            "vibes": tags.get("vibes", []),
-            "travelers": travelers,
-            "price_level": tags.get("price_level", "mid"),
-            "time_of_day": tags.get("time_of_day", ""),
-            "verified": True,
-        },
+    meta = {
+        **extra_meta,
+        "photos": photos,
+        "category": tags.get("category", ""),
+        "meal_type": tags.get("meal_type", []),
+        "vibes": tags.get("vibes", []),
+        "travelers": travelers,
+        "price_level": tags.get("price_level", "mid"),
+        "time_of_day": tags.get("time_of_day", ""),
+        "season": tags.get("season", "all"),
+        "verified": True,
     }
-    try:
-        resp = requests.post(
-            f"{SUPABASE_URL}/rest/v1/destination_media",
-            headers=HEADERS,
-            json=row,
-            timeout=15,
-        )
-        return resp.status_code in (200, 201, 204)
-    except Exception:
-        return False
+
+    if not photos:
+        # No photos — save one row with empty url
+        row = {
+            "destination": city.lower().strip(),
+            "type": "venue",
+            "name": name,
+            "url": "",
+            "thumb_url": "",
+            "source": "google_maps_stored",
+            "media_type": "photo",
+            "sort_order": 0,
+            "metadata": meta,
+        }
+        try:
+            resp = requests.post(f"{SUPABASE_URL}/rest/v1/destination_media", headers=HEADERS, json=row, timeout=15)
+            return resp.status_code in (200, 201, 204)
+        except Exception:
+            return False
+
+    # Save one row per photo (4 rows for 4 photos)
+    success = False
+    for idx, photo_url in enumerate(photos):
+        row = {
+            "destination": city.lower().strip(),
+            "type": "venue",
+            "name": name,
+            "url": photo_url,
+            "thumb_url": photo_url,
+            "source": "google_maps_stored",
+            "media_type": "photo",
+            "sort_order": idx,
+            "metadata": meta if idx == 0 else {"photo_index": idx},  # Full meta only on first row
+        }
+        try:
+            resp = requests.post(f"{SUPABASE_URL}/rest/v1/destination_media", headers=HEADERS, json=row, timeout=15)
+            if resp.status_code in (200, 201, 204):
+                success = True
+        except Exception:
+            pass
+
+    return success
 
 
 def already_exists(city: str, name: str) -> bool:
@@ -347,6 +439,18 @@ def scrape_venue_detail(page: Page, venue_name: str, city: str) -> dict | None:
         except Exception:
             pass
 
+        # Also try getting review count from the text near rating (e.g. "(1,234)")
+        if not data.get("review_count"):
+            try:
+                parens = page.locator('span:has-text("(")').first
+                if parens.is_visible(timeout=1000):
+                    txt = parens.inner_text()
+                    m = re.search(r'\(([\d,.]+)\)', txt)
+                    if m:
+                        data["review_count"] = int(m.group(1).replace(",", "").replace(".", ""))
+            except Exception:
+                pass
+
         # Price level + cuisine type from the info line below the name
         # Google Maps shows something like: "€€€ · French restaurant"
         try:
@@ -392,19 +496,46 @@ def scrape_venue_detail(page: Page, venue_name: str, city: str) -> dict | None:
         except Exception:
             pass
 
-        # Get opening hours (actual hours, not button text)
+        # Get opening hours — click to expand, then read the table
         try:
-            hours_btn = page.locator('[data-item-id*="hour"]')
+            hours_btn = page.locator('[data-item-id*="hour"], [aria-label*="hour"]').first
             if hours_btn.is_visible(timeout=1500):
+                # First check aria-label for quick info like "Open ⋅ Closes 11 PM"
                 aria = hours_btn.get_attribute("aria-label") or ""
-                # aria-label usually contains actual hours like "Open ⋅ Closes 11 PM"
-                if aria and "Show" not in aria:
-                    data["hours"] = aria[:100]
+                if aria and "Show" not in aria and len(aria) > 5:
+                    data["hours"] = aria[:150]
                 else:
-                    # Try the visible text inside
-                    inner = hours_btn.inner_text().strip()
-                    if inner and "Show" not in inner:
-                        data["hours"] = inner[:100]
+                    # Click to expand the hours dropdown
+                    hours_btn.click()
+                    time.sleep(1)
+                    # Read the expanded hours table
+                    hours_table = page.locator('[class*="open"] table, [aria-label*="Monday"], [class*="hours-table"]')
+                    if hours_table.is_visible(timeout=1500):
+                        data["hours"] = hours_table.inner_text().strip()[:300]
+                    else:
+                        # Try reading all text in the hours section
+                        expanded = page.locator('[data-item-id*="hour"] + div, [class*="section-open-hours"]')
+                        if expanded.is_visible(timeout=1000):
+                            data["hours"] = expanded.inner_text().strip()[:300]
+        except Exception:
+            pass
+
+        # Get description/about text (Google Maps editorial summary)
+        try:
+            # Google Maps shows "About" section or editorial summary
+            about_selectors = [
+                '[class*="editorial"] span',
+                '[aria-label*="About"] + div',
+                '[class*="section-editorial"]',
+                'div[class*="WeS02d"]',  # Google's about section class
+            ]
+            for sel in about_selectors:
+                el = page.locator(sel).first
+                if el.is_visible(timeout=800):
+                    txt = el.inner_text().strip()
+                    if txt and len(txt) > 20 and len(txt) < 500:
+                        data["description"] = txt[:300]
+                        break
         except Exception:
             pass
 
@@ -535,6 +666,11 @@ def process_category(page: Page, city: str, cat_key: str, dry_run: bool = False)
                     if uploaded:
                         photos_on_server.append(uploaded)
 
+            # MUST have exactly 4 photos — skip venue if not enough
+            if len(photos_on_server) < 4:
+                print(f"    ✗ {name}: only {len(photos_on_server)} photos (need 4), skipping")
+                continue
+
             # Build metadata
             extra_meta = {
                 "address": detail.get("address", ""),
@@ -546,6 +682,7 @@ def process_category(page: Page, city: str, cat_key: str, dry_run: bool = False)
                 "cuisine": detail.get("cuisine", ""),
                 "neighborhood": detail.get("neighborhood", ""),
                 "price_indicator": detail.get("price_indicator", ""),
+                "description": detail.get("description", ""),
                 "duration": "1.5h" if tags["category"] in ("dining", "cafe", "nightlife") else "2h",
             }
 
