@@ -40,7 +40,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAuthHeader } from "@/lib/authFetch";
 import { setWikimediaImage } from "@/utils/cityImages";
 import { setCachedVenuePhotos, setCachedEnrichedImages } from "@/utils/imageCache";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
@@ -381,6 +381,7 @@ const Chat = () => {
 };
 
 const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise<void> }) => {
+  const navigate = useNavigate();
   const { isPremium, loading: subLoading } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallContext, setPaywallContext] = useState<{ destination?: string; tripStats?: any }>({});
@@ -871,7 +872,9 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     if (error) {
       toast.error("Failed to save trip");
     } else {
-      toast.success("Trip saved to your account!");
+      toast.success("Trip saved!", {
+        action: { label: "View trips", onClick: () => navigate("/my-trips") },
+      });
     }
   };
 
@@ -920,6 +923,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (planGenerated && !isPremium) {
+      // Pass destination context to paywall for better messaging
+      const lastPlan = parsedMessages.findLast(m => m.role === "assistant" && m.parsed.itinerary.length > 0);
+      const dest = lastPlan?.parsed.destinationEnrich?.destination || "";
+      const stats = lastPlan ? {
+        days: lastPlan.parsed.itinerary.length,
+        activities: lastPlan.parsed.activities.length,
+        hotels: lastPlan.parsed.hotels.length,
+      } : undefined;
+      setPaywallContext({ destination: dest, tripStats: stats });
       setShowPaywall(true);
       return;
     }
@@ -1377,8 +1389,15 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                               </>
                             )}
 
-                            {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && !isFullPlan && (
+                            {isLastAssistant && !isLoading && parsed.quickReplies.length > 0 && (
                               <QuickReplies replies={parsed.quickReplies} onSelect={(reply) => {
+                                if (planGenerated && !isPremium) {
+                                  const lastPlan = parsedMessages.findLast(m => m.role === "assistant" && m.parsed.itinerary.length > 0);
+                                  const dest = lastPlan?.parsed.destinationEnrich?.destination || "";
+                                  setPaywallContext({ destination: dest, tripStats: lastPlan ? { days: lastPlan.parsed.itinerary.length, activities: lastPlan.parsed.activities.length } : undefined });
+                                  setShowPaywall(true);
+                                  return;
+                                }
                                 sendMessage(reply);
                               }} />
                             )}

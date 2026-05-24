@@ -146,9 +146,11 @@ const Auth = () => {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Loading..." : isLogin ? "Sign in" : "Create account"}
           </Button>
-          <p className="text-center text-muted-foreground mt-2" style={{ fontSize: "12px" }}>
-            3-day free trial · Cancel anytime
-          </p>
+          {!isLogin && (
+            <p className="text-center text-muted-foreground mt-2" style={{ fontSize: "12px" }}>
+              3-day free trial · Cancel anytime
+            </p>
+          )}
         </form>
 
         {isLogin && (
