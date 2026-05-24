@@ -3,6 +3,20 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 
+const ALLOWED_ORIGINS = [
+  "https://jolliday.online",
+  "https://www.jolliday.online",
+  "https://nononoxnononox.lovable.app",
+  "http://localhost:8080",
+  "http://localhost:5173",
+];
+
+function getCorsOrigin(req: Request): string {
+  const origin = req.headers.get("origin") || "";
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  return ALLOWED_ORIGINS[0]; // Default to production
+}
+
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -12,9 +26,9 @@ export const corsHeaders = {
 // Daily rate-limit quotas per user tier.
 // Null = unlimited. Applies to AI endpoints that cost money per call.
 export const RATE_LIMITS = {
-  anonymous: null as number | null,
-  free: null as number | null,
-  premium: null as number | null,
+  anonymous: 3 as number | null,   // 3 requests/day for anonymous visitors
+  free: 10 as number | null,       // 10 requests/day for logged-in free users
+  premium: null as number | null,  // Unlimited for subscribers
 };
 
 export type AuthContext = {
