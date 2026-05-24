@@ -1009,12 +1009,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
           {user ? (
             <>
               <Link
-                to="/my-trips"
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white hover:text-foreground transition-colors"
-              >
-                <User className="h-4 w-4" /> My Trips
-              </Link>
-              <Link
                 to="/settings"
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white hover:text-foreground transition-colors"
               >

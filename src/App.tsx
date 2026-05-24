@@ -14,7 +14,6 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 // Lazy-loaded routes (not needed on first paint)
-const MyTrips = lazy(() => import("./pages/MyTrips"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const TripDetail = lazy(() => import("./pages/TripDetail"));
 const SharedTrip = lazy(() => import("./pages/SharedTrip"));
@@ -54,7 +53,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />
+                <Route path="/my-trips" element={<Chat />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/trip/view" element={<ProtectedRoute><TripDetail /></ProtectedRoute>} />
                 <Route path="/p/:slug" element={<SharedTrip />} />

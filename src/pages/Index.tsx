@@ -96,15 +96,6 @@ const Index = () => {
           <div className="flex items-center gap-2 shrink-0">
             {user ? (
               <>
-                <Link to="/my-trips" className="hidden md:block">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-10 px-4 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5"
-                  >
-                    My Trips
-                  </Button>
-                </Link>
                 <Link to="/settings" className="hidden sm:block">
                   <Button
                     variant="ghost"
@@ -195,15 +186,6 @@ const Index = () => {
               >
                 FAQ
               </Link>
-              {user && (
-                <Link
-                  to="/my-trips"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-3 text-sm font-medium text-foreground rounded-lg hover:bg-foreground/5"
-                >
-                  My Trips
-                </Link>
-              )}
               {!user && (
                 <Link
                   to="/auth"
@@ -305,14 +287,6 @@ const Index = () => {
                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     Plan a Trip
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/my-trips"
-                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    My Trips
                   </Link>
                 </li>
                 <li>
