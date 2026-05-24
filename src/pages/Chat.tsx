@@ -371,7 +371,7 @@ const Chat = () => {
 
   if (authLoading) {
     return (
-      <div className="h-dvh flex items-center justify-center bg-[#0a0a0f]">
+      <div className="h-dvh flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
@@ -937,9 +937,9 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="h-dvh flex bg-[#0a0a0f] overflow-hidden no-ios-zoom">
+    <div className="h-dvh flex bg-background overflow-hidden no-ios-zoom">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} fixed md:relative md:translate-x-0 z-40 w-72 h-full bg-[#0d0d14] border-r border-white/5 flex flex-col transition-transform duration-200`}>
+      <aside className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} fixed md:relative md:translate-x-0 z-40 w-72 h-full bg-[hsl(0_0%_98%)] border-r border-border flex flex-col transition-transform duration-200`}>
         {/* Sidebar header with logo */}
         <div className="p-4 border-b border-border flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
@@ -1478,7 +1478,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
             ) : (
               <>
                 <form onSubmit={handleSubmit}>
-                  <div className="relative rounded-2xl border border-white/10 bg-white/5 hover:border-white/20 focus-within:border-indigo-500/50 focus-within:bg-white/[0.07] transition-all duration-200">
+                  <div className="relative rounded-3xl border-2 border-border bg-white shadow-[0_4px_24px_-4px_rgba(45,66,179,0.08)] hover:border-primary/30 focus-within:border-primary focus-within:shadow-[0_8px_32px_-8px_rgba(45,66,179,0.2)] transition-all duration-200">
                     <textarea
                       ref={textareaRef}
                       placeholder="Message Jolliday..."
@@ -1487,7 +1487,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                       onKeyDown={handleKeyDown}
                       disabled={isLoading}
                       rows={1}
-                      className="w-full bg-transparent px-5 pt-4 pb-2 text-base text-white placeholder:text-white/30 resize-none focus:outline-none min-h-[56px] max-h-[200px] leading-relaxed"
+                      className="w-full bg-transparent px-5 pt-4 pb-2 text-base text-foreground placeholder:text-muted-foreground/60 resize-none focus:outline-none min-h-[56px] max-h-[200px] leading-relaxed"
                     />
                     <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-1">
                       <div className="flex items-center gap-1">

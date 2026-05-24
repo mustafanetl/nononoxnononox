@@ -1,85 +1,130 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Sparkles, Play, Send } from "lucide-react";
 
 const HeroSection = () => {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = (q: string) => {
     const trimmed = q.trim();
     if (trimmed) navigate(`/chat?q=${encodeURIComponent(trimmed)}`);
   };
 
-  return (
-    <section className="relative min-h-[100svh] flex flex-col items-center justify-center px-4 sm:px-6 overflow-hidden bg-[#0a0a0f]">
-      {/* Ambient gradient background */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse 60% 50% at 50% 40%, rgba(99, 102, 241, 0.12) 0%, transparent 70%)",
-        }}
-      />
-      
-      {/* Subtle grid pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
-          backgroundSize: "80px 80px",
-        }}
-      />
+  // Auto-grow textarea
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
+  }, [query]);
 
-      <div className="relative w-full max-w-4xl mx-auto pt-32 pb-16 sm:pt-40 sm:pb-20 md:pt-48 md:pb-24 flex flex-col items-center text-center">
-        {/* Main headline — large, bold, cinematic */}
-        <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-extrabold tracking-[-0.04em] text-white leading-[0.95]">
-          Travel
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(query);
+    }
+  };
+
+  return (
+    <section className="relative min-h-[100svh] flex flex-col items-center justify-center bg-background px-4 sm:px-6 overflow-hidden">
+      {/* Subtle ambient gradient */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 120% 80% at 50% -20%, hsl(234 62% 96%) 0%, transparent 60%)" }} />
+
+      <div className="relative w-full max-w-3xl mx-auto pt-28 pb-12 sm:pt-32 sm:pb-16 md:pt-40 md:pb-20 flex flex-col items-center text-center">
+        {/* Social proof chip */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-700 text-xs font-medium mb-6 animate-fade-in">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          Instant AI-powered trip plans
+        </div>
+
+        {/* Headline */}
+        <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-[-0.03em] text-foreground leading-[1.05]">
+          Any trip.
           <br />
-          <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            better.
+          <span className="text-primary">
+            In one chat.
           </span>
         </h1>
 
-        <p className="mt-6 sm:mt-8 text-lg sm:text-xl text-white/50 max-w-lg leading-relaxed font-light">
-          Jolliday brings the world to you — verified venues, real photos, and instant itineraries crafted for your style.
+        <p className="mt-4 sm:mt-5 text-base sm:text-lg text-muted-foreground max-w-lg leading-relaxed">
+          Tell Jolliday where you want to go. Get a complete itinerary with real flights, verified hotels, and day-by-day plans — in under 60 seconds.
         </p>
 
-        {/* CTA Button */}
-        <button
-          onClick={() => navigate("/chat")}
-          className="mt-10 sm:mt-12 group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-white text-black font-semibold text-base sm:text-lg hover:bg-white/90 transition-all shadow-2xl shadow-white/10 hover:shadow-white/20 hover:scale-[1.02] active:scale-[0.98]"
-        >
-          Start chatting
-          <ArrowRight className="h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+        {/* Big text box */}
+        <div className="mt-8 sm:mt-10 w-full">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit(query);
+            }}
+          >
+            <div className="rounded-2xl border-2 border-border bg-card shadow-xl shadow-black/[0.04] hover:border-primary/40 focus-within:border-primary focus-within:shadow-2xl focus-within:shadow-primary/10 transition-all duration-200">
+              <textarea
+                ref={textareaRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="e.g. 5 days in Tokyo for a couple, mid-range budget, love food and culture"
+                aria-label="Describe your trip"
+                rows={3}
+                className="w-full px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3 text-[15px] sm:text-lg text-foreground placeholder:text-muted-foreground/50 bg-transparent focus:outline-none resize-none leading-relaxed min-h-[100px] sm:min-h-[120px] max-h-[160px]"
+              />
+              <div className="flex items-center justify-between px-3 sm:px-4 pb-3 sm:pb-4">
+                <p className="text-xs text-muted-foreground hidden sm:block">
+                  Press Enter to plan · Free to try
+                </p>
+                <Button
+                  type="submit"
+                  disabled={!query.trim()}
+                  className="h-10 sm:h-11 px-5 sm:px-7 rounded-xl gap-2 font-semibold text-sm sm:text-base bg-primary text-primary-foreground hover:bg-primary/90 shadow-md disabled:opacity-40 disabled:shadow-none ml-auto"
+                >
+                  Plan my trip
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </form>
+        </div>
 
-        {/* Quick prompts */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-2 max-w-2xl">
+        {/* Route-style example chips */}
+        <div className="mt-4 sm:mt-5 flex flex-wrap items-center justify-center gap-2">
           {[
-            "5 days in Tokyo for a couple",
-            "Weekend in Barcelona",
-            "Family trip to Bali",
-            "10 days Italy → Greece",
+            "3 days in Barcelona for 2",
+            "Tokyo → Kyoto for a week",
+            "Weekend in Amsterdam, budget-friendly",
           ].map((ex) => (
             <button
               key={ex}
               type="button"
               onClick={() => handleSubmit(ex)}
-              className="px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm text-white/60 hover:text-white hover:border-white/30 hover:bg-white/10 transition-all"
+              className="px-3.5 py-1.5 rounded-full border border-border bg-card text-xs sm:text-sm text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 active:scale-95 transition-all"
             >
               {ex}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/30">
-        <span className="text-xs tracking-wider uppercase">Learn more</span>
-        <div className="w-px h-8 bg-gradient-to-b from-white/30 to-transparent" />
+        {/* Trust bar */}
+        <div className="mt-10 sm:mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs sm:text-sm text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span>AI-verified venues</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Play className="h-3.5 w-3.5 text-primary" />
+            <span>Real-time prices</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <ArrowRight className="h-3.5 w-3.5 text-primary" />
+            <span>Book in one click</span>
+          </div>
+        </div>
       </div>
     </section>
   );
