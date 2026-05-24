@@ -6,11 +6,12 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, LogOut, Save, Crown, Shield, MapPin, Utensils, CreditCard, Loader2 } from "lucide-react";
+import { ArrowLeft, LogOut, Save, Crown, Shield, MapPin, Utensils, CreditCard, Loader2, Moon, Sun } from "lucide-react";
 import Logo from "@/components/Logo";
 import CancelSubscriptionModal from "@/components/CancelSubscriptionModal";
 import { toast } from "sonner";
 import { startCheckout } from "@/lib/stripeCheckout";
+import { useTheme } from "next-themes";
 
 const TRAVEL_STYLES = ["budget", "mid-range", "luxury"] as const;
 const DIETARY_OPTIONS = ["Vegetarian", "Vegan", "Halal", "Kosher", "Gluten-free", "Dairy-free", "Nut allergy", "Pescatarian"];
@@ -18,6 +19,7 @@ const DIETARY_OPTIONS = ["Vegetarian", "Vegan", "Halal", "Kosher", "Gluten-free"
 const Settings = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { plan, isPremium, loading: subLoading, subscriptionEnd, cancelAtPeriodEnd, refreshSubscription } = useSubscription();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
   const [displayName, setDisplayName] = useState("");
@@ -303,6 +305,34 @@ const Settings = () => {
                 </Button>
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Appearance Section */}
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />} Appearance
+          </h2>
+          <div className="border border-border rounded-2xl p-5 bg-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Dark Mode</p>
+                <p className="text-sm text-muted-foreground">Switch between light and dark theme</p>
+              </div>
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className={`relative w-12 h-7 rounded-full transition-colors ${
+                  theme === "dark" ? "bg-primary" : "bg-muted"
+                }`}
+                aria-label="Toggle dark mode"
+              >
+                <span
+                  className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                    theme === "dark" ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </section>
 

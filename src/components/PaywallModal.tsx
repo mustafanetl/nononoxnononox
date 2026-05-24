@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { startCheckout } from "@/lib/stripeCheckout";
 import { useNavigate } from "react-router-dom";
 import { getCurrencyPrices } from "@/utils/currencyLocale";
+import { toast } from "sonner";
 import TrustLine from "./TrustLine";
 
 interface PaywallModalProps {
@@ -121,7 +122,11 @@ const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalPro
               return;
             }
             setCheckoutLoading(true);
-            await startCheckout(selected as "monthly" | "annual");
+            try {
+              await startCheckout(selected as "monthly" | "annual");
+            } catch {
+              toast.error("Something went wrong. Please try again.");
+            }
             setCheckoutLoading(false);
           }}
           disabled={checkoutLoading}
