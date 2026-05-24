@@ -225,7 +225,7 @@ const Index = () => {
       </main>
 
       {/* Footer — light and refined */}
-      <footer className="bg-[hsl(0_0%_97%)] border-t border-border">
+      <footer className="bg-muted/50 border-t border-border">
         <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 pt-16 pb-8">
           <div className="grid grid-cols-2 md:grid-cols-12 gap-8 md:gap-10 mb-12">
             {/* Brand */}
@@ -243,7 +243,7 @@ const Index = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Instagram"
-                  className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
+                  className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
                   <Instagram className="h-4 w-4" />
                 </a>
@@ -252,7 +252,7 @@ const Index = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Twitter"
-                  className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
+                  className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
                   <Twitter className="h-4 w-4" />
                 </a>
@@ -261,14 +261,14 @@ const Index = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="YouTube"
-                  className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
+                  className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
                   <Youtube className="h-4 w-4" />
                 </a>
                 <a
                   href="mailto:hello@jolliday.online"
                   aria-label="Email"
-                  className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
+                  className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
                   <Mail className="h-4 w-4" />
                 </a>

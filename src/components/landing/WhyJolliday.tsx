@@ -48,7 +48,7 @@ const WhyJolliday = () => {
             return (
               <div
                 key={f.title}
-                className="rounded-2xl border border-border bg-white p-6 sm:p-8 flex items-start gap-5 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-1 transition-all duration-300 group"
+                className="rounded-2xl border border-border bg-card p-6 sm:p-8 flex items-start gap-5 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-0.5 transition-all duration-300 group"
               >
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:border-primary group-hover:scale-110 transition-all duration-300">
                   <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary group-hover:text-white transition-colors" />

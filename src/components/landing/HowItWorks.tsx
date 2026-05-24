@@ -51,7 +51,7 @@ const HowItWorks = () => {
             return (
               <div
                 key={step.title}
-                className="relative flex flex-col items-center text-center p-6 sm:p-8 rounded-2xl border border-border bg-white hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-1 transition-all duration-300 group"
+                className="relative flex flex-col items-center text-center p-6 sm:p-8 rounded-2xl border border-border bg-card hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-0.5 transition-all duration-300 group"
               >
                 {/* Step number */}
                 <span className="absolute top-4 right-5 text-xs font-bold text-muted-foreground/30 tracking-wider">
