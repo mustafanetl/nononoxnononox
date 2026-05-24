@@ -36,3 +36,17 @@ supabase/.temp/
 scripts/.state/
 scripts/.costs/
 scripts/__pycache__/
+scripts/_result.txt
+scripts/debug_screenshot.png
+scripts/scrape_results.json
+scripts/ai_knowledge_rotterdam.json
+scripts/ai_recommended_venues.json
+scripts/venue_list.json
+scripts/venues_to_scrape*.txt
+
+# Internal planning docs (keep locally, don't commit)
+GOAL_*.md
+KIRO_PROJECT_CONTEXT.md
+
+# Personal files
+*.pdf
