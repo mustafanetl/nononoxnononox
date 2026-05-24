@@ -66,8 +66,8 @@ const SharedTrip = () => {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex items-center gap-3 text-muted-foreground">
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+        <div className="flex items-center gap-3 text-white/50">
           <LogoMark size={20} color="hsl(234 62% 47%)" className="animate-spin" /> Loading shared trip…
         </div>
       </div>
@@ -76,13 +76,13 @@ const SharedTrip = () => {
 
   if (status === "missing" || !snapshot) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-6">
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f] px-6">
         <div className="max-w-md text-center space-y-3">
-          <h1 className="text-2xl font-bold">This shared trip isn't available</h1>
-          <p className="text-muted-foreground">The link may have expired or been removed.</p>
+          <h1 className="text-2xl font-bold text-white">This shared trip isn't available</h1>
+          <p className="text-white/50">The link may have expired or been removed.</p>
           <button
             onClick={() => navigate("/")}
-            className="mt-2 px-4 py-2 rounded-md bg-foreground text-background text-sm font-medium hover:opacity-90"
+            className="mt-2 px-4 py-2 rounded-md bg-white text-black text-sm font-medium hover:opacity-90"
           >
             Plan your own trip
           </button>

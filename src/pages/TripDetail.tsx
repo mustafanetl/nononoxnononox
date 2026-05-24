@@ -764,7 +764,7 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24 sm:pb-12">
+    <div className="min-h-screen bg-[#0a0a0f] pb-24 sm:pb-12">
       {isShared && (
         <div className="sticky top-0 z-50 bg-foreground text-background px-4 py-2.5 text-sm flex items-center justify-between gap-3">
           <span className="truncate">
