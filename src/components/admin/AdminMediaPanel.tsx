@@ -173,25 +173,11 @@ const AdminMediaPanel = () => {
   const googleCities = (() => {
     const map: Record<string, string | null> = {};
     for (const row of allMedia) {
-      if ((row as any).type === "gyg_activity" || row.source === "getyourguide") continue;
       const d = row.destination;
       if (!map[d]) map[d] = row.thumb_url || row.url || null;
       if (row.source === "admin") map[d] = row.thumb_url || row.url || map[d];
     }
     return Object.entries(map).map(([dest, img]) => ({ destination: dest, img })).sort((a, b) => a.destination.localeCompare(b.destination));
-  })();
-
-  const gygCities = (() => {
-    const map: Record<string, { img: string | null; count: number }> = {};
-    for (const row of allMedia) {
-      // Only GYG rows
-      if ((row as any).type !== "gyg_activity" && row.source !== "getyourguide") continue;
-      const d = row.destination;
-      if (!map[d]) map[d] = { img: null, count: 0 };
-      map[d].count++;
-      if (!map[d].img) map[d].img = row.thumb_url || row.url || null;
-    }
-    return Object.entries(map).map(([dest, v]) => ({ destination: dest, img: v.img, count: v.count })).sort((a, b) => a.destination.localeCompare(b.destination));
   })();
 
   // ─── Loading ──────────────────────────────────────────────────────────
@@ -275,7 +261,7 @@ const CitiesGrid = ({
   if (cities.length === 0) {
     return (
       <p className="text-center text-muted-foreground py-8">
-        {source === "google" ? "No Google Places media cached yet." : "No GetYourGuide activities scraped yet."}
+        {source === "google" ? "No Google Places media cached yet." : "No media cached yet."}
       </p>
     );
   }
@@ -319,7 +305,7 @@ const GoogleCityView = ({
   onBack: () => void;
   onSelectVenue: (venue: string | null, type: string) => void;
 }) => {
-  const cityMedia = media.filter((m) => m.destination === city && m.type !== "gyg_activity" && m.source !== "getyourguide");
+  const cityMedia = media.filter((m) => m.destination === city);
   const heroes = cityMedia.filter((m) => m.type === "hero");
 
   const venueMap = new Map<string, { type: string; items: MediaRow[] }>();
@@ -374,107 +360,6 @@ const GoogleCityView = ({
 };
 
 
-// ─── Level 2: GetYourGuide City View ──────────────────────────────────────
-
-const GygCityView = ({
-  media,
-  city,
-  onBack,
-  onSelectActivity,
-}: {
-  media: MediaRow[];
-  city: string;
-  onBack: () => void;
-  onSelectActivity: (name: string) => void;
-}) => {
-  const gygItems = media
-    .filter((m) => m.destination === city && (m.type === "gyg_activity" || m.source === "getyourguide"))
-    .sort((a, b) => {
-      // Sort by priority (P1 first), then by rating
-      const pa = a.metadata?.priority || 5;
-      const pb = b.metadata?.priority || 5;
-      if (pa !== pb) return pa - pb;
-      const ra = Number(a.metadata?.rating) || 0;
-      const rb = Number(b.metadata?.rating) || 0;
-      return rb - ra;
-    });
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
-        <h2 className="text-lg font-semibold capitalize">{city}</h2>
-        <Badge variant="secondary" className="bg-green-100 text-green-800">GetYourGuide · {gygItems.length} activities</Badge>
-      </div>
-
-      {gygItems.length === 0 ? (
-        <p className="text-center text-muted-foreground py-8 italic">
-          No activities scraped yet.<br />
-          <code className="text-xs bg-muted px-2 py-1 rounded mt-2 inline-block">python scripts/scrape_getyourguide.py --city {city}</code>
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {gygItems.map((item) => {
-            const meta = item.metadata || {};
-            const photos: string[] = meta.photos || [];
-            const photoCount = photos.length || (item.url ? 1 : 0);
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => item.name && onSelectActivity(item.name)}
-                className="relative rounded-xl overflow-hidden border border-border group focus:outline-none focus:ring-2 focus:ring-ring text-left"
-              >
-                {/* Image */}
-                <div className="aspect-video relative">
-                  {item.thumb_url || item.url ? (
-                    <img src={item.thumb_url || item.url} alt={item.name || ""} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-green-700 to-green-900 flex items-center justify-center">
-                      <Ticket className="h-8 w-8 text-white/40" />
-                    </div>
-                  )}
-                  {/* Priority badge */}
-                  {meta.priority && meta.priority <= 2 && (
-                    <Badge className="absolute top-2 left-2 text-[9px] px-1.5 py-0 bg-amber-500 text-white">
-                      {meta.priority === 1 ? "⭐ Must-see" : "👍 Top rated"}
-                    </Badge>
-                  )}
-                  {/* Photo count */}
-                  {photoCount > 1 && (
-                    <Badge className="absolute top-2 right-2 text-[9px] px-1.5 py-0 bg-black/60 text-white">
-                      <ImageIcon className="h-2.5 w-2.5 mr-0.5" />{photoCount}
-                    </Badge>
-                  )}
-                </div>
-                {/* Info */}
-                <div className="p-3 space-y-1">
-                  <p className="text-sm font-medium truncate">{item.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {meta.price && (
-                      <span className="text-green-600 font-medium">
-                        {meta.currency === "GBP" ? "£" : meta.currency === "USD" ? "$" : "€"}{Number(meta.price).toFixed(0)}
-                      </span>
-                    )}
-                    {meta.rating && <span className="text-amber-600">★ {Number(meta.rating).toFixed(1)}</span>}
-                    {meta.duration && <span>{meta.duration}</span>}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {meta.category && <Badge variant="outline" className="text-[9px] px-1.5 py-0">{meta.category}</Badge>}
-                    {meta.free_cancellation && <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-green-300 text-green-700">Free cancel</Badge>}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-
 // ─── Level 3: Photos/Detail View ──────────────────────────────────────────
 
 const PhotosView = ({
@@ -502,17 +387,7 @@ const PhotosView = ({
   onUpload: (file: File, dest: string, type: string, name: string | null) => void;
   uploading: boolean;
 }) => {
-  // For GYG activities, photos are stored in metadata.photos array (single row)
-  // For Google Places, photos are separate rows
-  const isGyg = source === "getyourguide" || type === "gyg_activity";
-
-  const gygRow = isGyg
-    ? media.find((m) => m.destination === city && m.name === venue && (m.type === "gyg_activity" || m.source === "getyourguide"))
-    : null;
-
-  const googleItems = !isGyg
-    ? media.filter((m) => m.destination === city && m.type === type && m.name === venue).sort((a, b) => a.sort_order - b.sort_order)
-    : [];
+  const googleItems = media.filter((m) => m.destination === city && m.type === type && m.name === venue).sort((a, b) => a.sort_order - b.sort_order);
 
   const heading = venue || "Hero Images";
 
@@ -529,22 +404,18 @@ const PhotosView = ({
           <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
           <div>
             <h2 className="text-lg font-semibold">{heading}</h2>
-            <p className="text-xs text-muted-foreground capitalize">{city} · {isGyg ? "GetYourGuide" : type}</p>
+            <p className="text-xs text-muted-foreground capitalize">{city} · {type}</p>
           </div>
         </div>
-        {!isGyg && (
-          <label className="cursor-pointer">
-            <input type="file" accept="image/*,video/*" className="hidden" onChange={handleFileChange} disabled={uploading} />
-            <Button variant="outline" size="sm" asChild disabled={uploading}>
-              <span>{uploading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Upload className="h-3 w-3 mr-1" />}Upload</span>
-            </Button>
-          </label>
-        )}
+        <label className="cursor-pointer">
+          <input type="file" accept="image/*,video/*" className="hidden" onChange={handleFileChange} disabled={uploading} />
+          <Button variant="outline" size="sm" asChild disabled={uploading}>
+            <span>{uploading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Upload className="h-3 w-3 mr-1" />}Upload</span>
+          </Button>
+        </label>
       </div>
 
-      {isGyg && gygRow ? (
-        <GygActivityDetail row={gygRow} onDelete={() => onDelete(gygRow.id)} />
-      ) : googleItems.length === 0 ? (
+      {googleItems.length === 0 ? (
         <p className="text-center text-muted-foreground py-8 italic">No media yet.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -565,84 +436,6 @@ const PhotosView = ({
     </div>
   );
 };
-
-// ─── GYG Activity Detail (shows all photos + metadata) ────────────────────
-
-const GygActivityDetail = ({ row, onDelete }: { row: MediaRow; onDelete: () => void }) => {
-  const meta = row.metadata || {};
-  const photos: string[] = meta.photos || [];
-  // Include main url if not in photos array
-  const allPhotos = photos.length > 0 ? photos : (row.url ? [row.url] : []);
-
-  return (
-    <div className="space-y-4">
-      {/* Photos grid */}
-      {allPhotos.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {allPhotos.map((url, i) => (
-            <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-border">
-              <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-              {i === 0 && <Badge className="absolute top-1 left-1 text-[9px] px-1 py-0 bg-amber-500 text-white">Main</Badge>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Metadata */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-        {meta.price && <InfoCard label="Price" value={`${meta.currency === "GBP" ? "£" : "€"}${meta.price}`} />}
-        {meta.rating && <InfoCard label="Rating" value={`★ ${Number(meta.rating).toFixed(1)} (${meta.review_count || "?"} reviews)`} />}
-        {meta.duration && <InfoCard label="Duration" value={meta.duration} />}
-        {meta.category && <InfoCard label="Category" value={meta.category} />}
-        {meta.neighborhood && <InfoCard label="Location" value={meta.neighborhood} />}
-        {meta.meeting_point && <InfoCard label="Meeting Point" value={meta.meeting_point} />}
-        {meta.priority && <InfoCard label="Priority" value={`P${meta.priority}`} />}
-        {meta.tour_type && <InfoCard label="Tour Type" value={meta.tour_type} />}
-        {meta.languages && <InfoCard label="Languages" value={meta.languages} />}
-        <InfoCard label="Free Cancellation" value={meta.free_cancellation ? "✓ Yes" : "✗ No"} />
-        <InfoCard label="Book Ahead" value={meta.bookAhead ? "✓ Yes" : "Not required"} />
-      </div>
-
-      {/* Description */}
-      {meta.description && (
-        <div className="bg-muted/50 rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1 font-medium">Description</p>
-          <p className="text-sm">{meta.description}</p>
-        </div>
-      )}
-
-      {/* Highlights */}
-      {meta.highlights?.length > 0 && (
-        <div className="bg-muted/50 rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1 font-medium">Highlights</p>
-          <ul className="text-sm space-y-0.5">{meta.highlights.map((h: string, i: number) => <li key={i}>• {h}</li>)}</ul>
-        </div>
-      )}
-
-      {/* Links */}
-      <div className="flex gap-2 flex-wrap">
-        {meta.activity_url && (
-          <a href={meta.activity_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">View on GYG →</a>
-        )}
-        {meta.affiliate_url && (
-          <a href={meta.affiliate_url} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:underline">Affiliate link →</a>
-        )}
-      </div>
-
-      {/* Delete */}
-      <Button variant="destructive" size="sm" onClick={onDelete}>
-        <Trash2 className="h-3 w-3 mr-1" /> Delete Activity
-      </Button>
-    </div>
-  );
-};
-
-const InfoCard = ({ label, value }: { label: string; value: string }) => (
-  <div className="bg-muted/30 rounded-lg p-2.5 border border-border/50">
-    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
-    <p className="text-sm font-medium mt-0.5 truncate">{value}</p>
-  </div>
-);
 
 
 // ─── Single Thumbnail (Google Places photos) ──────────────────────────────

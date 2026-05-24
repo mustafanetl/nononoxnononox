@@ -102,9 +102,10 @@ const ItineraryCard = ({
               </div>
             </button>
             {slot.transitNext && slot.transitNext !== "—" && idx < item.slots!.length - 1 && (
-              <div className="flex items-center gap-1.5 ml-10 py-0.5">
-                <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
-                <span className="text-[9px] text-muted-foreground/60 italic">{slot.transitNext}</span>
+              <div className="flex items-center gap-1.5 ml-10 py-1">
+                <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1">
+                  🚶 {slot.transitNext}
+                </span>
               </div>
             )}
           </div>
