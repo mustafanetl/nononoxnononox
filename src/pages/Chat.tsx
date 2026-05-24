@@ -863,10 +863,31 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     const convo = conversations.find(c => c.id === activeId);
     if (!convo) return;
 
+    // Extract the last full plan from parsed messages for TripDetail viewing
+    const lastPlanMsg = parsedMessages.findLast(m => m.role === "assistant" && m.parsed.itinerary.length > 0);
+    const destination = lastPlanMsg?.parsed.destinationEnrich?.destination || "";
+    const planData = lastPlanMsg ? {
+      flights: lastPlanMsg.parsed.flights,
+      hotels: lastPlanMsg.parsed.hotels,
+      activities: lastPlanMsg.parsed.activities,
+      itinerary: lastPlanMsg.parsed.itinerary,
+      timeline: lastPlanMsg.parsed.timeline || [],
+      travelInfo: lastPlanMsg.parsed.travelInfo || null,
+      quickReplies: lastPlanMsg.parsed.quickReplies || [],
+      text: lastPlanMsg.parsed.text || "",
+      weather: lastPlanMsg.parsed.weather || null,
+    } : null;
+
     const { error } = await supabase.from("saved_trips").insert({
       user_id: user.id,
       title: convo.title,
-      data_json: { messages: convo.messages },
+      destination: destination || null,
+      status: "planning",
+      data_json: {
+        messages: convo.messages,
+        plan: planData,
+        destination,
+      },
     } as any);
 
     if (error) {

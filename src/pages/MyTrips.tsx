@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, MapPin, Calendar, Trash2, ArrowLeft, Play, Settings } from "lucide-react";
+import { Plus, MapPin, Calendar, Trash2, ArrowLeft, Play, Settings, Eye } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { toast } from "sonner";
@@ -49,12 +49,32 @@ const MyTrips = () => {
   }, []);
 
   const deleteTrip = async (id: string) => {
+    if (!confirm("Delete this trip? This can't be undone.")) return;
     const { error } = await supabase.from("saved_trips").delete().eq("id", id);
     if (error) {
       toast.error("Failed to delete trip");
     } else {
       setTrips((prev) => prev.filter((t) => t.id !== id));
       toast.success("Trip deleted");
+    }
+  };
+
+  const viewTrip = (trip: SavedTrip) => {
+    const planData = trip.data_json?.plan;
+    const destination = trip.data_json?.destination || trip.destination || "";
+    if (planData && planData.itinerary?.length > 0) {
+      // Has parsed plan data — open TripDetail
+      sessionStorage.setItem("jolliday-trip-detail", JSON.stringify({
+        data: planData,
+        destination,
+      }));
+      navigate("/trip/view");
+    } else if (trip.data_json?.messages?.length > 0) {
+      // Only has messages — open in chat
+      openSavedTrip(trip.title, trip.data_json.messages);
+      navigate("/chat");
+    } else {
+      navigate(`/chat?q=Continue planning my trip to ${destination || trip.title}`);
     }
   };
 
@@ -102,9 +122,6 @@ const MyTrips = () => {
                 <Plus className="h-4 w-4" /> Plan a Trip
               </Button>
             </Link>
-            <p className="text-center text-muted-foreground mt-2" style={{ fontSize: "12px" }}>
-              3-day free trial · Cancel anytime
-            </p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
@@ -138,6 +155,15 @@ const MyTrips = () => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
+                      title="View plan"
+                      onClick={() => viewTrip(trip)}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
                       title="Continue planning"
                       onClick={() => {
                         const msgs = trip.data_json?.messages;
@@ -154,7 +180,8 @@ const MyTrips = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      title="Delete"
                       onClick={() => deleteTrip(trip.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
