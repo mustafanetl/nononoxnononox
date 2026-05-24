@@ -693,8 +693,7 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
   }, [activeId]);
 
   // Detect when a full plan has been generated for free users.
-  // PAYWALL DISABLED FOR NOW — all users see all plans.
-  // Will re-implement with a better UX later.
+  // First plan is FREE. Edits or new plans require subscription.
   const [planCount, setPlanCount] = useState(0);
   useEffect(() => {
     if (isPremium || isLoading || craftingActive) return;
@@ -710,8 +709,12 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
       if (blockTypes >= 2) count++;
     });
     setPlanCount(count);
-    // Paywall disabled — never gate
-    setPlanGenerated(false);
+    // Gate after first plan: user saw 1 free plan, now needs to subscribe
+    if (count >= 1) {
+      setPlanGenerated(true);
+    } else {
+      setPlanGenerated(false);
+    }
   }, [parsedMessages, isLoading, isPremium, craftingActive]);
 
   // Auto-enrich destinations when streaming is done

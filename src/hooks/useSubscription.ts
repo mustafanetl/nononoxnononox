@@ -80,7 +80,7 @@ export function useSubscription() {
     return () => clearInterval(interval);
   }, [authLoading, checkSubscription]);
 
-  const isPremium = true; // PAUSED — everything free/unlimited
+  const isPremium = state.plan !== "free";
 
   return {
     plan: state.plan,
