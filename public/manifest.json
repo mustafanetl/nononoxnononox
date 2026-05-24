@@ -1,0 +1,20 @@
+{
+  "name": "Jolliday — AI Trip Planner",
+  "short_name": "Jolliday",
+  "description": "Plan any trip in one chat. AI-powered itineraries with flights, hotels, and activities.",
+  "start_url": "/chat",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2d42b3",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "lifestyle"],
+  "lang": "en"
+}
