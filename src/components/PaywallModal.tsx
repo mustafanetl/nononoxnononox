@@ -1,5 +1,5 @@
 import { Crown, Check, X, Sparkles, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { startCheckout } from "@/lib/stripeCheckout";
 import { useNavigate } from "react-router-dom";
@@ -39,7 +39,14 @@ const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalPro
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="paywall-title"
+    >
       <div
         className="relative bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl animate-fade-in"
         style={{ animationDuration: "0.25s" }}
@@ -56,7 +63,7 @@ const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalPro
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
             <Crown className="h-6 w-6 text-primary" />
           </div>
-          <h3 className="text-xl font-bold text-foreground">
+          <h3 className="text-xl font-bold text-foreground" id="paywall-title">
             {hasContext ? `Your ${destination} plan is ready 🔥` : "Unlock Premium"}
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
