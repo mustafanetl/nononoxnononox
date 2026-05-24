@@ -9,10 +9,10 @@
     --background: 0 0% 100%;
     --foreground: 0 0% 7%;
 
-    --card: 0 0% 99%;
+    --card: 0 0% 100%;
     --card-foreground: 0 0% 7%;
 
-    --popover: 0 0% 99%;
+    --popover: 0 0% 100%;
     --popover-foreground: 0 0% 7%;
 
     --primary: 234 62% 47%;
@@ -22,7 +22,7 @@
     --secondary-foreground: 0 0% 7%;
 
     --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 35%;
+    --muted-foreground: 0 0% 40%;
 
     --accent: 234 62% 47%;
     --accent-foreground: 0 0% 100%;
@@ -30,8 +30,8 @@
     --destructive: 0 75% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
+    --border: 0 0% 91%;
+    --input: 0 0% 91%;
     --ring: 234 62% 47%;
 
     --radius: 1rem;
@@ -45,6 +45,40 @@
 
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-display: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  }
+
+  .dark {
+    --background: 240 6% 7%;
+    --foreground: 0 0% 95%;
+
+    --card: 240 5% 10%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 240 5% 10%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 234 62% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 95%;
+
+    --muted: 240 4% 16%;
+    --muted-foreground: 0 0% 55%;
+
+    --accent: 234 62% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 4% 18%;
+    --input: 240 4% 18%;
+    --ring: 234 62% 60%;
+
+    --sidebar: 240 5% 9%;
+    --sidebar-foreground: 0 0% 55%;
+    --sidebar-hover: 240 4% 14%;
   }
 }
 
