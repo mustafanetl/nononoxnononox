@@ -20,7 +20,10 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("[ErrorBoundary]", error, errorInfo);
+    // In production, suppress console noise. In dev, keep it for debugging.
+    if (import.meta.env.DEV) {
+      console.error("[ErrorBoundary]", error, errorInfo);
+    }
   }
 
   render() {
@@ -32,14 +35,22 @@ class ErrorBoundary extends Component<Props, State> {
               Something went wrong
             </h1>
             <p className="text-muted-foreground">
-              We hit an unexpected error. Please refresh the page to try again.
+              We hit an unexpected error. Please try again or refresh the page.
             </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity"
-            >
-              Refresh Page
-            </button>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => this.setState({ hasError: false, error: null })}
+                className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2.5 rounded-xl border border-border text-foreground font-medium text-sm hover:bg-muted transition-colors"
+              >
+                Refresh Page
+              </button>
+            </div>
           </div>
         </div>
       );
