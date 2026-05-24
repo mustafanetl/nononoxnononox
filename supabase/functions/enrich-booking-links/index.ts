@@ -1,12 +1,11 @@
 /**
  * enrich-booking-links — Constructs affiliate deeplinks for bookable activities.
  *
- * Builds GetYourGuide and Viator search deeplinks for each activity.
- * No external API call needed — pure URL construction with affiliate IDs.
+ * Builds Viator search deeplinks for each activity.
+ * No external API call needed — pure URL construction.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,25 +22,7 @@ interface ActivityInput {
 interface BookingLink {
   activity: string;
   booking_url: string;
-  provider: "getyourguide" | "viator";
-  secondary_url?: string;
-  secondary_provider?: "viator" | "getyourguide";
-}
-
-/**
- * Build a GetYourGuide search deeplink.
- * If we have a direct activity URL from our scraped DB, use that instead.
- */
-function buildGYGLink(activityName: string, city: string, partnerId: string, directUrl?: string): string {
-  // Prefer direct activity URL (from our scraped GYG data) — much higher conversion
-  if (directUrl && directUrl.includes("getyourguide.com")) {
-    const sep = directUrl.includes("?") ? "&" : "?";
-    return partnerId ? `${directUrl}${sep}partner_id=${partnerId}` : directUrl;
-  }
-  // Fallback: search URL
-  const query = encodeURIComponent(`${activityName} ${city}`);
-  const base = `https://www.getyourguide.com/s/?q=${query}`;
-  return partnerId ? `${base}&partner_id=${partnerId}` : base;
+  provider: "viator";
 }
 
 /**
@@ -60,7 +41,7 @@ serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { activities, partner_id } = body;
+    const { activities } = body;
 
     // Validate
     if (!activities || !Array.isArray(activities) || activities.length === 0) {
@@ -70,54 +51,15 @@ serve(async (req: Request) => {
       );
     }
 
-    // Use env var if no partner_id passed in request
-    const gygPartnerId = partner_id || Deno.env.get("GETYOURGUIDE_PARTNER_ID") || "";
-
-    // Look up scraped GYG activity URLs from our DB for direct linking
-    let gygLookup: Record<string, string> = {};
-    try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      if (supabaseUrl && serviceKey) {
-        const db = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
-        // Get all GYG activities for the cities in this request
-        const cities = [...new Set((activities as ActivityInput[]).map(a => a.city.toLowerCase().trim()))];
-        for (const city of cities) {
-          const { data } = await db
-            .from("destination_media")
-            .select("name, metadata")
-            .eq("destination", city)
-            .eq("type", "gyg_activity")
-            .limit(100);
-          if (data) {
-            for (const row of data) {
-              const url = (row.metadata as any)?.activity_url || (row.metadata as any)?.affiliate_url;
-              if (url && row.name) {
-                gygLookup[row.name.toLowerCase()] = url;
-              }
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("[enrich-booking-links] DB lookup failed, using search URLs:", e);
-    }
-
     const links: BookingLink[] = (activities as ActivityInput[])
       .filter((a) => a.name && a.city)
       .slice(0, 30) // cap at 30 activities
       .map((activity) => {
-        // Try to find a direct GYG URL from our scraped data
-        const directUrl = gygLookup[activity.name.toLowerCase()] || undefined;
-        const gygUrl = buildGYGLink(activity.name, activity.city, gygPartnerId, directUrl);
         const viatorUrl = buildViatorLink(activity.name, activity.city);
-
         return {
           activity: activity.name,
-          booking_url: gygUrl,
-          provider: "getyourguide" as const,
-          secondary_url: viatorUrl,
-          secondary_provider: "viator" as const,
+          booking_url: viatorUrl,
+          provider: "viator" as const,
         };
       });
 
