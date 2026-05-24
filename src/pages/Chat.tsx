@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Menu, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, Save, User, LogOut, MapPin, Settings, RotateCcw, Crown, MoreHorizontal, Sparkles, Plane, Calendar, Users, Mountain, Utensils, PanelLeftClose, Loader2 } from "lucide-react";
+import { ArrowUp, Plus, Menu, ChevronLeft, ChevronRight, Share2, Trash2, GitCompare, Download, User, LogOut, MapPin, Settings, RotateCcw, Crown, MoreHorizontal, Sparkles, Plane, Calendar, Users, Mountain, Utensils, PanelLeftClose, Loader2 } from "lucide-react";
 import Logo, { LogoMark } from "@/components/Logo";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { useAuth } from "@/hooks/useAuth";
@@ -855,50 +855,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
     toast.success("PDF downloaded!");
   };
 
-  const handleSaveTrip = async () => {
-    if (!user) {
-      toast.error("Sign in to save trips", { action: { label: "Sign in", onClick: () => window.location.href = "/auth" } });
-      return;
-    }
-    const convo = conversations.find(c => c.id === activeId);
-    if (!convo) return;
-
-    // Extract the last full plan from parsed messages for TripDetail viewing
-    const lastPlanMsg = parsedMessages.findLast(m => m.role === "assistant" && m.parsed.itinerary.length > 0);
-    const destination = lastPlanMsg?.parsed.destinationEnrich?.destination || "";
-    const planData = lastPlanMsg ? {
-      flights: lastPlanMsg.parsed.flights,
-      hotels: lastPlanMsg.parsed.hotels,
-      activities: lastPlanMsg.parsed.activities,
-      itinerary: lastPlanMsg.parsed.itinerary,
-      timeline: lastPlanMsg.parsed.timeline || [],
-      travelInfo: lastPlanMsg.parsed.travelInfo || null,
-      quickReplies: lastPlanMsg.parsed.quickReplies || [],
-      text: lastPlanMsg.parsed.text || "",
-      weather: lastPlanMsg.parsed.weather || null,
-    } : null;
-
-    const { error } = await supabase.from("saved_trips").insert({
-      user_id: user.id,
-      title: convo.title,
-      destination: destination || null,
-      status: "planning",
-      data_json: {
-        messages: convo.messages,
-        plan: planData,
-        destination,
-      },
-    } as any);
-
-    if (error) {
-      toast.error("Failed to save trip");
-    } else {
-      toast.success("Trip saved!", {
-        action: { label: "View trips", onClick: () => navigate("/my-trips") },
-      });
-    }
-  };
-
   const getSmartSuggestions = () => {
     const month = new Date().getMonth();
     const hour = new Date().getHours();
@@ -1120,9 +1076,6 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={handleSaveTrip}>
-                    <Save className="h-4 w-4 mr-2" /> Save trip
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleExportPDF}>
                     <Download className="h-4 w-4 mr-2" /> Export PDF
                   </DropdownMenuItem>

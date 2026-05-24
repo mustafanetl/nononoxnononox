@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, MapPin, Calendar, Trash2, ArrowLeft, Play, Settings, Eye } from "lucide-react";
+import { Plus, MapPin, Calendar, Trash2, ArrowLeft, Play, Settings } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useRzumaChat } from "@/hooks/useRzumaChat";
 import { toast } from "sonner";
@@ -60,21 +60,13 @@ const MyTrips = () => {
   };
 
   const viewTrip = (trip: SavedTrip) => {
-    const planData = trip.data_json?.plan;
-    const destination = trip.data_json?.destination || trip.destination || "";
-    if (planData && planData.itinerary?.length > 0) {
-      // Has parsed plan data — open TripDetail
-      sessionStorage.setItem("jolliday-trip-detail", JSON.stringify({
-        data: planData,
-        destination,
-      }));
-      navigate("/trip/view");
-    } else if (trip.data_json?.messages?.length > 0) {
-      // Only has messages — open in chat
-      openSavedTrip(trip.title, trip.data_json.messages);
+    // Restore conversation in chat
+    const msgs = trip.data_json?.messages;
+    if (msgs && Array.isArray(msgs) && msgs.length > 0) {
+      openSavedTrip(trip.title, msgs);
       navigate("/chat");
     } else {
-      navigate(`/chat?q=Continue planning my trip to ${destination || trip.title}`);
+      navigate(`/chat?q=Continue planning my trip to ${trip.destination || trip.title}`);
     }
   };
 
@@ -155,25 +147,8 @@ const MyTrips = () => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      title="View plan"
+                      title="Open trip"
                       onClick={() => viewTrip(trip)}
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      title="Continue planning"
-                      onClick={() => {
-                        const msgs = trip.data_json?.messages;
-                        if (msgs && Array.isArray(msgs) && msgs.length > 0) {
-                          openSavedTrip(trip.title, msgs);
-                          navigate("/chat");
-                        } else {
-                          navigate(`/chat?q=Continue planning my trip to ${trip.destination || trip.title}`);
-                        }
-                      }}
                     >
                       <Play className="h-3.5 w-3.5" />
                     </Button>

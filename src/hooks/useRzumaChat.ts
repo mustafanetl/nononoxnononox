@@ -598,6 +598,27 @@ export const useRzumaChat = () => {
         if (planMeta && assistantContent) {
           savePlanToCache(planMeta, assistantContent);
         }
+
+        // ── AUTO-SAVE TO ACCOUNT (fire-and-forget) ────────────────────
+        // If user is logged in, save/update this conversation to saved_trips
+        if (hasStructuredPlan(assistantContent)) {
+          (async () => {
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (!session?.user) return;
+              const convo = convosRef.current.find(c => c.id === currentId);
+              if (!convo) return;
+              const dest = extractDestinationHint(assistantContent) || planMeta?.destination || "";
+              await supabase.from("saved_trips").upsert({
+                user_id: session.user.id,
+                title: convo.title,
+                destination: dest || null,
+                status: "planning",
+                data_json: { messages: convo.messages, destination: dest },
+              } as any, { onConflict: "user_id,title" });
+            } catch { /* silent — localStorage is the primary store */ }
+          })();
+        }
       }
     } catch (e) {
       console.error("Chat error:", e);
