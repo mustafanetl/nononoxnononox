@@ -144,10 +144,10 @@ const PaywallModal = ({ open, onClose, destination, tripStats }: PaywallModalPro
         </button>
         <TrustLine />
 
-        {/* Social proof + fine print */}
+        {/* Fine print */}
         <div className="mt-3 text-center space-y-1">
           <p className="text-[11px] text-muted-foreground">
-            Join 2,000+ travelers planning smarter trips
+            Cancel anytime · No commitment
           </p>
         </div>
       </div>

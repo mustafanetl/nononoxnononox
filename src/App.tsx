@@ -18,6 +18,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const TripDetail = lazy(() => import("./pages/TripDetail"));
 const SharedTrip = lazy(() => import("./pages/SharedTrip"));
 const Settings = lazy(() => import("./pages/Settings"));
+const MyTrips = lazy(() => import("./pages/MyTrips"));
 const FAQ = lazy(() => import("./pages/FAQ"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
@@ -53,7 +54,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/my-trips" element={<Chat />} />
+                <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/trip/view" element={<ProtectedRoute><TripDetail /></ProtectedRoute>} />
                 <Route path="/p/:slug" element={<SharedTrip />} />

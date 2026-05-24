@@ -1,8 +1,8 @@
 /**
  * useEnrichBookingLinks — Fetches affiliate deeplinks for activities.
  *
- * Calls the enrich-booking-links edge function to build GetYourGuide
- * and Viator affiliate links for each activity in the plan.
+ * Calls the enrich-booking-links edge function to build Viator
+ * affiliate links for each activity in the plan.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -13,9 +13,9 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 export interface BookingLink {
   activity: string;
   booking_url: string;
-  provider: "getyourguide" | "viator";
+  provider: "viator";
   secondary_url?: string;
-  secondary_provider?: "viator" | "getyourguide";
+  secondary_provider?: "viator";
 }
 
 export interface UseEnrichBookingLinksParams {

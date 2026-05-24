@@ -29,7 +29,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="relative min-h-[100svh] flex flex-col items-center justify-center bg-white px-4 sm:px-6 overflow-hidden">
+    <section className="relative min-h-[100svh] flex flex-col items-center justify-center bg-background px-4 sm:px-6 overflow-hidden">
       {/* Subtle ambient gradient */}
       <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 120% 80% at 50% -20%, hsl(234 62% 96%) 0%, transparent 60%)" }} />
 
@@ -40,7 +40,7 @@ const HeroSection = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
           </span>
-          2,847 trips planned this week
+          Instant AI-powered trip plans
         </div>
 
         {/* Headline */}
@@ -64,13 +64,14 @@ const HeroSection = () => {
               handleSubmit(query);
             }}
           >
-            <div className="rounded-2xl border-2 border-border bg-white shadow-xl shadow-black/[0.04] hover:border-primary/40 focus-within:border-primary focus-within:shadow-2xl focus-within:shadow-primary/10 transition-all duration-200">
+            <div className="rounded-2xl border-2 border-border bg-card shadow-xl shadow-black/[0.04] hover:border-primary/40 focus-within:border-primary focus-within:shadow-2xl focus-within:shadow-primary/10 transition-all duration-200">
               <textarea
                 ref={textareaRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="e.g. 5 days in Tokyo for a couple, mid-range budget, love food and culture"
+                aria-label="Describe your trip"
                 rows={3}
                 className="w-full px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3 text-[15px] sm:text-lg text-foreground placeholder:text-muted-foreground/50 bg-transparent focus:outline-none resize-none leading-relaxed min-h-[100px] sm:min-h-[120px] max-h-[160px]"
               />
@@ -102,7 +103,7 @@ const HeroSection = () => {
               key={ex}
               type="button"
               onClick={() => handleSubmit(ex)}
-              className="px-3.5 py-1.5 rounded-full border border-border bg-white text-xs sm:text-sm text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 active:scale-95 transition-all"
+              className="px-3.5 py-1.5 rounded-full border border-border bg-card text-xs sm:text-sm text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 active:scale-95 transition-all"
             >
               {ex}
             </button>

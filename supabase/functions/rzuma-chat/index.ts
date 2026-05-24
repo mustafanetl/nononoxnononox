@@ -79,10 +79,21 @@ function extractCacheParams(
     if (/friends|vänner|kompisar|group|guys|girls/i.test(text)) travelerType = "friends";
   }
 
-  // Clean up destination (remove trailing words that aren't city names)
-  destination = destination.replace(/\s*(trip|vacation|holiday|please|thanks|vibe)$/i, "").trim();
+  // Clean up destination (remove vibe words, traveler words, and filler that aren't city names)
+  const vibeWords = /\b(romantic|romantisk|honeymoon|adventure|äventyr|cultur\w*|kultur\w*|food\w*|mat|nightlife|nattliv|party|relax\w*|avslappn\w*|chill|family[\s-]*friendly|family|familj)\b/gi;
+  const travelerWords = /\b(solo|alone|ensam|couple|partner|girlfriend|boyfriend|wife|husband|friends|vänner|kompisar|group|guys|girls)\b/gi;
+  const fillerWords = /\b(trip|vacation|holiday|please|thanks|vibe|with|my|for|in|a|the|and)\b/gi;
+  destination = destination
+    .replace(vibeWords, "")
+    .replace(travelerWords, "")
+    .replace(fillerWords, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 
   if (!destination || !duration) return null;
+
+  // Clamp duration to cached range (2-30 days)
+  duration = Math.max(2, Math.min(30, duration));
 
   return {
     destination: destination.toLowerCase().trim(),
@@ -680,8 +691,12 @@ serve(async (req) => {
             // Don't burn rate limit quota for cache hits
             return streamFromCache(cached.plan_content);
           }
+
+          // Cache miss — fall through to live AI generation.
+          // The frontend will save the result via cache-plan endpoint after QA passes.
+          console.log(`[cache-miss] key=${cacheKey} — generating live via AI`);
         } catch (e) {
-          // Cache lookup failed — proceed with normal AI call (fail-open)
+          // Cache lookup failed — fall through to AI anyway
           console.warn("[cache] lookup failed, proceeding to AI:", e);
         }
       }
@@ -858,6 +873,13 @@ RULES:
         } catch (e) {
           console.warn("[gyg-inject] failed, proceeding without:", e);
         }
+
+        // ── INJECT SCRAPED VENUE DATABASE ──────────────────────────────────────
+        // NOTE: Venue injection is disabled. The scraped DB is incomplete (missing
+        // iconic landmarks like Euromast, Fenix Food Factory, Hotel New York etc.)
+        // Instead, we let the AI use its knowledge and rely on enrich-destination 
+        // to fetch & cache photos from Google Places on first use.
+        // Future: Re-enable when DB coverage is more complete per city.
       }
     }
 

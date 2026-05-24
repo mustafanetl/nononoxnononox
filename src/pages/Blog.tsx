@@ -46,7 +46,7 @@ Before diving into tools, here's what separates useful from useless:
 ## The Contenders
 
 ### Jolliday
-**Strengths:** Generates complete day-by-day itineraries with real venues verified against Google Places. Shows real-time flight and hotel prices via Travelpayouts. Walking times between venues calculated via OSRM. Direct booking links to Skyscanner, Booking.com, and GetYourGuide.
+**Strengths:** Generates complete day-by-day itineraries with real venues verified against Google Places. Shows real-time flight and hotel prices via Travelpayouts. Walking times between venues calculated via OSRM. Direct booking links to Skyscanner and Booking.com.
 
 **Weaknesses:** Web-only (no native app yet). Requires a subscription after free trial.
 

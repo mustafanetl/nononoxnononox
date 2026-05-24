@@ -1,11 +1,11 @@
 /**
- * AI provider — OpenRouter with google/gemini-2.5-flash-lite.
+ * AI provider — OpenRouter with google/gemini-2.5-flash.
  */
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash-lite";
+const MODEL = "google/gemini-2.5-flash";
 const DEFAULT_MAX_TOKENS = 16000;
 
 const DEFAULT_HEADERS = {

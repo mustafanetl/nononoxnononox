@@ -72,27 +72,35 @@ HEADERS = {
 # ── Destinations ────────────────────────────────────────────────────────────
 
 DESTINATIONS = [
-    # Missing EU cities (not yet in destination_media)
+    # EU top cities
+    "Paris", "Amsterdam", "Barcelona", "Madrid", "Lisbon", "Porto",
     "Rome", "Florence", "Milan", "Venice", "Naples",
-    "Lisbon", "Porto",
-    "Berlin", "Munich", "Hamburg",
-    "Vienna", "Prague", "Budapest",
-    "Brussels", "Bruges",
-    "Dublin", "Edinburgh", "London",
-    "Stockholm", "Copenhagen", "Oslo", "Helsinki", "Reykjavik",
-    "Athens", "Santorini",
-    "Dubrovnik", "Split",
-    "Valletta", "Nice", "Marseille",
-    "Krakow", "Warsaw",
-    "Zurich",
-    "Seville", "Malaga",
+    "Berlin", "Munich", "Hamburg", "Vienna", "Prague", "Budapest",
+    "Brussels", "Dublin", "Edinburgh", "London",
+    "Stockholm", "Copenhagen", "Oslo", "Helsinki",
+    "Athens", "Santorini", "Dubrovnik", "Split",
+    "Nice", "Marseille", "Krakow", "Warsaw", "Zurich", "Seville", "Malaga",
+    # Asia top cities
+    "Tokyo", "Kyoto", "Osaka", "Bangkok", "Chiang Mai",
+    "Singapore", "Kuala Lumpur", "Hong Kong",
+    "Seoul", "Busan", "Hanoi", "Ho Chi Minh City",
+    "Bali", "Taipei", "Dubai", "Abu Dhabi",
+    "Mumbai", "Delhi", "Goa", "Jaipur",
+    "Phuket", "Krabi", "Siem Reap",
+    # Africa top cities
+    "Marrakech", "Casablanca", "Cairo", "Luxor",
+    "Nairobi", "Zanzibar", "Cape Town", "Johannesburg",
+    "Mauritius", "Seychelles", "Accra", "Dakar",
 ]
 
 ORIGIN = "Stockholm"
 
 COMBOS: list[tuple[int, str, str]] = [
-    (5, "mixed", "couple"),
-    (5, "cultural", "couple"),
+    (5, "foodie", "couple"),
+    (5, "romantic", "couple"),
+    (5, "nightlife", "friends"),
+    (5, "adventure", "solo"),
+    (5, "family-friendly", "family"),
 ]
 
 VIBE_PHRASE = {

@@ -54,8 +54,8 @@ const Index = () => {
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-white/90 backdrop-blur-xl border-b border-border shadow-sm"
-            : "bg-white/70 backdrop-blur-md border-b border-transparent"
+            ? "bg-background/90 backdrop-blur-xl border-b border-border shadow-sm"
+            : "bg-background/70 backdrop-blur-md border-b border-transparent"
         }`}
       >
         <nav className="w-full flex items-center justify-between px-4 sm:px-6 lg:px-8 xl:px-12 h-16 lg:h-[72px]">
@@ -156,7 +156,7 @@ const Index = () => {
 
         {/* Mobile menu dropdown */}
         {mobileMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 right-0 bg-white border-b border-border shadow-lg animate-fade-in">
+          <div className="lg:hidden absolute top-full left-0 right-0 bg-background border-b border-border shadow-lg animate-fade-in">
             <div className="flex flex-col gap-1 p-4">
               <a
                 href="#how-it-works"

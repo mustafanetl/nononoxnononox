@@ -20,7 +20,7 @@ const steps = [
     number: "03",
     title: "Book everything",
     description:
-      "One-click links to Skyscanner, Booking.com, and GetYourGuide. Your entire trip, bookable in minutes.",
+      "One-click links to Skyscanner and Booking.com. Your entire trip, bookable in minutes.",
   },
 ];
 

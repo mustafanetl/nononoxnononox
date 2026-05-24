@@ -24,7 +24,7 @@ type MediaRow = {
   created_at: string;
 };
 
-type MediaSource = "google" | "getyourguide";
+type MediaSource = "google";
 
 type NavigationState =
   | { level: 1; source: MediaSource }
@@ -45,8 +45,7 @@ const AdminMediaPanel = () => {
   const fetchCities = useCallback(async () => {
     setLoading(true);
 
-    // Two parallel queries: one for Google/venue cities, one for GYG cities
-    const [googleRes, venueRes, gygRes] = await Promise.all([
+    const [googleRes, venueRes] = await Promise.all([
       // Google Places: get hero rows for city thumbnails
       supabase
         .from("destination_media" as any)
@@ -61,24 +60,15 @@ const AdminMediaPanel = () => {
         .eq("type", "venue")
         .order("sort_order", { ascending: true })
         .limit(5000),
-      // GYG: get all gyg_activity rows for city list + counts
-      supabase
-        .from("destination_media" as any)
-        .select("destination, url, thumb_url, source, type")
-        .eq("type", "gyg_activity")
-        .order("sort_order", { ascending: true })
-        .limit(5000),
     ]);
 
     const combined = [
       ...((googleRes.data as any[]) || []),
       ...((venueRes.data as any[]) || []),
-      ...((gygRes.data as any[]) || []),
     ];
 
     if (googleRes.error) console.warn("Google fetch error:", googleRes.error);
     if (venueRes.error) console.warn("Venue fetch error:", venueRes.error);
-    if (gygRes.error) console.warn("GYG fetch error:", gygRes.error);
 
     setAllMedia(combined);
     setLoading(false);
@@ -228,45 +218,25 @@ const AdminMediaPanel = () => {
               >
                 <MapPin className="h-4 w-4" /> Google Places ({googleCities.length})
               </button>
-              <button
-                type="button"
-                onClick={() => setNav({ level: 1, source: "getyourguide" })}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                  nav.source === "getyourguide" ? "bg-green-600 text-white shadow-md" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                <Ticket className="h-4 w-4" /> GetYourGuide ({gygCities.length})
-              </button>
             </div>
             <Button variant="outline" size="sm" onClick={fetchCities}>
               <RefreshCw className="h-4 w-4 mr-1" /> Refresh
             </Button>
           </div>
 
-          {nav.source === "google" ? (
-            <CitiesGrid cities={googleCities} source="google" onSelectCity={navigateToCity} />
-          ) : (
-            <CitiesGrid cities={gygCities} source="getyourguide" onSelectCity={navigateToCity} />
-          )}
+          <CitiesGrid cities={googleCities} source="google" onSelectCity={navigateToCity} />
         </>
       )}
 
       {nav.level === 2 && (
         cityLoading ? (
           <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin" /></div>
-        ) : nav.source === "google" ? (
+        ) : (
           <GoogleCityView
             media={cityMedia}
             city={nav.city}
             onBack={() => setNav({ level: 1, source: "google" })}
             onSelectVenue={(venue, type) => setNav({ level: 3, city: nav.city, venue, type, source: "google" })}
-          />
-        ) : (
-          <GygCityView
-            media={cityMedia}
-            city={nav.city}
-            onBack={() => setNav({ level: 1, source: "getyourguide" })}
-            onSelectActivity={(name) => setNav({ level: 3, city: nav.city, venue: name, type: "gyg_activity", source: "getyourguide" })}
           />
         )
       )}
