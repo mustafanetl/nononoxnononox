@@ -1154,6 +1154,26 @@ const ChatInner = ({ user, signOut }: { user: any | null; signOut: () => Promise
                   </div>
                 </div>
 
+                {/* Surprise Me */}
+                <div className="mt-6">
+                  <button
+                    onClick={() => {
+                      const surprises = [
+                        "Surprise me with a 4-day trip somewhere I wouldn't expect",
+                        "Plan a spontaneous weekend getaway — you pick the destination",
+                        "Take me somewhere beautiful for 5 days, surprise me",
+                        "I want to be surprised — plan a unique trip I'd never think of",
+                        "Pick a hidden gem destination and plan 3 days there",
+                      ];
+                      sendMessage(surprises[Math.floor(Math.random() * surprises.length)]);
+                    }}
+                    className="px-6 py-3 text-sm font-semibold rounded-full bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 text-primary hover:from-primary/20 hover:to-accent/20 hover:border-primary/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center gap-2"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Surprise me
+                  </button>
+                </div>
+
                 {/* Trust line */}
                 <div className="mt-10 flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" /> AI-verified venues</span>
