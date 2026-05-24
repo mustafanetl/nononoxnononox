@@ -22,6 +22,7 @@ import { setWikimediaImage } from "@/utils/cityImages";
 import { useCityHeroImage } from "@/hooks/useCityHeroImage";
 import { useDestinationVideo } from "@/hooks/useCityImages";
 import { exportTripPlanPDF } from "@/utils/pdfExport";
+import { getGoogleCalendarUrl, downloadICS } from "@/utils/calendarExport";
 import { createDistinctPhotoGallery } from "@/utils/photoGallery";
 import { getSkyscannerUrl, getBookingDotComUrl } from "@/utils/bookingLinks";
 import { useAuth } from "@/hooks/useAuth";
@@ -727,6 +728,27 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
     toast.success("PDF downloaded!");
   };
 
+  const handleCalendarExport = () => {
+    const activityNames = data.itinerary
+      .flatMap((day: any) => (day.slots || []).map((s: any) => s.venue || s.activity))
+      .filter(Boolean)
+      .slice(0, 10);
+    const days = data.itinerary.length || 3;
+    const url = getGoogleCalendarUrl({ destination, days, activities: activityNames });
+    window.open(url, "_blank");
+    toast.success("Opening Google Calendar...");
+  };
+
+  const handleICSExport = () => {
+    const activityNames = data.itinerary
+      .flatMap((day: any) => (day.slots || []).map((s: any) => s.venue || s.activity))
+      .filter(Boolean)
+      .slice(0, 10);
+    const days = data.itinerary.length || 3;
+    downloadICS({ destination, days, activities: activityNames });
+    toast.success("Calendar file downloaded!");
+  };
+
   const handleSave = async () => {
     if (!user) { toast.error("Sign in to save trips"); navigate("/auth"); return; }
     setSaving(true);
@@ -776,6 +798,9 @@ const TripDetail: React.FC<TripDetailProps> = ({ mode = "owner", shareSlug, init
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleExportPDF} className="h-8 gap-1.5">
                   <Download className="h-3.5 w-3.5" /> {t.downloadPdf}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleCalendarExport} className="h-8 gap-1.5">
+                  <CalendarDays className="h-3.5 w-3.5" /> Calendar
                 </Button>
               </>
             )}
