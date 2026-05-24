@@ -1,11 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Send, CheckCircle2, Zap, MapPin } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 const HeroSection = () => {
   const [query, setQuery] = useState("");
-  const [focused, setFocused] = useState(false);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -14,114 +12,74 @@ const HeroSection = () => {
     if (trimmed) navigate(`/chat?q=${encodeURIComponent(trimmed)}`);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSubmit(query);
-    }
-  };
-
-  const examples = [
-    "5 days in Tokyo for a couple",
-    "Weekend in Barcelona, budget-friendly",
-    "10 days Italy → Greece with friends",
-    "Family trip to Bali, kid-friendly",
-  ];
-
   return (
-    <section className="relative min-h-[100svh] flex flex-col items-center justify-center bg-background px-4 sm:px-6 overflow-hidden">
-      {/* Subtle ambient gradient — light mode only */}
+    <section className="relative min-h-[100svh] flex flex-col items-center justify-center px-4 sm:px-6 overflow-hidden bg-[#0a0a0f]">
+      {/* Ambient gradient background */}
       <div
-        className="absolute inset-0 pointer-events-none dark:opacity-0 transition-opacity"
+        className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 50% 0%, hsl(234 62% 97%) 0%, transparent 70%)",
+            "radial-gradient(ellipse 60% 50% at 50% 40%, rgba(99, 102, 241, 0.12) 0%, transparent 70%)",
+        }}
+      />
+      
+      {/* Subtle grid pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+          backgroundSize: "80px 80px",
         }}
       />
 
-      <div className="relative w-full max-w-2xl mx-auto pt-28 pb-12 sm:pt-32 sm:pb-16 md:pt-40 md:pb-20 flex flex-col items-center text-center">
-        {/* Headline */}
-        <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-[-0.03em] text-foreground leading-[1.05]">
-          Your next trip.
+      <div className="relative w-full max-w-4xl mx-auto pt-32 pb-16 sm:pt-40 sm:pb-20 md:pt-48 md:pb-24 flex flex-col items-center text-center">
+        {/* Main headline — large, bold, cinematic */}
+        <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-extrabold tracking-[-0.04em] text-white leading-[0.95]">
+          Travel
           <br />
-          Planned in seconds.
+          <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            better.
+          </span>
         </h1>
 
-        <p className="mt-4 sm:mt-5 text-base sm:text-lg text-muted-foreground max-w-md leading-relaxed">
-          Tell Jolliday where you want to go. Get a verified itinerary with real
-          photos, walking times, and booking links — instantly.
+        <p className="mt-6 sm:mt-8 text-lg sm:text-xl text-white/50 max-w-lg leading-relaxed font-light">
+          Jolliday brings the world to you — verified venues, real photos, and instant itineraries crafted for your style.
         </p>
 
-        {/* Clean single-line input */}
-        <div className="mt-8 sm:mt-10 w-full max-w-xl">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit(query);
-            }}
-          >
-            <div
-              className={`flex items-center gap-2 rounded-2xl border-2 bg-card px-4 sm:px-5 h-14 sm:h-16 shadow-lg shadow-black/[0.03] transition-all duration-200 ${
-                focused
-                  ? "border-primary shadow-xl shadow-primary/10"
-                  : "border-border hover:border-primary/30"
-              }`}
-            >
-              <MapPin className="h-5 w-5 text-muted-foreground/50 shrink-0" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                onKeyDown={handleKeyDown}
-                placeholder="Where do you want to go?"
-                aria-label="Describe your trip"
-                className="flex-1 bg-transparent text-[15px] sm:text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-w-0"
-              />
-              <Button
-                type="submit"
-                disabled={!query.trim()}
-                size="sm"
-                className="h-9 sm:h-10 px-4 sm:px-5 rounded-xl gap-1.5 font-semibold text-sm bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm disabled:opacity-30 disabled:shadow-none shrink-0"
-              >
-                <span className="hidden sm:inline">Plan</span>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </form>
-        </div>
+        {/* CTA Button */}
+        <button
+          onClick={() => navigate("/chat")}
+          className="mt-10 sm:mt-12 group inline-flex items-center gap-2 px-8 py-4 rounded-full bg-white text-black font-semibold text-base sm:text-lg hover:bg-white/90 transition-all shadow-2xl shadow-white/10 hover:shadow-white/20 hover:scale-[1.02] active:scale-[0.98]"
+        >
+          Start chatting
+          <ArrowRight className="h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
+        </button>
 
-        {/* Example prompts as pills */}
-        <div className="mt-4 sm:mt-5 flex flex-wrap items-center justify-center gap-2">
-          {examples.map((ex) => (
+        {/* Quick prompts */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2 max-w-2xl">
+          {[
+            "5 days in Tokyo for a couple",
+            "Weekend in Barcelona",
+            "Family trip to Bali",
+            "10 days Italy → Greece",
+          ].map((ex) => (
             <button
               key={ex}
               type="button"
               onClick={() => handleSubmit(ex)}
-              className="px-3.5 py-1.5 rounded-full border border-border bg-card text-xs sm:text-sm text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 active:scale-95 transition-all"
+              className="px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm text-white/60 hover:text-white hover:border-white/30 hover:bg-white/10 transition-all"
             >
               {ex}
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Trust indicators */}
-        <div className="mt-10 sm:mt-14 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs sm:text-sm text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            <span>Verified venues</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Zap className="h-3.5 w-3.5 text-amber-500" />
-            <span>Instant plans</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5 text-primary" />
-            <span>Real photos & walking times</span>
-          </div>
-        </div>
+      {/* Scroll indicator */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/30">
+        <span className="text-xs tracking-wider uppercase">Learn more</span>
+        <div className="w-px h-8 bg-gradient-to-b from-white/30 to-transparent" />
       </div>
     </section>
   );
