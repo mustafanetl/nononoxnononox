@@ -17,6 +17,7 @@ import HowItWorks from "@/components/landing/HowItWorks";
 import WhyJolliday from "@/components/landing/WhyJolliday";
 import SocialProof from "@/components/landing/SocialProof";
 import DestinationsMosaic from "@/components/landing/DestinationsMosaic";
+import TripTemplates from "@/components/landing/TripTemplates";
 import HomeFAQ from "@/components/landing/HomeFAQ";
 import FinalCTA from "@/components/landing/FinalCTA";
 import MobileStickyCTA from "@/components/landing/MobileStickyCTA";
@@ -227,6 +228,8 @@ const Index = () => {
         <div id="destinations">
           <DestinationsMosaic />
         </div>
+
+        <TripTemplates />
 
         <WhyJolliday />
 
