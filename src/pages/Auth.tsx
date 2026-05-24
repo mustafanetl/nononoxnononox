@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useNavigate, Link, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +16,9 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
-  const nextUrl = params.get("next") || "/chat";
+  const nextUrl = params.get("next") || (location.state as any)?.from || "/chat";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

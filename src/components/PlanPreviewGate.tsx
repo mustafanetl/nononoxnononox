@@ -14,7 +14,6 @@ interface PlanPreviewGateProps {
   destination: string;
   enrichedImages?: any[];
   origin?: string;
-  onUpgrade: () => void;
 }
 
 const features = [
@@ -24,7 +23,7 @@ const features = [
   "PDF export & sharing",
 ];
 
-const PlanPreviewGate = ({ data, destination, enrichedImages, origin, onUpgrade }: PlanPreviewGateProps) => {
+const PlanPreviewGate = ({ data, destination, enrichedImages, origin }: PlanPreviewGateProps) => {
   const resolvedOrigin = (origin || data.flights[0]?.from || "").trim();
   const [selectedPlan, setSelectedPlan] = useState<"annual" | "monthly">("annual");
   const [checkoutLoading, setCheckoutLoading] = useState(false);

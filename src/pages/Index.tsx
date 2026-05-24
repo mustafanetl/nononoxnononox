@@ -254,28 +254,34 @@ const Index = () => {
               {/* Socials */}
               <div className="mt-6 flex items-center gap-2">
                 <a
-                  href="#"
+                  href="https://instagram.com/jolliday.online"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label="Instagram"
                   className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
                   <Instagram className="h-4 w-4" />
                 </a>
                 <a
-                  href="#"
+                  href="https://x.com/jollidayonline"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label="Twitter"
                   className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
                   <Twitter className="h-4 w-4" />
                 </a>
                 <a
-                  href="#"
+                  href="https://youtube.com/@jolliday"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label="YouTube"
                   className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
                   <Youtube className="h-4 w-4" />
                 </a>
                 <a
-                  href="mailto:hello@jolliday.app"
+                  href="mailto:hello@jolliday.online"
                   aria-label="Email"
                   className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                 >
