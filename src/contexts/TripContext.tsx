@@ -93,7 +93,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
   const totalBudget = items.reduce((sum, item) => {
     if (item.type === "flight") return sum + item.data.price;
     if (item.type === "activity") return sum + item.data.price;
-    if (item.type === "hotel") return sum + item.data.pricePerNight * 3;
+    if (item.type === "hotel") return sum + item.data.pricePerNight;
     return sum;
   }, 0);
 

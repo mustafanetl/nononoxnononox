@@ -339,9 +339,26 @@ const Settings = () => {
         {/* Account Actions */}
         <section>
           <h2 className="text-lg font-semibold mb-4">Account</h2>
-          <div className="border border-border rounded-2xl p-5 bg-card">
+          <div className="border border-border rounded-2xl p-5 bg-card space-y-3">
             <Button onClick={handleSignOut} variant="outline" className="w-full justify-start gap-2">
               <LogOut className="h-4 w-4" /> Sign Out
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!confirm("Are you sure you want to delete your account? This action cannot be undone. All your trips, preferences, and data will be permanently removed.")) return;
+                try {
+                  await supabase.functions.invoke("delete-account");
+                  await signOut();
+                  toast.success("Account deleted. We're sorry to see you go.");
+                  navigate("/");
+                } catch {
+                  toast.error("Failed to delete account. Please contact support.");
+                }
+              }}
+              variant="ghost"
+              className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              Delete Account
             </Button>
           </div>
         </section>
