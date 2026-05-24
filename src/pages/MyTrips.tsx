@@ -117,54 +117,69 @@ const MyTrips = () => {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
-            {trips.map((trip) => (
-              <div key={trip.id} className="group border border-border rounded-2xl p-5 bg-card hover:shadow-lg transition-shadow">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-semibold text-base">{trip.title}</h3>
-                    {trip.destination && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                        <MapPin className="h-3 w-3" /> {trip.destination}
-                      </p>
+            {trips.map((trip) => {
+              const heroImage = trip.data_json?.enrichedImages?.[0]?.thumbUrl || trip.data_json?.enrichedImages?.[0]?.url;
+              return (
+                <div key={trip.id} className="group border border-border rounded-2xl overflow-hidden bg-card hover:shadow-lg transition-shadow">
+                  {/* Hero image */}
+                  {heroImage && (
+                    <div className="h-32 overflow-hidden cursor-pointer" onClick={() => viewTrip(trip)}>
+                      <img
+                        src={heroImage}
+                        alt={trip.destination || trip.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  )}
+                  <div className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold text-base">{trip.title}</h3>
+                        {trip.destination && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                            <MapPin className="h-3 w-3" /> {trip.destination}
+                          </p>
+                        )}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full capitalize ${statusColors[trip.status] || statusColors.planning}`}>
+                        {trip.status}
+                      </span>
+                    </div>
+
+                    {trip.occasion && (
+                      <p className="text-xs text-muted-foreground capitalize mb-3">{trip.occasion}</p>
                     )}
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded-full capitalize ${statusColors[trip.status] || statusColors.planning}`}>
-                    {trip.status}
-                  </span>
-                </div>
 
-                {trip.occasion && (
-                  <p className="text-xs text-muted-foreground capitalize mb-3">{trip.occasion}</p>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(trip.updated_at).toLocaleDateString()}
-                  </span>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      title="Open trip"
-                      onClick={() => viewTrip(trip)}
-                    >
-                      <Play className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      title="Delete"
-                      onClick={() => deleteTrip(trip.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(trip.updated_at).toLocaleDateString()}
+                      </span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Open trip"
+                          onClick={() => viewTrip(trip)}
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          title="Delete"
+                          onClick={() => deleteTrip(trip.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
