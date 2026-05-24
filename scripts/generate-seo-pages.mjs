@@ -107,7 +107,7 @@ for (const dest of destinations) {
                     <li>Every venue verified against Google Places — no fake recommendations</li>
                     <li>Real flight and hotel prices from Travelpayouts</li>
                     <li>Walking times between stops calculated via OSRM routing</li>
-                    <li>Direct booking links to Skyscanner, Booking.com, and GetYourGuide</li>
+                    <li>Direct booking links to Skyscanner and Booking.com</li>
                     <li>Personalized to your budget, travel style, and group size</li>
                 </ul>
             </section>
